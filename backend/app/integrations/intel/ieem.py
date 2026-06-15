@@ -27,8 +27,19 @@ def list_datasets() -> list[dict[str, str]]:
     return [{"key": k, "label": v["label"]} for k, v in DATASETS.items()]
 
 
+def _decode(raw: bytes) -> str:
+    """IEEM CSVs are not always UTF-8 (often Windows-1252 / Latin-1). Try
+    common encodings before falling back to a lossy latin-1 decode."""
+    for enc in ("utf-8-sig", "cp1252", "latin-1"):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("latin-1", errors="replace")
+
+
 def _parse_csv(raw: bytes) -> tuple[list[str], list[dict[str, str]]]:
-    text = raw.decode("utf-8-sig")  # handle BOM
+    text = _decode(raw)  # handle BOM + non-UTF-8 (Windows-1252) encodings
     reader = csv.reader(io.StringIO(text))
     rows = [r for r in reader if any(cell.strip() for cell in r)]
     if not rows:

@@ -22,3 +22,11 @@ def test_unknown_dataset_raises():
     import pytest
     with pytest.raises(KeyError):
         ieem.fetch_dataset("nope", fetch=lambda url: CSV)
+
+
+def test_fetch_dataset_handles_latin1_encoding():
+    # IEEM files are often Windows-1252/Latin-1 (e.g. "RUIZ CASTAÑEDA").
+    latin1 = "MUNICIPIO,NOMBRE DEL MUNICIPIO\r\n1,ACAMBAY DE RUIZ CASTAÑEDA\r\n".encode("latin-1")
+    result = ieem.fetch_dataset("municipios", fetch=lambda url: latin1)
+    assert result["count"] == 1
+    assert result["rows"][0]["NOMBRE DEL MUNICIPIO"] == "ACAMBAY DE RUIZ CASTAÑEDA"
