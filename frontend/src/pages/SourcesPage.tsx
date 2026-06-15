@@ -2,8 +2,10 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { getSources, searchDatasets } from "@/api/sources";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { Card } from "@/components/ui/Card";
-import { SearchIcon } from "@/components/ui/icons";
+import { DatabaseIcon, SearchIcon } from "@/components/ui/icons";
 import type { DatasetSummary, SourceInfo } from "@/types/sources";
 
 const KIND_BADGE: Record<string, string> = {
@@ -46,53 +48,78 @@ export function SourcesPage() {
 
   return (
     <AppLayout title="Fuentes de datos" crumb="Integraciones · INE México">
-      <div className="mb-6">
-        <div className="eyebrow">Integraciones</div>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
-          Fuentes de datos INE
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-ink-muted">
-          Catálogo de fuentes consumibles del Instituto Nacional Electoral y datos
-          abiertos relacionados. Consulta el catálogo de datos.gob.mx en vivo.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Integraciones"
+        title="Fuentes de datos"
+        accent="INE"
+        subtitle="Catálogo de fuentes consumibles del Instituto Nacional Electoral y datos abiertos relacionados. Consulta el catálogo de datos.gob.mx en vivo."
+        actions={
+          sources.length > 0 && (
+            <div className="card-premium px-4 py-3">
+              <div className="eyebrow mb-1.5">Fuentes</div>
+              <div className="flex items-center gap-2">
+                <DatabaseIcon className="h-5 w-5 text-accent" />
+                <AnimatedNumber
+                  value={sources.length}
+                  className="font-display text-2xl font-bold tabular-nums text-ink"
+                />
+              </div>
+            </div>
+          )
+        }
+      />
 
       {error && (
-        <div className="mb-4 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
+        <div className="reveal mb-4 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
           {error}
         </div>
       )}
 
       {/* Source registry */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {sources.map((s) => (
-          <div key={s.id} className="panel p-5">
+        {sources.map((s, i) => (
+          <div
+            key={s.id}
+            className="card-premium reveal group flex flex-col p-5"
+            style={{ animationDelay: `${120 + i * 60}ms` }}
+          >
             <div className="flex items-start justify-between gap-2">
-              <h3 className="text-sm font-semibold text-ink">{s.name}</h3>
-              <span className={`pill ${KIND_BADGE[s.kind] ?? "border-line"}`}>{s.kind}</span>
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="metric-chip h-8 w-8 shrink-0 text-accent transition-colors group-hover:text-teal">
+                  <DatabaseIcon width={15} height={15} />
+                </span>
+                <h3 className="truncate text-sm font-semibold text-ink">{s.name}</h3>
+              </div>
+              <span className={`pill shrink-0 ${KIND_BADGE[s.kind] ?? "border-line"}`}>
+                {s.kind}
+              </span>
             </div>
-            <p className="mt-2 text-xs leading-relaxed text-ink-muted">{s.notes}</p>
+            <p className="mt-3 text-xs leading-relaxed text-ink-muted">{s.notes}</p>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {s.formats.map((f) => (
-                <span key={f} className="pill border-line text-ink-faint">
+                <span key={f} className="pill border-line font-mono text-ink-faint">
                   {f}
                 </span>
               ))}
             </div>
-            <div className="mt-3 flex items-center justify-between text-[11px] text-ink-faint">
-              <span className="truncate">{s.base_url}</span>
-              {s.auth_required && <span className="text-state-warning">requiere acceso</span>}
+            <div className="mt-auto flex items-center justify-between gap-2 pt-3 text-[11px] text-ink-faint">
+              <span className="truncate font-mono">{s.base_url}</span>
+              {s.auth_required && (
+                <span className="pill shrink-0 border-state-warning/30 bg-state-warning/10 text-state-warning">
+                  requiere acceso
+                </span>
+              )}
             </div>
           </div>
         ))}
         {sources.length === 0 && !error && (
-          <div className="panel p-5 text-sm text-ink-faint">Cargando fuentes…</div>
+          <div className="card-premium p-5 text-sm text-ink-faint">Cargando fuentes…</div>
         )}
       </div>
 
       {/* CKAN dataset search */}
-      <div className="mt-6">
-        <Card title="Catálogo datos.gob.mx (CKAN)">
+      <div className="reveal mt-6" style={{ animationDelay: "240ms" }}>
+        <Card title="Catálogo datos.gob.mx (CKAN)" accentDot>
           <form onSubmit={onSearch} className="relative">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
             <input
@@ -117,7 +144,7 @@ export function SourcesPage() {
               datasets?.map((d) => (
                 <div
                   key={d.id}
-                  className="flex items-start justify-between gap-3 rounded-lg border border-line bg-bg-sunken px-3 py-2.5"
+                  className="flex items-start justify-between gap-3 rounded-lg border border-line bg-bg-sunken px-3 py-2.5 transition-all hover:-translate-y-0.5 hover:border-line-strong hover:bg-panel-hover"
                 >
                   <div className="min-w-0">
                     <div className="truncate text-sm text-ink">{d.title}</div>
@@ -127,7 +154,7 @@ export function SourcesPage() {
                   </div>
                   <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
                     {d.formats.slice(0, 4).map((f) => (
-                      <span key={f} className="pill border-line text-ink-faint">
+                      <span key={f} className="pill border-line font-mono text-ink-faint">
                         {f}
                       </span>
                     ))}

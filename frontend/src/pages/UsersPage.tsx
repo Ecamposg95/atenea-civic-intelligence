@@ -10,9 +10,11 @@ import {
   updateUser,
 } from "@/api/users";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { SearchIcon } from "@/components/ui/icons";
+import { SearchIcon, UserIcon } from "@/components/ui/icons";
 import { useAuthStore } from "@/store/authStore";
 import type { User, UserRole } from "@/types/auth";
 import type { UserCreatePayload, UserUpdatePayload } from "@/types/users";
@@ -105,24 +107,36 @@ export function UsersPage() {
 
   return (
     <AppLayout title="Usuarios" crumb="Administración · Control de acceso">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <div className="eyebrow">Administración</div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
-            Gestión de usuarios
-          </h1>
-          <p className="mt-1 max-w-xl text-sm text-ink-muted">
-            Alta, roles, estado y restablecimiento de contraseñas. Acciones
-            tenant-scoped y auditadas.
-          </p>
-        </div>
-        <Button variant="primary" onClick={() => setCreateOpen(true)}>
-          + Nuevo usuario
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow="Administración"
+        title="Gestión de"
+        accent="usuarios"
+        subtitle="Alta, roles, estado y restablecimiento de contraseñas. Acciones tenant-scoped y auditadas."
+        actions={
+          <>
+            <div className="card-premium px-4 py-3">
+              <div className="eyebrow mb-1.5">Usuarios</div>
+              <div className="flex items-center gap-2">
+                <UserIcon className="h-5 w-5 text-accent" />
+                <AnimatedNumber
+                  value={total}
+                  className="font-display text-2xl font-bold tabular-nums text-ink"
+                />
+              </div>
+            </div>
+            <Button
+              variant="primary"
+              className="shadow-glow-accent"
+              onClick={() => setCreateOpen(true)}
+            >
+              + Nuevo usuario
+            </Button>
+          </>
+        }
+      />
 
       {/* Toolbar */}
-      <div className="panel mb-4 flex flex-wrap items-center gap-3 p-4">
+      <div className="reveal card-premium mb-4 flex flex-wrap items-center gap-3 p-4" style={{ animationDelay: "120ms" }}>
         <form onSubmit={onSearch} className="relative flex-1 min-w-[220px]">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
           <input
@@ -188,16 +202,16 @@ export function UsersPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
+        <div className="reveal mb-4 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
           {error}
         </div>
       )}
 
       {/* Table */}
-      <div className="panel overflow-hidden">
+      <div className="reveal card-premium overflow-hidden !p-0" style={{ animationDelay: "200ms" }}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
+            <tr className="border-b border-line bg-bg-sunken/60 text-left font-mono text-[11px] uppercase tracking-wider text-ink-faint">
               <th className="px-4 py-3 font-medium">Usuario</th>
               <th className="px-4 py-3 font-medium">Rol</th>
               <th className="px-4 py-3 font-medium">Estado</th>
@@ -226,11 +240,24 @@ export function UsersPage() {
                 return (
                   <tr
                     key={u.id}
-                    className="border-b border-line/60 last:border-0 hover:bg-panel-hover/40"
+                    className="border-b border-line/60 transition-colors last:border-0 hover:bg-panel-hover/50"
                   >
                     <td className="px-4 py-3">
-                      <div className="font-medium text-ink">{u.full_name}</div>
-                      <div className="text-xs text-ink-faint">{u.email}</div>
+                      <div className="flex items-center gap-3">
+                        <span className="metric-chip h-8 w-8 shrink-0 font-display text-[11px] font-bold text-accent">
+                          {u.full_name
+                            .trim()
+                            .split(/\s+/)
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .map((p) => p[0]?.toUpperCase() ?? "")
+                            .join("") || "—"}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-ink">{u.full_name}</div>
+                          <div className="truncate font-mono text-xs text-ink-faint">{u.email}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`pill ${ROLE_BADGE[u.role]}`}>{u.role}</span>
@@ -249,7 +276,7 @@ export function UsersPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-ink-muted">{u.phone || "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-ink-muted">{u.phone || "—"}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2 text-xs">
                         <button

@@ -3,10 +3,22 @@ import { Link } from "react-router-dom";
 
 import { updateMe } from "@/api/users";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ShieldIcon } from "@/components/ui/icons";
 import { useAuthStore } from "@/store/authStore";
+
+/** Build up-to-two-letter initials from a display name. */
+function initials(name: string | undefined): string {
+  if (!name) return "—";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "—";
+  return parts
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
 const ROLE_BADGE: Record<string, string> = {
   superadmin: "border-accent/30 bg-accent/10 text-accent",
@@ -54,13 +66,31 @@ export function ProfilePage() {
 
   return (
     <AppLayout title="Mi perfil" crumb="Cuenta">
-      <div className="mb-6">
-        <div className="eyebrow">Cuenta</div>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">Mi perfil</h1>
-      </div>
+      <PageHeader
+        eyebrow="Cuenta"
+        title="Mi"
+        accent="perfil"
+        subtitle="Tus datos personales, rol y configuración de seguridad."
+        actions={
+          <div className="card-premium flex items-center gap-3 px-4 py-3">
+            <span className="metric-chip h-11 w-11 shrink-0 font-display text-base font-bold text-accent shadow-glow-accent">
+              {initials(user?.full_name)}
+            </span>
+            <div className="min-w-0">
+              <div className="truncate font-display text-sm font-semibold text-ink">
+                {user?.full_name ?? "—"}
+              </div>
+              <div className="truncate font-mono text-[11px] text-ink-faint">
+                {user?.email ?? "—"}
+              </div>
+            </div>
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card title="Datos personales" className="lg:col-span-2">
+        <div className="reveal lg:col-span-2" style={{ animationDelay: "120ms" }}>
+        <Card title="Datos personales" accentDot className="h-full">
           <form className="space-y-4" onSubmit={onSubmit}>
             <div>
               <label className="field-label">Nombre completo</label>
@@ -103,9 +133,10 @@ export function ProfilePage() {
             </Button>
           </form>
         </Card>
+        </div>
 
-        <div className="space-y-4">
-          <Card title="Rol y acceso">
+        <div className="reveal space-y-4" style={{ animationDelay: "200ms" }}>
+          <Card title="Rol y acceso" accentDot>
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-ink-muted">Rol</span>
@@ -128,7 +159,7 @@ export function ProfilePage() {
             </div>
           </Card>
 
-          <Card title="Seguridad">
+          <Card title="Seguridad" accentDot>
             <p className="flex items-start gap-2 text-sm text-ink-muted">
               <ShieldIcon width={16} height={16} className="mt-0.5 shrink-0 text-teal" />
               Mantén tu cuenta segura cambiando tu contraseña periódicamente.
