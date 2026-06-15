@@ -33,6 +33,16 @@
   *::-webkit-scrollbar-track {
     background: transparent;
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
 }
 
 @layer components {
@@ -80,5 +90,63 @@
       ),
       linear-gradient(90deg, rgba(79, 156, 255, 0.06) 1px, transparent 1px);
     background-size: 48px 48px;
+  }
+
+  /* ---- Command-center premium primitives ---- */
+  .text-gradient {
+    @apply bg-accent-gradient bg-clip-text text-transparent;
+  }
+
+  .card-premium {
+    @apply relative rounded-card border border-line bg-gradient-to-b from-panel-raised to-panel shadow-panel transition-all duration-300;
+  }
+  .card-premium::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(135deg, #4f9cff 0%, #2dd4bf 100%);
+    opacity: 0.6;
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    pointer-events: none;
+  }
+  .card-premium:hover {
+    @apply border-line-strong shadow-card-hover -translate-y-0.5;
+  }
+
+  .reveal {
+    @apply animate-fade-up;
+  }
+
+  .aura {
+    @apply pointer-events-none absolute;
+    background: radial-gradient(
+      closest-side,
+      rgba(79, 156, 255, 0.18),
+      transparent
+    );
+    filter: blur(20px);
+  }
+  .aura-teal {
+    background: radial-gradient(
+      closest-side,
+      rgba(45, 212, 191, 0.16),
+      transparent
+    );
+  }
+
+  .grain {
+    @apply pointer-events-none fixed inset-0;
+    z-index: 0;
+    opacity: 0.035;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .metric-chip {
+    @apply grid place-items-center rounded-xl border border-line bg-panel;
   }
 }
