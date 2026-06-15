@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.routers import (
     analytics,
+    audit,
     auth,
     health,
     maps,
@@ -118,7 +119,7 @@ def _configure_error_handlers(app: FastAPI) -> None:
 def _register_routers(app: FastAPI) -> None:
     """Mount all API routers under the configured prefix."""
     prefix = settings.API_PREFIX
-    for module in (health, auth, users, organizations, maps, analytics, sources):
+    for module in (health, auth, users, organizations, maps, analytics, sources, audit):
         app.include_router(module.router, prefix=prefix)
 
 
