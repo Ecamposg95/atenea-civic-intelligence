@@ -5,6 +5,7 @@ import { getOverview } from "@/api/analytics";
 import { getAreas } from "@/api/maps";
 import { getSources } from "@/api/sources";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { CoverageBars, type CoverageDatum } from "@/components/dashboards/CoverageBars";
 import { ParticipationChart } from "@/components/dashboards/ParticipationChart";
 import { Heatmap } from "@/components/charts/Heatmap";
@@ -137,49 +138,13 @@ export function DashboardPage() {
   return (
     <AppLayout title="Centro de Mando" crumb="Civic Intelligence Overview">
       {/* ---- Hero ---- */}
-      <section className="relative mb-7 overflow-hidden">
-        <div className="aura -left-16 -top-24 h-72 w-72" aria-hidden="true" />
-        <div className="aura aura-teal right-0 -top-16 h-64 w-64" aria-hidden="true" />
-
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="reveal min-w-0" style={{ animationDelay: "0ms" }}>
-            <div className="eyebrow">Executive briefing</div>
-            <h1 className="mt-2 font-display text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-5xl">
-              <span className="text-gradient">Centro de Mando</span>
-              <br className="hidden sm:block" />
-              <span className="text-ink"> Civic Intelligence</span>
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-muted">
-              Vista institucional en tiempo real de cobertura electoral,
-              participación y gobernanza de datos territoriales.
-            </p>
-
-            {/* Live status chips */}
-            <div
-              className="reveal mt-5 flex flex-wrap items-center gap-2.5"
-              style={{ animationDelay: "120ms" }}
-            >
-              <span className="pill border-line-strong font-mono uppercase tracking-wider text-ink-muted">
-                Producción
-              </span>
-              <span className="pill border-teal/30 bg-teal/10 text-teal">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-pulse-glow rounded-full bg-teal" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
-                </span>
-                Sistemas operativos
-              </span>
-              <span className="pill border-line text-ink-muted">
-                Actualizado {relativeTime(data?.generated_at)}
-              </span>
-            </div>
-          </div>
-
-          {/* Real 14-day activity sparkline + export */}
-          <div
-            className="reveal flex shrink-0 items-end gap-4"
-            style={{ animationDelay: "200ms" }}
-          >
+      <PageHeader
+        eyebrow="Executive briefing"
+        title="Centro de Mando"
+        accent="Civic Intelligence"
+        subtitle="Vista institucional en tiempo real de cobertura electoral, participación y gobernanza de datos territoriales."
+        actions={
+          <>
             {activitySeries.length > 0 && (
               <div className="card-premium px-4 py-3">
                 <div className="eyebrow mb-1.5">Actividad 14d</div>
@@ -194,9 +159,26 @@ export function DashboardPage() {
             <Button variant="primary" className="shadow-glow-accent">
               Exportar briefing
             </Button>
-          </div>
+          </>
+        }
+      >
+        {/* Live status chips */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="pill border-line-strong font-mono uppercase tracking-wider text-ink-muted">
+            Producción
+          </span>
+          <span className="pill border-teal/30 bg-teal/10 text-teal">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-pulse-glow rounded-full bg-teal" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
+            </span>
+            Sistemas operativos
+          </span>
+          <span className="pill border-line text-ink-muted">
+            Actualizado {relativeTime(data?.generated_at)}
+          </span>
         </div>
-      </section>
+      </PageHeader>
 
       {/* ---- KPI row (animated counters, real values, no fabricated trends) ---- */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

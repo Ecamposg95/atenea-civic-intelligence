@@ -19,9 +19,16 @@ export function OrganizationSettingsPage() {
   }, []);
 
   const Row = ({ label, value, mono }: { label: string; value: string; mono?: boolean }) => (
-    <div className="flex items-center justify-between border-b border-line/60 py-3 last:border-0">
-      <span className="text-sm text-ink-muted">{label}</span>
-      <span className={`text-sm text-ink ${mono ? "font-mono text-xs text-ink-faint" : ""}`}>
+    <div className="flex items-center justify-between gap-4 border-b border-line/60 py-3 last:border-0">
+      <span className="shrink-0 text-sm text-ink-muted">{label}</span>
+      <span
+        className={
+          mono
+            ? "truncate font-mono text-xs text-ink-faint"
+            : "truncate text-sm text-ink"
+        }
+        title={value}
+      >
         {value}
       </span>
     </div>
@@ -44,9 +51,13 @@ export function OrganizationSettingsPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="reveal" style={{ animationDelay: "120ms" }}>
-        <Card title="Identidad" accentDot className="h-full">
+        <Card title="Identidad" accentDot className="hud-corners h-full">
           {loading ? (
-            <div className="h-32 animate-pulse rounded-lg bg-panel-hover" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-9 animate-pulse rounded-lg bg-panel-hover" />
+              ))}
+            </div>
           ) : org ? (
             <div>
               <Row label="Nombre" value={org.name} />

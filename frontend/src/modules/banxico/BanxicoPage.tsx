@@ -52,8 +52,11 @@ export function BanxicoPage() {
         title="Indicadores"
         accent="Banxico"
         subtitle="Tipo de cambio, inflación, tasa objetivo y UDIS — contexto macro para la lectura territorial."
+        actions={<span className="pill border-line text-ink-muted">Fuente futura · Banxico SIE</span>}
       />
       <PreviewBanner note="Datos de muestra (Banxico SIE) · Preview. Las series son ilustrativas y se conectarán a la fuente real." />
+
+      {series.length === 0 && <LoadingState />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {series.map((s, i) => {
@@ -104,5 +107,15 @@ export function BanxicoPage() {
         ))}
       </div>
     </AppLayout>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="reveal grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="card-premium h-28 animate-pulse p-5" />
+      ))}
+    </div>
   );
 }

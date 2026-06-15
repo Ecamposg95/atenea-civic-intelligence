@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { DataState } from "@/components/ui/DataState";
 import { MetricCard } from "@/components/ui/MetricCard";
-import { SearchIcon } from "@/components/ui/icons";
+import { DatabaseIcon, SearchIcon } from "@/components/ui/icons";
 import { useAsync } from "@/hooks/useAsync";
 
 export function IeemPage() {
@@ -39,12 +39,17 @@ export function IeemPage() {
         subtitle="Estadística electoral oficial del Instituto Electoral del Estado de México (Registro Federal de Electores). Datos reales."
         actions={
           data && (
-            <MetricCard label={data.label} value={String(data.count)} tone="accent" />
+            <MetricCard
+              label={data.label}
+              value={String(data.count)}
+              tone="accent"
+              icon={<DatabaseIcon width={18} height={18} />}
+            />
           )
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="reveal mb-4 flex flex-wrap items-center gap-2">
         {datasets.map((d) => (
           <button
             key={d.key}
@@ -77,7 +82,14 @@ export function IeemPage() {
       <Card
         title={data?.label ?? "Dataset"}
         accentDot
-        className="card-premium hud-corners"
+        className="reveal card-premium hud-corners !p-0 overflow-hidden"
+        action={
+          data && (
+            <span className="pill border-line text-ink-muted">
+              {rows.length} de {data.count} filas
+            </span>
+          )
+        }
       >
         <DataState
           loading={loading}
@@ -86,7 +98,7 @@ export function IeemPage() {
           isEmpty={!!data && data.rows.length === 0}
           emptyMessage="El dataset no devolvió filas."
           skeleton={
-            <div className="space-y-2">
+            <div className="space-y-2 p-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div
                   key={i}
@@ -100,10 +112,10 @@ export function IeemPage() {
             <>
               <div className="max-h-[460px] overflow-auto">
                 <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-panel">
-                    <tr className="text-left text-xs uppercase tracking-wide text-ink-faint">
+                  <thead className="sticky top-0 z-10">
+                    <tr className="border-b border-line bg-bg-sunken text-left font-mono text-[11px] uppercase tracking-wider text-ink-faint">
                       {data.columns.map((c) => (
-                        <th key={c} className="px-2 py-2">
+                        <th key={c} className="px-4 py-3 font-medium">
                           {c}
                         </th>
                       ))}
@@ -114,7 +126,7 @@ export function IeemPage() {
                       <tr>
                         <td
                           colSpan={data.columns.length}
-                          className="px-2 py-8 text-center text-sm text-ink-faint"
+                          className="px-4 py-8 text-center text-sm text-ink-faint"
                         >
                           Ninguna fila coincide con “{q}”.
                         </td>
@@ -123,12 +135,12 @@ export function IeemPage() {
                       rows.map((r, i) => (
                         <tr
                           key={i}
-                          className="border-t border-line transition-colors hover:bg-panel-hover"
+                          className="border-b border-line/60 transition-colors last:border-0 hover:bg-panel-hover/50"
                         >
                           {data.columns.map((c) => (
                             <td
                               key={c}
-                              className="px-2 py-2 font-mono text-ink-muted"
+                              className="px-4 py-3 font-mono text-ink-muted"
                             >
                               {r[c]}
                             </td>
@@ -139,7 +151,7 @@ export function IeemPage() {
                   </tbody>
                 </table>
               </div>
-              <p className="mt-3 text-[11px] text-ink-faint">
+              <p className="border-t border-line px-4 py-3 text-[11px] text-ink-faint">
                 Fuente: {data.source} · {rows.length} de {data.count} filas
               </p>
             </>

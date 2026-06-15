@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getAreas, getLayers } from "@/api/maps";
 import { getWmsLayers } from "@/api/sources";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { AreaDetailPanel } from "@/components/maps/AreaDetailPanel";
 import { LayerPanel } from "@/components/maps/LayerPanel";
 import { Legend } from "@/components/maps/Legend";
@@ -118,25 +119,13 @@ export function MapExplorerPage() {
 
   return (
     <AppLayout title="Map Explorer" crumb="Electoral & Territorial Layers">
-      {/* Hero header */}
-      <div className="relative mb-6 overflow-hidden">
-        <div className="aura -left-16 -top-24 h-72 w-72" aria-hidden="true" />
-        <div className="aura aura-teal right-0 -top-16 h-64 w-64" aria-hidden="true" />
-        <div className="reveal relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <div className="eyebrow">Geospatial intelligence</div>
-            <h1 className="mt-2 font-display text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-5xl">
-              <span className="text-gradient">Explorador Territorial</span>
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-muted">
-              Explora distritos, secciones y superficies analíticas. Activa capas
-              gobernadas (incluyendo WMS del SIGE/INE) sobre el basemap
-              institucional.
-            </p>
-          </div>
-
-          {/* Stats strip — real data from the loaded areas */}
-          <div className="reveal flex shrink-0 flex-wrap items-stretch gap-3" style={{ animationDelay: "80ms" }}>
+      <PageHeader
+        eyebrow="Geospatial intelligence"
+        title="Explorador"
+        accent="Territorial"
+        subtitle="Explora distritos, secciones y superficies analíticas. Activa capas gobernadas (incluyendo WMS del SIGE/INE) sobre el basemap institucional."
+        actions={
+          <>
             <div className="card-premium px-4 py-3">
               <div className="eyebrow mb-1.5">Áreas</div>
               <div className="flex items-center gap-2">
@@ -160,9 +149,9 @@ export function MapExplorerPage() {
                 {LEVEL_LABEL[level] ?? "—"}
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {error && (
         <div className="reveal mb-4 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">

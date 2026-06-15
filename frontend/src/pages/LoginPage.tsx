@@ -148,7 +148,7 @@ export function LoginPage() {
               </div>
             </div>
 
-            <div className="card-premium reveal p-8" style={{ animationDelay: "120ms" }}>
+            <div className="card-premium hud-corners reveal p-8" style={{ animationDelay: "120ms" }}>
               <div className="eyebrow">Iniciar sesión</div>
               <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-ink">
                 Acceso al command center

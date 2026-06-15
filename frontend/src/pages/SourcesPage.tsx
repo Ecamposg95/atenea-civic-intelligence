@@ -18,6 +18,7 @@ const KIND_BADGE: Record<string, string> = {
 
 export function SourcesPage() {
   const [sources, setSources] = useState<SourceInfo[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -30,7 +31,8 @@ export function SourcesPage() {
   useEffect(() => {
     getSources()
       .then(setSources)
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, []);
 
   const runSearch = async (q: string) => {
@@ -63,7 +65,7 @@ export function SourcesPage() {
         subtitle="Catálogo de fuentes consumibles del Instituto Nacional Electoral y datos abiertos relacionados. Consulta el catálogo de datos.gob.mx en vivo."
         actions={
           sources.length > 0 && (
-            <div className="card-premium px-4 py-3">
+            <div className="card-premium hud-corners px-4 py-3">
               <div className="eyebrow mb-1.5">Fuentes</div>
               <div className="flex items-center gap-2">
                 <DatabaseIcon className="h-5 w-5 text-accent" />
@@ -77,53 +79,58 @@ export function SourcesPage() {
         }
       />
 
-      {error && (
-        <div className="reveal mb-4 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
-          {error}
-        </div>
-      )}
-
       {/* Source registry */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {sources.map((s, i) => (
-          <div
-            key={s.id}
-            className="card-premium reveal group flex flex-col p-5"
-            style={{ animationDelay: `${120 + i * 60}ms` }}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <span className="metric-chip h-8 w-8 shrink-0 text-accent transition-colors group-hover:text-teal">
-                  <DatabaseIcon width={15} height={15} />
-                </span>
-                <h3 className="truncate text-sm font-semibold text-ink">{s.name}</h3>
-              </div>
-              <span className={`pill shrink-0 ${KIND_BADGE[s.kind] ?? "border-line"}`}>
-                {s.kind}
-              </span>
-            </div>
-            <p className="mt-3 text-xs leading-relaxed text-ink-muted">{s.notes}</p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {s.formats.map((f) => (
-                <span key={f} className="pill border-line font-mono text-ink-faint">
-                  {f}
-                </span>
-              ))}
-            </div>
-            <div className="mt-auto flex items-center justify-between gap-2 pt-3 text-[11px] text-ink-faint">
-              <span className="truncate font-mono">{s.base_url}</span>
-              {s.auth_required && (
-                <span className="pill shrink-0 border-state-warning/30 bg-state-warning/10 text-state-warning">
-                  requiere acceso
-                </span>
-              )}
-            </div>
+      <DataState
+        loading={loading}
+        error={error}
+        isEmpty={sources.length === 0}
+        emptyMessage="No hay fuentes registradas."
+        skeleton={
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-44 animate-pulse rounded-card bg-panel-hover" />
+            ))}
           </div>
-        ))}
-        {sources.length === 0 && !error && (
-          <div className="card-premium p-5 text-sm text-ink-faint">Cargando fuentes…</div>
-        )}
-      </div>
+        }
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {sources.map((s, i) => (
+            <div
+              key={s.id}
+              className="card-premium reveal group flex flex-col p-5"
+              style={{ animationDelay: `${120 + i * 60}ms` }}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="metric-chip h-8 w-8 shrink-0 text-accent transition-colors group-hover:text-teal">
+                    <DatabaseIcon width={15} height={15} />
+                  </span>
+                  <h3 className="truncate text-sm font-semibold text-ink">{s.name}</h3>
+                </div>
+                <span className={`pill shrink-0 ${KIND_BADGE[s.kind] ?? "border-line"}`}>
+                  {s.kind}
+                </span>
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-ink-muted">{s.notes}</p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {s.formats.map((f) => (
+                  <span key={f} className="pill border-line font-mono text-ink-faint">
+                    {f}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-auto flex items-center justify-between gap-2 pt-3 text-[11px] text-ink-faint">
+                <span className="truncate font-mono">{s.base_url}</span>
+                {s.auth_required && (
+                  <span className="pill shrink-0 border-state-warning/30 bg-state-warning/10 text-state-warning">
+                    requiere acceso
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </DataState>
 
       {/* CKAN dataset search */}
       <div className="reveal mt-6" style={{ animationDelay: "240ms" }}>

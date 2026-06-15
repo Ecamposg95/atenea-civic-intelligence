@@ -11,9 +11,10 @@ export function ComingSoonPage({ module }: { module: ModuleDef }) {
       <section className="relative mb-7 overflow-hidden">
         <div className="aura -left-16 -top-24 h-72 w-72" aria-hidden="true" />
         <div className="aura aura-teal right-0 -top-16 h-64 w-64" aria-hidden="true" />
+        <div className="aura aura-amber left-1/3 -top-10 h-56 w-56" aria-hidden="true" />
 
         <div className="reveal relative flex items-start gap-5">
-          <span className="metric-chip h-14 w-14 shrink-0 text-accent shadow-glow-accent">
+          <span className="metric-chip hud-corners h-14 w-14 shrink-0 text-accent shadow-glow-accent">
             <Icon width={26} height={26} />
           </span>
           <div className="min-w-0">
@@ -56,10 +57,22 @@ export function ComingSoonPage({ module }: { module: ModuleDef }) {
         </div>
 
         <div className="reveal" style={{ animationDelay: "200ms" }}>
-          <Card title="Fuente de datos prevista" accentDot className="h-full">
+          <Card
+            title="Fuente de datos prevista"
+            accentDot
+            className="h-full"
+            action={<span className="pill border-line text-ink-muted">por conectar</span>}
+          >
             <div className="rounded-lg border border-line bg-bg-sunken px-4 py-3.5">
+              <div className="eyebrow mb-2 flex items-center gap-2 text-teal">
+                <span className="h-1.5 w-1.5 rounded-full bg-teal shadow-glow-teal" />
+                Origen previsto
+              </div>
               <p className="text-sm leading-relaxed text-ink-muted">{soon?.dataSource}</p>
             </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">
+              Aún no disponible — esta vista es una previsualización del módulo.
+            </p>
           </Card>
         </div>
       </div>

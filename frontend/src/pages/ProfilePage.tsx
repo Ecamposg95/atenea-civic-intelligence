@@ -72,7 +72,7 @@ export function ProfilePage() {
         accent="perfil"
         subtitle="Tus datos personales, rol y configuración de seguridad."
         actions={
-          <div className="card-premium flex items-center gap-3 px-4 py-3">
+          <div className="card-premium hud-corners flex items-center gap-3 px-4 py-3">
             <span className="metric-chip h-11 w-11 shrink-0 font-display text-base font-bold text-accent shadow-glow-accent">
               {initials(user?.full_name)}
             </span>

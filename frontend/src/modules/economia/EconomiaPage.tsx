@@ -67,10 +67,11 @@ export function EconomiaPage() {
         title="Economía"
         accent="Territorial"
         subtitle="PIB, empleo, complejidad económica y comercio por entidad — base para la estrategia territorial."
+        actions={<span className="pill border-line text-ink-muted">Fuente futura · DataMéxico</span>}
       />
       <PreviewBanner note="Datos de muestra (DataMéxico) · Preview. Las cifras son ilustrativas y se conectarán a la fuente real." />
 
-      {data && (
+      {data ? (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
@@ -157,8 +158,20 @@ export function EconomiaPage() {
 
           <EntityTable entities={data.entities} />
         </>
+      ) : (
+        <LoadingState />
       )}
     </AppLayout>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="reveal grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="card-premium h-28 animate-pulse p-5" />
+      ))}
+    </div>
   );
 }
 

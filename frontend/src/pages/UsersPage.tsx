@@ -188,9 +188,10 @@ export function UsersPage() {
           <option value="email:asc">Email A–Z</option>
           <option value="role:asc">Rol</option>
         </select>
-        <label className="flex items-center gap-2 text-sm text-ink-muted">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-muted">
           <input
             type="checkbox"
+            className="h-4 w-4 rounded border-line bg-bg-sunken accent-accent"
             checked={includeDeleted}
             onChange={(e) => {
               setOffset(0);
@@ -208,8 +209,8 @@ export function UsersPage() {
       )}
 
       {/* Table */}
-      <div className="reveal card-premium overflow-hidden !p-0" style={{ animationDelay: "200ms" }}>
-        <table className="w-full text-sm">
+      <div className="reveal card-premium overflow-x-auto !p-0" style={{ animationDelay: "200ms" }}>
+        <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-line bg-bg-sunken/60 text-left font-mono text-[11px] uppercase tracking-wider text-ink-faint">
               <th className="px-4 py-3 font-medium">Usuario</th>
@@ -220,16 +221,19 @@ export function UsersPage() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-ink-faint">
-                  Cargando…
-                </td>
-              </tr>
-            )}
+            {loading &&
+              Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i} className="border-b border-line/60 last:border-0">
+                  {Array.from({ length: 5 }).map((__, j) => (
+                    <td key={j} className="px-4 py-3.5">
+                      <div className="h-5 animate-pulse rounded bg-panel-hover" />
+                    </td>
+                  ))}
+                </tr>
+              ))}
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-ink-faint">
+                <td colSpan={5} className="px-4 py-12 text-center text-sm text-ink-faint">
                   Sin usuarios para los filtros actuales.
                 </td>
               </tr>
@@ -263,45 +267,47 @@ export function UsersPage() {
                       <span className={`pill ${ROLE_BADGE[u.role]}`}>{u.role}</span>
                     </td>
                     <td className="px-4 py-3">
-                      {u.is_active ? (
-                        <span className="pill border-teal/30 bg-teal/10 text-teal">Activo</span>
-                      ) : (
-                        <span className="pill border-state-critical/30 bg-state-critical/10 text-state-critical">
-                          Inactivo
-                        </span>
-                      )}
-                      {u.must_change_password && (
-                        <span className="pill ml-1 border-state-warning/30 bg-state-warning/10 text-state-warning">
-                          Cambio pendiente
-                        </span>
-                      )}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {u.is_active ? (
+                          <span className="pill border-teal/30 bg-teal/10 text-teal">Activo</span>
+                        ) : (
+                          <span className="pill border-state-critical/30 bg-state-critical/10 text-state-critical">
+                            Inactivo
+                          </span>
+                        )}
+                        {u.must_change_password && (
+                          <span className="pill border-state-warning/30 bg-state-warning/10 text-state-warning">
+                            Cambio pendiente
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-ink-muted">{u.phone || "—"}</td>
                     <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2 text-xs">
+                      <div className="flex flex-wrap justify-end gap-1.5 text-xs">
                         <button
-                          className="text-accent hover:underline"
+                          className="rounded-md border border-line bg-bg-sunken px-2 py-1 font-medium text-accent transition-colors hover:border-accent/40 hover:bg-accent/10"
                           onClick={() => setEditing(u)}
                         >
                           Editar
                         </button>
                         {u.is_active ? (
                           <button
-                            className="text-ink-muted hover:text-ink"
+                            className="rounded-md border border-line bg-bg-sunken px-2 py-1 font-medium text-ink-muted transition-colors hover:border-line-strong hover:text-ink"
                             onClick={() => withRefresh(() => setActive(u.id, false))}
                           >
                             Desactivar
                           </button>
                         ) : (
                           <button
-                            className="text-teal hover:underline"
+                            className="rounded-md border border-line bg-bg-sunken px-2 py-1 font-medium text-teal transition-colors hover:border-teal/40 hover:bg-teal/10"
                             onClick={() => withRefresh(() => setActive(u.id, true))}
                           >
                             Activar
                           </button>
                         )}
                         <button
-                          className="text-ink-muted hover:text-ink"
+                          className="rounded-md border border-line bg-bg-sunken px-2 py-1 font-medium text-ink-muted transition-colors hover:border-line-strong hover:text-ink"
                           onClick={() =>
                             withRefresh(async () => {
                               const r = await resetPassword(u.id);
@@ -315,14 +321,14 @@ export function UsersPage() {
                           Reset clave
                         </button>
                         <button
-                          className="text-state-critical hover:underline"
+                          className="rounded-md border border-line bg-bg-sunken px-2 py-1 font-medium text-state-critical transition-colors hover:border-state-critical/40 hover:bg-state-critical/10"
                           onClick={() => setConfirmDelete(u)}
                         >
                           Eliminar
                         </button>
                         {includeDeleted && !deleted && (
                           <button
-                            className="text-teal hover:underline"
+                            className="rounded-md border border-line bg-bg-sunken px-2 py-1 font-medium text-teal transition-colors hover:border-teal/40 hover:bg-teal/10"
                             onClick={() => withRefresh(() => restoreUser(u.id))}
                           >
                             Restaurar
@@ -628,9 +634,10 @@ function EditUserModal({
             />
           </div>
         </div>
-        <label className="flex items-center gap-2 text-sm text-ink-muted">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-muted">
           <input
             type="checkbox"
+            className="h-4 w-4 rounded border-line bg-bg-sunken accent-accent"
             checked={Boolean(form.is_active)}
             onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
           />

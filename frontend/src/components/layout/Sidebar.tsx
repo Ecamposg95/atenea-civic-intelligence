@@ -12,9 +12,9 @@ import { useAuthStore } from "@/store/authStore";
 import type { UserRole } from "@/types/auth";
 
 const navItem =
-  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors";
+  "group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all";
 const sectionLabel =
-  "mt-7 mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint";
+  "mt-5 mb-1.5 flex items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint";
 
 function visibleFor(role: string | undefined, m: ModuleDef): boolean {
   if (!m.roles) return true;
@@ -27,24 +27,28 @@ export function Sidebar() {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `${navItem} ${
-      isActive ? "bg-accent/10 text-accent" : "text-ink-muted hover:bg-panel-hover hover:text-ink"
+      isActive
+        ? "bg-accent/10 text-accent ring-1 ring-inset ring-accent/25 shadow-glow-accent"
+        : "text-ink-muted hover:bg-panel-hover hover:text-ink"
     }`;
 
   return (
-    <aside className="relative z-10 flex w-64 shrink-0 flex-col border-r border-line bg-panel px-4 py-5">
+    <aside className="relative z-10 flex w-64 shrink-0 flex-col border-r border-line bg-panel px-3 py-5">
       <div className="flex items-center gap-3 px-2">
-        <div className="grid h-9 w-9 place-items-center rounded-lg bg-accent/15 text-accent">
+        <div className="grid h-9 w-9 place-items-center rounded-lg bg-accent/15 text-accent shadow-glow-accent">
           <LogoMark width={20} height={20} />
         </div>
         <div>
-          <div className="text-sm font-semibold tracking-tight text-ink">Ágora</div>
+          <div className="font-display text-sm font-semibold tracking-tight text-ink">
+            Ágora
+          </div>
           <div className="text-[11px] uppercase tracking-[0.16em] text-ink-faint">
             Civic Intelligence
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="mt-2 flex-1 overflow-y-auto pr-1">
         {SECTION_ORDER.map((section) => {
           const items = MODULES.filter(
             (m) => m.section === section && visibleFor(role, m),
@@ -52,14 +56,23 @@ export function Sidebar() {
           if (items.length === 0) return null;
           return (
             <div key={section}>
-              <div className={sectionLabel}>{SECTION_LABELS[section]}</div>
-              <nav className="flex flex-col gap-1">
+              <div className={sectionLabel}>
+                <span>{SECTION_LABELS[section]}</span>
+                <span className="text-ink-faint/60">{items.length}</span>
+              </div>
+              <nav className="flex flex-col gap-0.5">
                 {items.map((m) => {
                   const Icon = m.icon;
                   return (
-                    <NavLink key={m.key} to={m.path} end={m.end} className={linkClass}>
-                      <Icon width={18} height={18} />
-                      <span className="flex-1">{m.label}</span>
+                    <NavLink
+                      key={m.key}
+                      to={m.path}
+                      end={m.end}
+                      className={linkClass}
+                      title={m.label}
+                    >
+                      <Icon width={17} height={17} className="shrink-0" />
+                      <span className="min-w-0 flex-1 truncate">{m.label}</span>
                       <ModuleBadge state={m.state} />
                     </NavLink>
                   );
@@ -70,7 +83,7 @@ export function Sidebar() {
         })}
       </div>
 
-      <div className="px-3 pt-6 text-[11px] leading-relaxed text-ink-faint">
+      <div className="mt-2 border-t border-line px-3 pt-4 text-[11px] leading-relaxed text-ink-faint">
         Atlas Tech · GovTech
         <br />
         <span className="opacity-70">v0.2.0 · Platform demo</span>

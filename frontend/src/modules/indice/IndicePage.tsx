@@ -144,7 +144,7 @@ export function IndicePage() {
         accent="Cívico-Territorial"
         subtitle="Síntesis que superpone señales cívicas y socioeconómicas por territorio: combina nuestra cartografía real con dimensiones ilustrativas para un solo puntaje comparable."
         actions={
-          <div className="card-premium flex items-center gap-4 px-5 py-4">
+          <div className="card-premium hud-corners flex items-center gap-4 px-5 py-4">
             <RadialGauge value={avg} label="Promedio nal." size={104} />
             <div>
               <div className="eyebrow mb-1">Índice promedio</div>

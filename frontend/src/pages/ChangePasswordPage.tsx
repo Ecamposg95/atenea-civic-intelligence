@@ -78,7 +78,7 @@ export function ChangePasswordPage() {
           </div>
         </div>
 
-        <div className="card-premium reveal p-8" style={{ animationDelay: "120ms" }}>
+        <div className="card-premium hud-corners reveal p-8" style={{ animationDelay: "120ms" }}>
           <div className="eyebrow">Seguridad</div>
           <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-ink">
             {forced ? "Cambia tu contraseña temporal" : "Cambiar contraseña"}
@@ -116,6 +116,9 @@ export function ChangePasswordPage() {
                 onChange={(e) => setNext(e.target.value)}
                 required
               />
+              <p className="mt-1.5 text-[11px] text-ink-faint">
+                Mínimo 8 caracteres.
+              </p>
             </div>
             <div>
               <label className="field-label" htmlFor="confirm">

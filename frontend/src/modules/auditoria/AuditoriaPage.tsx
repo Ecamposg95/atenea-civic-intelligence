@@ -100,7 +100,7 @@ export function AuditoriaPage() {
                 value={actionInput}
                 onChange={(e) => setActionInput(e.target.value)}
                 placeholder="Filtrar por acción…"
-                className="field-input w-auto pl-9"
+                className="field-input w-44 pl-9 sm:w-56"
               />
             </div>
           }
@@ -116,9 +116,14 @@ export function AuditoriaPage() {
                 </tr>
               </thead>
               <tbody>
-                {loading && (
-                  <tr><td colSpan={4} className="px-4 py-10 text-center text-ink-faint">Cargando…</td></tr>
-                )}
+                {loading &&
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={i} className="border-b border-line/60 last:border-0">
+                      <td colSpan={4} className="px-4 py-2.5">
+                        <div className="h-6 animate-pulse rounded-md bg-panel-hover" />
+                      </td>
+                    </tr>
+                  ))}
                 {!loading && items.map((e) => (
                   <tr
                     key={e.id}
@@ -141,8 +146,22 @@ export function AuditoriaPage() {
           <div className="flex items-center justify-between border-t border-line px-4 py-3 text-sm text-ink-muted">
             <span className="font-mono text-xs">{data ? `${offset + 1}–${Math.min(offset + PAGE, data.total)} de ${data.total}` : ""}</span>
             <div className="flex gap-2">
-              <button disabled={loading || offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))} className="pill border-line disabled:opacity-40">Anterior</button>
-              <button disabled={loading || !data || offset + PAGE >= data.total} onClick={() => setOffset(offset + PAGE)} className="pill border-line disabled:opacity-40">Siguiente</button>
+              <button
+                type="button"
+                disabled={loading || offset === 0}
+                onClick={() => setOffset(Math.max(0, offset - PAGE))}
+                className="btn-ghost disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <button
+                type="button"
+                disabled={loading || !data || offset + PAGE >= data.total}
+                onClick={() => setOffset(offset + PAGE)}
+                className="btn-ghost disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Siguiente
+              </button>
             </div>
           </div>
         </Card>

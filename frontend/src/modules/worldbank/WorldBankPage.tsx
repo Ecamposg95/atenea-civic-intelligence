@@ -26,7 +26,18 @@ function IndicatorCard({ code, label }: { code: string; label: string }) {
   }));
 
   return (
-    <Card title={label} accentDot className="card-premium hud-corners">
+    <Card
+      title={label}
+      accentDot
+      className="card-premium hud-corners h-full"
+      action={
+        data?.latest && (
+          <span className="pill border-line font-mono text-ink-muted">
+            {data.latest.year}
+          </span>
+        )
+      }
+    >
       <DataState
         loading={loading}
         error={error}
@@ -39,13 +50,8 @@ function IndicatorCard({ code, label }: { code: string; label: string }) {
       >
         {data && (
           <>
-            <div className="mb-2 font-display text-2xl font-bold tabular-nums text-ink">
+            <div className="mb-2 font-display text-3xl font-bold tabular-nums tracking-tight text-ink">
               {data.latest ? compact.format(data.latest.value) : "—"}
-              {data.latest && (
-                <span className="ml-2 font-mono text-xs text-ink-faint">
-                  {data.latest.year}
-                </span>
-              )}
             </div>
             <ParticipationChart
               data={series}
@@ -73,8 +79,14 @@ export function WorldBankPage() {
         subtitle="Series macroeconómicas de México (Banco Mundial). Datos reales."
       />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {CODES.map((c) => (
-          <IndicatorCard key={c.code} {...c} />
+        {CODES.map((c, i) => (
+          <div
+            key={c.code}
+            className="reveal"
+            style={{ animationDelay: `${i * 80}ms` }}
+          >
+            <IndicatorCard {...c} />
+          </div>
         ))}
       </div>
     </AppLayout>
