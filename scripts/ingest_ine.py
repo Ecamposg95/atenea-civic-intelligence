@@ -30,11 +30,12 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
-from sqlalchemy import select  # noqa: E402
+from sqlalchemy import delete as sa_delete, select  # noqa: E402
 
 from app.database import SessionLocal  # noqa: E402
 from app.integrations.ine import candidaturas, cartografia, ckan, prep  # noqa: E402
-from app.integrations.ine.config import SOURCES  # noqa: E402
+from app.integrations.ine.config import SOURCES, map_level  # noqa: E402
+from app.models.electoral_area import ElectoralArea  # noqa: E402
 from app.models.organization import Organization  # noqa: E402
 from app.services.ine_service import ingest_feature_collection  # noqa: E402
 
@@ -71,6 +72,16 @@ def cmd_cartografia(args: argparse.Namespace) -> None:
         ).scalar_one_or_none()
         if org is None:
             sys.exit(f"Organization with slug '{args.org}' not found. Seed it first.")
+        if args.replace:
+            lvl = map_level(args.level)
+            deleted = db.execute(
+                sa_delete(ElectoralArea).where(
+                    ElectoralArea.organization_id == org.id,
+                    ElectoralArea.level == lvl,
+                )
+            ).rowcount
+            db.commit()
+            print(f"Replace: deleted {deleted} existing level={lvl.value} areas for '{args.org}'")
         count = ingest_feature_collection(
             db,
             organization_id=org.id,
@@ -123,6 +134,8 @@ def main() -> None:
                         help="Property to filter features by (e.g. NAME_1)")
     p_cart.add_argument("--filter-value", dest="filter_value", default=None,
                         help="Keep only features whose --filter-prop equals this")
+    p_cart.add_argument("--replace", action="store_true",
+                        help="Delete existing areas of this org+level before inserting")
     p_cart.set_defaults(func=cmd_cartografia)
 
     p_cand = sub.add_parser("candidaturas", help="Fetch Candidaturas MX collection")
