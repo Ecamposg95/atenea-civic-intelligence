@@ -3,9 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { getAreas, getLayers } from "@/api/maps";
 import { getWmsLayers } from "@/api/sources";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { AreaDetailPanel } from "@/components/maps/AreaDetailPanel";
 import { LayerPanel } from "@/components/maps/LayerPanel";
-import { MapCanvas, type WmsOverlay } from "@/components/maps/MapCanvas";
-import type { AreasResponse, MapLayer } from "@/types/maps";
+import { Legend } from "@/components/maps/Legend";
+import { MapCanvas, type Basemap, type WmsOverlay } from "@/components/maps/MapCanvas";
+import type { AreaProperties, AreasResponse, MapLayer } from "@/types/maps";
 
 export function MapExplorerPage() {
   const [layers, setLayers] = useState<MapLayer[]>([]);
@@ -14,6 +16,14 @@ export function MapExplorerPage() {
   const [wmsTiles, setWmsTiles] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Map robustness controls.
+  const [level, setLevel] = useState<string>(""); // "" = all
+  const [choropleth, setChoropleth] = useState(true);
+  const [basemap, setBasemap] = useState<Basemap>("dark");
+  const [selected, setSelected] = useState<(AreaProperties & { metric: number }) | null>(null);
+  const [search, setSearch] = useState("");
+  const [fitKey, setFitKey] = useState(0);
 
   useEffect(() => {
     Promise.allSettled([getLayers(), getAreas(), getWmsLayers()])
@@ -54,6 +64,13 @@ export function MapExplorerPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Re-fetch areas whenever the selected level changes.
+  useEffect(() => {
+    getAreas(level || undefined)
+      .then(setAreas)
+      .catch(() => setAreas({ type: "FeatureCollection", features: [] }));
+  }, [level]);
+
   const toggle = (id: string) =>
     setLayers((prev) =>
       prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l)),
@@ -72,6 +89,19 @@ export function MapExplorerPage() {
         .map((l) => ({ id: l.id, tiles: wmsTiles[l.id], visible: l.visible })),
     [layers, wmsTiles],
   );
+
+  // Client-side name search filter over the loaded areas.
+  const filteredAreas = useMemo(() => {
+    if (!areas) return areas;
+    if (!search.trim()) return areas;
+    const q = search.toLowerCase();
+    return {
+      ...areas,
+      features: areas.features.filter((f) =>
+        f.properties.name.toLowerCase().includes(q),
+      ),
+    };
+  }, [areas, search]);
 
   return (
     <AppLayout title="Map Explorer" crumb="Electoral & Territorial Layers">
@@ -94,7 +124,62 @@ export function MapExplorerPage() {
 
       <div className="grid h-[calc(100vh-15rem)] grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
         <LayerPanel layers={layers} onToggle={toggle} loading={loading} />
-        <MapCanvas areas={areas} showAreas={showAreas} wmsLayers={wmsOverlays} />
+        <div className="flex h-full flex-col">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <select
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              className="rounded-lg border border-line bg-bg-sunken px-2 py-1.5 text-sm text-ink"
+            >
+              <option value="">Todos los niveles</option>
+              <option value="state">Entidad</option>
+              <option value="district">Distrito</option>
+              <option value="municipality">Municipio</option>
+            </select>
+            <select
+              value={basemap}
+              onChange={(e) => setBasemap(e.target.value as Basemap)}
+              className="rounded-lg border border-line bg-bg-sunken px-2 py-1.5 text-sm text-ink"
+            >
+              <option value="dark">Mapa oscuro</option>
+              <option value="satellite">Satélite</option>
+            </select>
+            <label className="flex items-center gap-2 text-sm text-ink-muted">
+              <input
+                type="checkbox"
+                checked={choropleth}
+                onChange={(e) => setChoropleth(e.target.checked)}
+              />{" "}
+              Coropleta
+            </label>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar área…"
+              className="rounded-lg border border-line bg-bg-sunken px-3 py-1.5 text-sm text-ink placeholder:text-ink-faint"
+            />
+            <button
+              onClick={() => setFitKey((k) => k + 1)}
+              className="pill border-line text-ink-muted"
+            >
+              Encadrar
+            </button>
+          </div>
+          <div className="relative flex-1">
+            <MapCanvas
+              key={basemap}
+              areas={filteredAreas}
+              showAreas={showAreas}
+              wmsLayers={wmsOverlays}
+              choropleth={choropleth}
+              basemap={basemap}
+              fitKey={fitKey}
+              onSelect={setSelected}
+            />
+            {choropleth && <Legend label="Participación" />}
+            <AreaDetailPanel area={selected} onClose={() => setSelected(null)} />
+          </div>
+        </div>
       </div>
     </AppLayout>
   );
