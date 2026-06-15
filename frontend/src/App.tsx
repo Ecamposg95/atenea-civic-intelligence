@@ -1,35 +1,14 @@
 import { JSX, Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
+import { ComingSoonPage } from "@/components/modules/ComingSoonPage";
+import { MODULES } from "@/modules/registry";
 import { useAuthStore } from "@/store/authStore";
 
 // Route-level code splitting: heavy deps (MapLibre, Recharts) load only on the
 // routes that need them, keeping the initial bundle small.
 const LoginPage = lazy(() =>
   import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })),
-);
-const DashboardPage = lazy(() =>
-  import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
-);
-const MapExplorerPage = lazy(() =>
-  import("@/pages/MapExplorerPage").then((m) => ({ default: m.MapExplorerPage })),
-);
-const AnalyticsPage = lazy(() =>
-  import("@/pages/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage })),
-);
-const UsersPage = lazy(() =>
-  import("@/pages/UsersPage").then((m) => ({ default: m.UsersPage })),
-);
-const ProfilePage = lazy(() =>
-  import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
-);
-const SourcesPage = lazy(() =>
-  import("@/pages/SourcesPage").then((m) => ({ default: m.SourcesPage })),
-);
-const OrganizationSettingsPage = lazy(() =>
-  import("@/pages/OrganizationSettingsPage").then((m) => ({
-    default: m.OrganizationSettingsPage,
-  })),
 );
 const ChangePasswordPage = lazy(() =>
   import("@/pages/ChangePasswordPage").then((m) => ({ default: m.ChangePasswordPage })),
@@ -83,62 +62,18 @@ export default function App() {
               </RequireSession>
             }
           />
-          <Route
-            path="/"
-            element={
-              <RequireAuth>
-                <DashboardPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/maps"
-            element={
-              <RequireAuth>
-                <MapExplorerPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/analytics"
-            element={
-              <RequireAuth>
-                <AnalyticsPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/users"
-            element={
-              <RequireAuth>
-                <UsersPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/sources"
-            element={
-              <RequireAuth>
-                <SourcesPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/organization"
-            element={
-              <RequireAuth>
-                <OrganizationSettingsPage />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <RequireAuth>
-                <ProfilePage />
-              </RequireAuth>
-            }
-          />
+          {MODULES.map((m) => {
+            const Element = m.element;
+            const node =
+              m.state === "soon" || !Element ? <ComingSoonPage module={m} /> : <Element />;
+            return (
+              <Route
+                key={m.key}
+                path={m.path}
+                element={<RequireAuth>{node}</RequireAuth>}
+              />
+            );
+          })}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

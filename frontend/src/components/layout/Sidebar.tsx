@@ -1,39 +1,31 @@
 import { NavLink } from "react-router-dom";
 
+import { ModuleBadge } from "@/components/ui/ModuleBadge";
+import { LogoMark } from "@/components/ui/icons";
 import {
-  AiIcon,
-  AnalyticsIcon,
-  DashboardIcon,
-  DatabaseIcon,
-  LogoMark,
-  MapIcon,
-  SettingsIcon,
-  VotersIcon,
-} from "@/components/ui/icons";
+  MODULES,
+  SECTION_LABELS,
+  SECTION_ORDER,
+  type ModuleDef,
+} from "@/modules/registry";
 import { useAuthStore } from "@/store/authStore";
-
-const NAV = [
-  { to: "/", label: "Command Center", icon: DashboardIcon, end: true },
-  { to: "/maps", label: "Map Explorer", icon: MapIcon },
-  { to: "/analytics", label: "Participation Analytics", icon: AnalyticsIcon },
-  { to: "/sources", label: "Fuentes de datos", icon: DatabaseIcon },
-];
 
 const navItem =
   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors";
-
 const sectionLabel =
   "mt-7 mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint";
 
+function visibleFor(role: string | undefined, m: ModuleDef): boolean {
+  if (!m.roles) return true;
+  return !!role && m.roles.includes(role as never);
+}
+
 export function Sidebar() {
   const role = useAuthStore((s) => s.user?.role);
-  const canManageUsers = role === "admin" || role === "superadmin";
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `${navItem} ${
-      isActive
-        ? "bg-accent/10 text-accent"
-        : "text-ink-muted hover:bg-panel-hover hover:text-ink"
+      isActive ? "bg-accent/10 text-accent" : "text-ink-muted hover:bg-panel-hover hover:text-ink"
     }`;
 
   return (
@@ -50,43 +42,36 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className={sectionLabel}>Platform</div>
-      <nav className="flex flex-col gap-1">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
-          <NavLink key={to} to={to} end={end} className={linkClass}>
-            <Icon width={18} height={18} />
-            {label}
-          </NavLink>
-        ))}
-      </nav>
-
-      {canManageUsers && (
-        <>
-          <div className={sectionLabel}>Administración</div>
-          <nav className="flex flex-col gap-1">
-            <NavLink to="/users" className={linkClass}>
-              <VotersIcon width={18} height={18} />
-              Usuarios
-            </NavLink>
-            <NavLink to="/organization" className={linkClass}>
-              <SettingsIcon width={18} height={18} />
-              Organización
-            </NavLink>
-          </nav>
-        </>
-      )}
-
-      <div className={sectionLabel}>Intelligence</div>
-      <div className={`${navItem} cursor-not-allowed text-ink-faint`} aria-disabled="true">
-        <AiIcon width={18} height={18} />
-        AI Analyst
-        <span className="pill ml-auto border-teal/30 bg-teal/10 text-teal">Soon</span>
+      <div className="flex-1 overflow-y-auto">
+        {SECTION_ORDER.map((section) => {
+          const items = MODULES.filter(
+            (m) => m.section === section && visibleFor(role, m),
+          );
+          if (items.length === 0) return null;
+          return (
+            <div key={section}>
+              <div className={sectionLabel}>{SECTION_LABELS[section]}</div>
+              <nav className="flex flex-col gap-1">
+                {items.map((m) => {
+                  const Icon = m.icon;
+                  return (
+                    <NavLink key={m.key} to={m.path} end={m.end} className={linkClass}>
+                      <Icon width={18} height={18} />
+                      <span className="flex-1">{m.label}</span>
+                      <ModuleBadge state={m.state} />
+                    </NavLink>
+                  );
+                })}
+              </nav>
+            </div>
+          );
+        })}
       </div>
 
-      <div className="mt-auto px-3 pt-6 text-[11px] leading-relaxed text-ink-faint">
+      <div className="px-3 pt-6 text-[11px] leading-relaxed text-ink-faint">
         Atlas Tech · GovTech
         <br />
-        <span className="opacity-70">v0.1.0 · MVP scaffold</span>
+        <span className="opacity-70">v0.2.0 · Platform demo</span>
       </div>
     </aside>
   );
