@@ -22,6 +22,7 @@ from app.routers import (
     audit,
     auth,
     health,
+    intel,
     maps,
     organizations,
     sources,
@@ -119,7 +120,7 @@ def _configure_error_handlers(app: FastAPI) -> None:
 def _register_routers(app: FastAPI) -> None:
     """Mount all API routers under the configured prefix."""
     prefix = settings.API_PREFIX
-    for module in (health, auth, users, organizations, maps, analytics, sources, audit):
+    for module in (health, auth, users, organizations, maps, analytics, sources, audit, intel):
         app.include_router(module.router, prefix=prefix)
 
 
