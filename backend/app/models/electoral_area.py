@@ -14,6 +14,7 @@ from geoalchemy2 import Geometry
 from sqlalchemy import Enum, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.config import settings
 from app.database import Base
 from app.models.base import AuditMixin, TenantMixin, UUIDMixin
 
@@ -32,10 +33,14 @@ class AreaLevel(str, enum.Enum):
     PRECINCT = "precinct"
 
 
-# PostGIS geometry on Postgres; plain text elsewhere (keeps tests portable).
-_GEOMETRY_TYPE = Geometry(geometry_type="GEOMETRY", srid=4326).with_variant(
-    Text(), "sqlite"
-)
+# PostGIS geometry on Postgres; plain Text on SQLite (dev/tests). We branch on
+# the configured dialect at import time rather than using ``with_variant`` so
+# that GeoAlchemy2's SpatiaLite DDL hooks (RecoverGeometryColumn) never fire on
+# SQLite — those hooks break ``Base.metadata.create_all`` without SpatiaLite.
+if settings.DATABASE_URL.startswith("sqlite"):
+    _GEOMETRY_TYPE: Any = Text()
+else:
+    _GEOMETRY_TYPE = Geometry(geometry_type="GEOMETRY", srid=4326)
 
 
 class ElectoralArea(UUIDMixin, TenantMixin, AuditMixin, Base):
