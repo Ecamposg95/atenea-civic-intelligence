@@ -12,7 +12,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.electoral_area import ElectoralArea
+from app.models.electoral_area import AreaLevel, ElectoralArea
 
 
 def list_layers() -> list[dict[str, Any]]:
@@ -52,7 +52,9 @@ def _level_value(level: Any) -> str:
     return getattr(level, "value", level)
 
 
-def list_areas_geojson(db: Session, organization_id: str | None) -> dict[str, Any]:
+def list_areas_geojson(
+    db: Session, organization_id: str | None, level: str | None = None
+) -> dict[str, Any]:
     """Return tenant-scoped electoral areas as a GeoJSON FeatureCollection."""
     dialect = db.bind.dialect.name if db.bind is not None else ""
     features: list[dict[str, Any]] = []
@@ -68,6 +70,11 @@ def list_areas_geojson(db: Session, organization_id: str | None) -> dict[str, An
         ).where(ElectoralArea.deleted_at.is_(None))
         if organization_id is not None:
             stmt = stmt.where(ElectoralArea.organization_id == organization_id)
+        if level:
+            try:
+                stmt = stmt.where(ElectoralArea.level == AreaLevel(level))
+            except ValueError:
+                pass  # unknown level → no filter
         for id_, name, code, level, org_id, geojson in db.execute(stmt).all():
             features.append(
                 {
@@ -86,6 +93,11 @@ def list_areas_geojson(db: Session, organization_id: str | None) -> dict[str, An
         stmt = select(ElectoralArea).where(ElectoralArea.deleted_at.is_(None))
         if organization_id is not None:
             stmt = stmt.where(ElectoralArea.organization_id == organization_id)
+        if level:
+            try:
+                stmt = stmt.where(ElectoralArea.level == AreaLevel(level))
+            except ValueError:
+                pass  # unknown level → no filter
         for area in db.execute(stmt).scalars().all():
             features.append(
                 {

@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.dependencies import DbSession, Tenant
 from app.integrations.ine import cartografia
@@ -18,9 +18,15 @@ def list_layers() -> dict[str, Any]:
 
 
 @router.get("/areas", summary="Electoral areas as GeoJSON")
-def list_areas(db: DbSession, ctx: Tenant) -> dict[str, Any]:
+def list_areas(
+    db: DbSession,
+    ctx: Tenant,
+    level: str | None = Query(
+        None, description="Filter by level (e.g. state, district)"
+    ),
+) -> dict[str, Any]:
     """Return tenant-scoped electoral areas as a GeoJSON FeatureCollection."""
-    return map_service.list_areas_geojson(db, ctx.organization_id)
+    return map_service.list_areas_geojson(db, ctx.organization_id, level)
 
 
 @router.get("/wms-layers", summary="INE SIGE WMS layers for the basemap")
