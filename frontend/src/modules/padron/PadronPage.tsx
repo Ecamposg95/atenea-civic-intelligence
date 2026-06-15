@@ -65,7 +65,7 @@ export function PadronPage() {
             action={
               <div className="flex items-center gap-3 text-xs text-ink-muted">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#4f9cff" }} />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#22d3ee" }} />
                   Hombres
                 </span>
                 <span className="inline-flex items-center gap-1.5">
@@ -78,13 +78,13 @@ export function PadronPage() {
             <div style={{ width: "100%", height: 280 }}>
               <ResponsiveContainer>
                 <BarChart data={AGE_BANDS} margin={{ left: -16 }}>
-                  <XAxis dataKey="band" stroke="#5e6f8f" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="#5e6f8f" tick={{ fontSize: 12 }} />
+                  <XAxis dataKey="band" stroke="#52646d" tick={{ fontSize: 12 }} />
+                  <YAxis stroke="#52646d" tick={{ fontSize: 12 }} />
                   <Tooltip
-                    cursor={{ fill: "rgba(79,156,255,0.06)" }}
-                    contentStyle={{ background: "#0d1422", border: "1px solid #2a3a5c", borderRadius: 10 }}
+                    cursor={{ fill: "rgba(34,211,238,0.06)" }}
+                    contentStyle={{ background: "#06090c", border: "1px solid #223a44", borderRadius: 10 }}
                   />
-                  <Bar dataKey="hombres" fill="#4f9cff" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="hombres" fill="#22d3ee" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="mujeres" fill="#2dd4bf" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

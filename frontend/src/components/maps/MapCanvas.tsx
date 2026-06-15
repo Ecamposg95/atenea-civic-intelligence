@@ -28,10 +28,10 @@ const RASTER: Record<Basemap, { tiles: string[]; attribution: string; paint: Rec
   // needed) — far more robust than OSM and on-theme for the command center.
   dark: {
     tiles: [
-      "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-      "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-      "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-      "https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+      "https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+      "https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+      "https://c.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+      "https://d.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
     ],
     attribution: "© OpenStreetMap © CARTO",
     paint: {},
@@ -64,17 +64,17 @@ function withMetric(fc: AreasResponse): GeoJSON.FeatureCollection {
   } as unknown as GeoJSON.FeatureCollection;
 }
 
-const FLAT_FILL: maplibregl.FillLayerSpecification["paint"] = { "fill-color": "#4f9cff", "fill-opacity": 0.18 };
-// Punchy command-center ramp: deep navy → accent blue → bright cyan/white.
+const FLAT_FILL: maplibregl.FillLayerSpecification["paint"] = { "fill-color": "#22d3ee", "fill-opacity": 0.16 };
+// All-black big-screen ramp: deep cyan → bright cyan → amber at the peak.
 const CHORO_FILL: maplibregl.FillLayerSpecification["paint"] = {
-  "fill-opacity": 0.62,
+  "fill-opacity": 0.6,
   "fill-color": [
     "interpolate", ["linear"], ["get", "metric"],
-    0.45, "#07172e",
-    0.58, "#0d3b66",
-    0.70, "#4f9cff",
-    0.82, "#2dd4bf",
-    0.90, "#eafbff",
+    0.45, "#062a30",
+    0.58, "#0e7490",
+    0.70, "#22d3ee",
+    0.82, "#67e8f9",
+    0.90, "#f5b53d",
   ] as never,
 };
 
@@ -141,15 +141,15 @@ export function MapCanvas({ areas, showAreas, wmsLayers = [], choropleth, basema
       map.addSource(AREAS_SOURCE, { type: "geojson", data: EMPTY_FC as never });
       map.addLayer({ id: AREAS_FILL, type: "fill", source: AREAS_SOURCE, paint: FLAT_FILL });
       // Soft teal glow underlay for the boundaries (blurred, low opacity).
-      map.addLayer({ id: AREAS_GLOW, type: "line", source: AREAS_SOURCE, paint: { "line-color": "#2dd4bf", "line-width": 3.5, "line-blur": 3, "line-opacity": 0.5 } });
-      map.addLayer({ id: AREAS_LINE, type: "line", source: AREAS_SOURCE, paint: { "line-color": "#7ff0e0", "line-width": 1.1, "line-opacity": 0.9 } });
+      map.addLayer({ id: AREAS_GLOW, type: "line", source: AREAS_SOURCE, paint: { "line-color": "#22d3ee", "line-width": 3.5, "line-blur": 3, "line-opacity": 0.5 } });
+      map.addLayer({ id: AREAS_LINE, type: "line", source: AREAS_SOURCE, paint: { "line-color": "#67e8f9", "line-width": 1.1, "line-opacity": 0.9 } });
 
       map.on("mousemove", AREAS_FILL, (e) => {
         map.getCanvas().style.cursor = "pointer";
         const f = e.features?.[0];
         if (f && popupRef.current) {
           const p = f.properties as Record<string, unknown>;
-          popupRef.current.setLngLat(e.lngLat).setHTML(`<div style="font:12px sans-serif;color:#0d1422"><b>${p.name}</b></div>`).addTo(map);
+          popupRef.current.setLngLat(e.lngLat).setHTML(`<div style="font:12px sans-serif;color:#06090c"><b>${p.name}</b></div>`).addTo(map);
         }
       });
       map.on("mouseleave", AREAS_FILL, () => { map.getCanvas().style.cursor = ""; popupRef.current?.remove(); });

@@ -1,5 +1,5 @@
-// Gradient stops mirror the CHORO_FILL ramp in MapCanvas (deep navy → accent → bright cyan).
-const RAMP = "linear-gradient(90deg, #07172e 0%, #0d3b66 28%, #4f9cff 64%, #2dd4bf 84%, #eafbff 100%)";
+// Gradient stops mirror the CHORO_FILL ramp in MapCanvas (deep cyan → bright cyan → amber).
+const RAMP = "linear-gradient(90deg, #062a30 0%, #0e7490 28%, #22d3ee 64%, #67e8f9 84%, #f5b53d 100%)";
 
 export function Legend({ label }: { label: string }) {
   return (

@@ -24,8 +24,8 @@ const TONE: Record<
   accent: {
     text: "text-accent",
     glow: "shadow-glow-accent",
-    stroke: "#4f9cff",
-    fill: "rgba(79,156,255,0.32)",
+    stroke: "#22d3ee",
+    fill: "rgba(34,211,238,0.32)",
   },
   teal: {
     text: "text-teal",
@@ -36,7 +36,7 @@ const TONE: Record<
   warning: {
     text: "text-state-warning",
     glow: "shadow-glow",
-    stroke: "#d8b25a",
+    stroke: "#f5b53d",
     fill: "rgba(216,178,90,0.28)",
   },
   critical: {
@@ -62,7 +62,7 @@ export function MetricCard({
 
   return (
     <div
-      className="card-premium reveal p-5"
+      className="card-premium hud-corners reveal p-5"
       style={{ animationDelay: delay ? `${delay}ms` : undefined }}
     >
       <div className="flex items-center justify-between">

@@ -62,12 +62,12 @@ export function ResultadosPage() {
             <div style={{ width: "100%", height: 260 }}>
               <ResponsiveContainer>
                 <BarChart data={PARTY_RESULTS} layout="vertical" margin={{ left: 24 }}>
-                  <XAxis type="number" tickFormatter={pct} stroke="#5e6f8f" tick={{ fontSize: 12 }} />
-                  <YAxis type="category" dataKey="party" stroke="#5e6f8f" tick={{ fontSize: 12 }} width={110} />
+                  <XAxis type="number" tickFormatter={pct} stroke="#52646d" tick={{ fontSize: 12 }} />
+                  <YAxis type="category" dataKey="party" stroke="#52646d" tick={{ fontSize: 12 }} width={110} />
                   <Tooltip
-                    cursor={{ fill: "rgba(79,156,255,0.06)" }}
+                    cursor={{ fill: "rgba(34,211,238,0.06)" }}
                     formatter={(v: number) => pct(v)}
-                    contentStyle={{ background: "#0d1422", border: "1px solid #2a3a5c", borderRadius: 10 }}
+                    contentStyle={{ background: "#06090c", border: "1px solid #223a44", borderRadius: 10 }}
                   />
                   <Bar dataKey="share" radius={[0, 6, 6, 0]}>
                     {PARTY_RESULTS.map((p) => <Cell key={p.party} fill={p.color} />)}

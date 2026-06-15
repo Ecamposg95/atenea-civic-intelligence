@@ -5,7 +5,7 @@ export interface EntityResult { entity: string; turnout: number; winner: string;
 export const NATIONAL = { turnout: 0.612, counted: 0.973, leader: "Coalición A" };
 
 export const PARTY_RESULTS: PartyResult[] = [
-  { party: "Coalición A", color: "#4f9cff", votes: 18432110, share: 0.41 },
+  { party: "Coalición A", color: "#22d3ee", votes: 18432110, share: 0.41 },
   { party: "Coalición B", color: "#f59e0b", votes: 14211980, share: 0.316 },
   { party: "Coalición C", color: "#2dd4bf", votes: 8123450, share: 0.181 },
   { party: "Otros", color: "#7c8aa5", votes: 4187220, share: 0.093 },

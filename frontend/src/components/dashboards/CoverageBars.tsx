@@ -13,7 +13,7 @@ export interface CoverageDatum {
   count: number;
 }
 
-const COLORS = ["#4f9cff", "#2dd4bf", "#d8b25a", "#9fb0cc", "#2f7fff", "#f2b450"];
+const COLORS = ["#22d3ee", "#2dd4bf", "#f5b53d", "#8ba0a8", "#06b6d4", "#f5b53d"];
 
 export function CoverageBars({ data, height = 200 }: { data: CoverageDatum[]; height?: number }) {
   return (
@@ -28,19 +28,19 @@ export function CoverageBars({ data, height = 200 }: { data: CoverageDatum[]; he
           <YAxis
             type="category"
             dataKey="level"
-            stroke="#5e6f8f"
-            tick={{ fontSize: 12, fill: "#9fb0cc" }}
+            stroke="#52646d"
+            tick={{ fontSize: 12, fill: "#8ba0a8" }}
             tickLine={false}
             axisLine={false}
             width={96}
           />
           <Tooltip
-            cursor={{ fill: "rgba(79,156,255,0.08)" }}
+            cursor={{ fill: "rgba(34,211,238,0.08)" }}
             contentStyle={{
-              background: "#0d1422",
-              border: "1px solid #2a3a5c",
+              background: "#06090c",
+              border: "1px solid #223a44",
               borderRadius: 10,
-              color: "#e8eef9",
+              color: "#e6f2f5",
               fontSize: 12,
             }}
           />
