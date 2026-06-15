@@ -6,9 +6,10 @@ import { useAuthStore } from "@/store/authStore";
 interface TopbarProps {
   title: string;
   crumb?: string;
+  onMenu?: () => void;
 }
 
-export function Topbar({ title, crumb }: TopbarProps) {
+export function Topbar({ title, crumb, onMenu }: TopbarProps) {
   const navigate = useNavigate();
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
@@ -28,27 +29,41 @@ export function Topbar({ title, crumb }: TopbarProps) {
     : "AT";
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-line bg-panel/60 px-8">
-      <div>
-        <div className="text-base font-semibold tracking-tight text-ink">
-          {title}
+    <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-line bg-panel/60 px-4 sm:px-6 lg:px-8">
+      <div className="flex min-w-0 items-center gap-3">
+        <button
+          type="button"
+          onClick={onMenu}
+          aria-label="Abrir menú"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-ink-muted hover:text-ink lg:hidden"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold tracking-tight text-ink sm:text-base">
+            {title}
+          </div>
+          {crumb && <div className="truncate text-xs text-ink-faint">{crumb}</div>}
         </div>
-        {crumb && <div className="text-xs text-ink-faint">{crumb}</div>}
       </div>
 
-      <div className="flex items-center gap-3">
-        <span className="pill border-teal/30 bg-teal/10 text-teal">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <span className="pill hidden border-teal/30 bg-teal/10 text-teal md:inline-flex">
           <span className="h-1.5 w-1.5 rounded-full bg-teal" />
           Systems operational
         </span>
-        <button className="btn-ghost" onClick={handleLogout}>
+        <button className="btn-ghost !px-2.5 sm:!px-4" onClick={handleLogout} title="Sign out">
           <LogoutIcon width={16} height={16} />
-          Sign out
+          <span className="hidden sm:inline">Sign out</span>
         </button>
         <Link
           to="/profile"
           title="Mi perfil"
-          className="grid h-9 w-9 place-items-center rounded-full border border-line bg-panel-raised text-xs font-semibold text-ink-muted transition-colors hover:border-accent hover:text-ink"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-line bg-panel-raised text-xs font-semibold text-ink-muted transition-colors hover:border-accent hover:text-ink"
         >
           {initials}
         </Link>

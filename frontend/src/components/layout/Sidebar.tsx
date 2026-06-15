@@ -22,7 +22,13 @@ function visibleFor(role: string | undefined, m: ModuleDef): boolean {
   return m.roles.includes(role as UserRole);
 }
 
-export function Sidebar() {
+export function Sidebar({
+  open = false,
+  onClose,
+}: {
+  open?: boolean;
+  onClose?: () => void;
+}) {
   const role = useAuthStore((s) => s.user?.role);
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -33,12 +39,16 @@ export function Sidebar() {
     }`;
 
   return (
-    <aside className="relative z-10 flex w-64 shrink-0 flex-col border-r border-line bg-panel px-3 py-5">
+    <aside
+      className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-line bg-panel px-3 py-5 transition-transform duration-300 lg:static lg:z-10 lg:translate-x-0 ${
+        open ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
       <div className="flex items-center gap-3 px-2">
         <div className="grid h-9 w-9 place-items-center rounded-lg bg-accent/15 text-accent shadow-glow-accent">
           <LogoMark width={20} height={20} />
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="font-display text-sm font-semibold tracking-tight text-ink">
             Ágora
           </div>
@@ -46,6 +56,14 @@ export function Sidebar() {
             Civic Intelligence
           </div>
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar menú"
+          className="ml-auto grid h-8 w-8 place-items-center rounded-lg border border-line text-ink-muted hover:text-ink lg:hidden"
+        >
+          ✕
+        </button>
       </div>
 
       <div className="mt-2 flex-1 overflow-y-auto pr-1">
@@ -70,6 +88,7 @@ export function Sidebar() {
                       end={m.end}
                       className={linkClass}
                       title={m.label}
+                      onClick={onClose}
                     >
                       <Icon width={17} height={17} className="shrink-0" />
                       <span className="min-w-0 flex-1 truncate">{m.label}</span>

@@ -159,7 +159,7 @@ export function MapExplorerPage() {
         </div>
       )}
 
-      <div className="grid h-[calc(100vh-15rem)] grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:h-[calc(100vh-15rem)] lg:grid-cols-[320px_1fr]">
         <LayerPanel layers={layers} onToggle={toggle} loading={loading} />
         <div className="reveal flex h-full flex-col" style={{ animationDelay: "120ms" }}>
           {/* Premium control bar */}
