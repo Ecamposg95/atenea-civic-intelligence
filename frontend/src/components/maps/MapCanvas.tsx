@@ -61,6 +61,8 @@ export function MapCanvas({ areas, showAreas, wmsLayers = [], choropleth, basema
   const readyRef = useRef(false);
   const wmsAddedRef = useRef<Set<string>>(new Set());
   const popupRef = useRef<maplibregl.Popup | null>(null);
+  const onSelectRef = useRef(onSelect);
+  useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
 
   // Init once. Basemap change re-inits via key on the wrapper (see Task 20).
   useEffect(() => {
@@ -93,9 +95,9 @@ export function MapCanvas({ areas, showAreas, wmsLayers = [], choropleth, basema
       map.on("mouseleave", AREAS_FILL, () => { map.getCanvas().style.cursor = ""; popupRef.current?.remove(); });
       map.on("click", AREAS_FILL, (e) => {
         const f = e.features?.[0];
-        if (f && onSelect) {
+        if (f) {
           const p = f.properties as unknown as AreaProperties & { metric: number };
-          onSelect({ ...p, metric: Number((p as { metric: number }).metric) });
+          onSelectRef.current?.({ ...p, metric: Number((p as { metric: number }).metric) });
         }
       });
     });

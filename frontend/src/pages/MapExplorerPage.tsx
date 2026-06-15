@@ -26,8 +26,8 @@ export function MapExplorerPage() {
   const [fitKey, setFitKey] = useState(0);
 
   useEffect(() => {
-    Promise.allSettled([getLayers(), getAreas(), getWmsLayers()])
-      .then(([layersRes, areasRes, wmsRes]) => {
+    Promise.allSettled([getLayers(), getWmsLayers()])
+      .then(([layersRes, wmsRes]) => {
         const base: MapLayer[] =
           layersRes.status === "fulfilled" ? layersRes.value.layers : [];
         if (layersRes.status === "rejected") {
@@ -54,12 +54,6 @@ export function MapExplorerPage() {
             : [];
         setWmsTiles(tiles);
         setLayers([...base, ...wmsLayers]);
-
-        setAreas(
-          areasRes.status === "fulfilled"
-            ? areasRes.value
-            : { type: "FeatureCollection", features: [] },
-        );
       })
       .finally(() => setLoading(false));
   }, []);
