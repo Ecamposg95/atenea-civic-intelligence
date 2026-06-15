@@ -5,7 +5,6 @@ import { getOverview } from "@/api/analytics";
 import { getAreas } from "@/api/maps";
 import { getSources } from "@/api/sources";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { AiAnalystPanel } from "@/components/dashboards/AiAnalystPanel";
 import { CoverageBars, type CoverageDatum } from "@/components/dashboards/CoverageBars";
 import { ParticipationChart } from "@/components/dashboards/ParticipationChart";
 import { Button } from "@/components/ui/Button";
@@ -206,9 +205,6 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      <div className="mt-5">
-        <AiAnalystPanel />
-      </div>
     </AppLayout>
   );
 }
