@@ -14,7 +14,11 @@ pydantic-settings==2.7.0
 email-validator==2.2.0
 
 # --- Security ---
-passlib[bcrypt]==1.7.4
+# bcrypt is pinned: passlib 1.7.4's backend detection breaks with bcrypt>=4.1
+# ("password cannot be longer than 72 bytes" at hash time). 4.0.1 is the last
+# fully-compatible release.
+passlib==1.7.4
+bcrypt==4.0.1
 pyjwt==2.10.1
 python-multipart==0.0.20
 
