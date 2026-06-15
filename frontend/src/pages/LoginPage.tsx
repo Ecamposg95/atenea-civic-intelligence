@@ -17,10 +17,10 @@ const FEATURES = [
   { icon: LayersIcon, label: "Gobernanza de datos electorales" },
 ];
 
-const STATS = [
-  { value: "1.28M", label: "Padrón" },
-  { value: "412", label: "Áreas" },
-  { value: "63.1%", label: "Participación" },
+const CAPABILITIES = [
+  "API-first · Multi-tenant",
+  "PostGIS · Geoespacial",
+  "Auditoría integral",
 ];
 
 export function LoginPage() {
@@ -36,133 +36,180 @@ export function LoginPage() {
   };
 
   return (
-    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-      {/* Left — institutional hero */}
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-panel p-12 lg:flex">
-        <div className="grid-backdrop pointer-events-none absolute inset-0 opacity-60" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-teal/10" />
+    <div className="relative min-h-screen overflow-hidden bg-bg bg-mesh">
+      {/* Atmosphere */}
+      <div
+        className="grid-backdrop pointer-events-none absolute inset-0 opacity-50"
+        aria-hidden="true"
+      />
+      <div className="grain" aria-hidden="true" />
+      <div
+        className="aura -left-24 -top-32 h-[28rem] w-[28rem] animate-float"
+        aria-hidden="true"
+      />
+      <div
+        className="aura aura-teal -bottom-32 right-0 h-[26rem] w-[26rem] animate-float"
+        style={{ animationDelay: "1.5s" }}
+        aria-hidden="true"
+      />
 
-        <div className="relative flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-accent/15 text-accent">
-            <LogoMark width={22} height={22} />
-          </div>
-          <div>
-            <div className="text-sm font-semibold tracking-tight text-ink">Ágora</div>
-            <div className="text-[11px] uppercase tracking-[0.16em] text-ink-faint">
-              Civic Intelligence
+      <div className="relative grid min-h-screen grid-cols-1 lg:grid-cols-2">
+        {/* Left — brand showcase */}
+        <aside className="relative hidden flex-col justify-between overflow-hidden p-12 lg:flex xl:p-16">
+          <div
+            className="reveal flex items-center gap-3"
+            style={{ animationDelay: "0ms" }}
+          >
+            <div className="metric-chip relative h-11 w-11 text-accent shadow-glow">
+              <LogoMark width={24} height={24} />
+            </div>
+            <div>
+              <div className="font-display text-base font-semibold tracking-tight text-ink">
+                Ágora
+              </div>
+              <div className="text-[11px] uppercase tracking-[0.16em] text-ink-faint">
+                Civic Intelligence
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="relative max-w-md">
-          <div className="eyebrow">GovTech Command Center</div>
-          <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-ink">
-            Inteligencia cívica, electoral y territorial — gobernada de extremo a
-            extremo.
-          </h1>
-          <p className="mt-4 text-sm leading-relaxed text-ink-muted">
-            Plataforma privacy-by-design para instituciones: mapas unificados,
-            dashboards ejecutivos, gobernanza de datos electorales y analítica de
-            participación, con auditabilidad total.
-          </p>
+          <div className="relative max-w-lg">
+            <div className="reveal eyebrow" style={{ animationDelay: "80ms" }}>
+              GovTech Command Center
+            </div>
+            <h1
+              className="reveal mt-4 font-display text-4xl font-bold leading-[1.05] tracking-tight text-ink xl:text-5xl"
+              style={{ animationDelay: "140ms" }}
+            >
+              <span className="text-gradient">Inteligencia cívica</span>,
+              <br />
+              electoral y territorial.
+            </h1>
+            <p
+              className="reveal mt-5 max-w-md text-sm leading-relaxed text-ink-muted"
+              style={{ animationDelay: "200ms" }}
+            >
+              Plataforma privacy-by-design para instituciones: mapas unificados,
+              dashboards ejecutivos, gobernanza de datos electorales y analítica
+              de participación, con auditabilidad total.
+            </p>
 
-          <ul className="mt-6 space-y-3">
-            {FEATURES.map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-3 text-sm text-ink-muted">
-                <span className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-bg-sunken text-accent">
-                  <Icon width={16} height={16} />
+            <ul className="mt-8 space-y-3.5">
+              {FEATURES.map(({ icon: Icon, label }, i) => (
+                <li
+                  key={label}
+                  className="reveal flex items-center gap-3 text-sm text-ink-muted"
+                  style={{ animationDelay: `${260 + i * 70}ms` }}
+                >
+                  <span className="metric-chip h-9 w-9 text-accent">
+                    <Icon width={16} height={16} />
+                  </span>
+                  {label}
+                </li>
+              ))}
+            </ul>
+
+            <div
+              className="reveal mt-9 flex flex-wrap gap-2.5"
+              style={{ animationDelay: "480ms" }}
+            >
+              {CAPABILITIES.map((cap) => (
+                <span
+                  key={cap}
+                  className="pill border-line-strong font-mono uppercase tracking-wider text-ink-muted"
+                >
+                  {cap}
                 </span>
-                {label}
-              </li>
-            ))}
-          </ul>
-
-          <div className="mt-8 flex gap-6">
-            {STATS.map((stat) => (
-              <div key={stat.label}>
-                <div className="text-xl font-semibold tracking-tight text-ink">
-                  {stat.value}
-                </div>
-                <div className="text-[11px] uppercase tracking-wide text-ink-faint">
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="relative flex items-center gap-2 text-xs text-ink-faint">
-          <ShieldIcon width={15} height={15} /> Privacy-by-design · Audit-logged ·
-          Multi-tenant ready
-        </div>
-      </aside>
-
-      {/* Right — sign-in card */}
-      <section className="flex items-center justify-center bg-bg px-6 py-12">
-        <div className="panel w-full max-w-sm p-8">
-          <div className="mb-6 flex items-center gap-3 lg:hidden">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-accent/15 text-accent">
-              <LogoMark width={22} height={22} />
-            </div>
-            <div className="text-sm font-semibold tracking-tight text-ink">
-              Ágora · Civic Intelligence
+              ))}
             </div>
           </div>
 
-          <div className="eyebrow">Iniciar sesión</div>
-          <h2 className="mt-2 text-xl font-semibold tracking-tight text-ink">
-            Acceso al command center
-          </h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Usa tus credenciales institucionales.
-          </p>
+          <div
+            className="reveal flex items-center gap-2 text-xs text-ink-faint"
+            style={{ animationDelay: "560ms" }}
+          >
+            <ShieldIcon width={15} height={15} /> Privacy-by-design · Audit-logged
+            · Multi-tenant ready
+          </div>
+        </aside>
 
-          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="email" className="field-label">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                className="field-input"
-                placeholder="analyst@institution.gov"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="field-label">
-                Contraseña
-              </label>
-              <input
-                id="password"
-                type="password"
-                className="field-input"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            {error && (
-              <div className="rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
-                {error}
+        {/* Right — sign-in card */}
+        <section className="flex items-center justify-center px-6 py-12">
+          <div className="w-full max-w-sm">
+            <div
+              className="reveal mb-6 flex items-center gap-3 lg:hidden"
+              style={{ animationDelay: "0ms" }}
+            >
+              <div className="metric-chip h-10 w-10 text-accent shadow-glow">
+                <LogoMark width={22} height={22} />
               </div>
-            )}
+              <div className="font-display text-sm font-semibold tracking-tight text-ink">
+                Ágora · Civic Intelligence
+              </div>
+            </div>
 
-            <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-              {loading ? "Autenticando…" : "Iniciar sesión"}
-            </Button>
-          </form>
+            <div className="card-premium reveal p-8" style={{ animationDelay: "120ms" }}>
+              <div className="eyebrow">Iniciar sesión</div>
+              <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-ink">
+                Acceso al command center
+              </h2>
+              <p className="mt-1.5 text-sm text-ink-muted">
+                Usa tus credenciales institucionales.
+              </p>
 
-          <p className="mt-5 text-center text-[11px] text-ink-faint">
-            Conecta credenciales institucionales para continuar.
-          </p>
-        </div>
-      </section>
+              <form className="mt-7 space-y-4" onSubmit={handleSubmit}>
+                <div>
+                  <label htmlFor="email" className="field-label">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    className="field-input"
+                    placeholder="analyst@institution.gov"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="password" className="field-label">
+                    Contraseña
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    className="field-input"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {error && (
+                  <div className="reveal rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="w-full shadow-glow-accent"
+                  disabled={loading}
+                >
+                  {loading ? "Autenticando…" : "Iniciar sesión"}
+                </Button>
+              </form>
+
+              <p className="mt-6 text-center text-[11px] text-ink-faint">
+                Conecta credenciales institucionales para continuar.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
