@@ -99,6 +99,11 @@ const Auditoria = lazy(() =>
     default: m.AuditoriaPage,
   })),
 );
+const Territorios = lazy(() =>
+  import("@/modules/territorios/TerritoriosPage").then((m) => ({
+    default: m.TerritoriosPage,
+  })),
+);
 
 export const MODULES: ModuleDef[] = [
   // Plataforma (active)
@@ -118,14 +123,7 @@ export const MODULES: ModuleDef[] = [
       dataSource: "Candidaturas MX (apielectoral.mx) — ya integrada en el backend.",
     },
   },
-  {
-    key: "territorios", path: "/territorios", label: "Territorios & Secciones", section: "inteligencia", icon: LayersIcon, state: "soon",
-    soon: {
-      summary: "Drill-down geográfico: entidad → distrito → sección → casilla.",
-      features: ["Jerarquía territorial navegable", "Métricas por nivel", "Exportación de cortes territoriales"],
-      dataSource: "Marco Geográfico Electoral (SIGE/INE) vía ingest de cartografía.",
-    },
-  },
+  { key: "territorios", path: "/territorios", label: "Territorios & Secciones", section: "inteligencia", icon: LayersIcon, state: "active", element: Territorios },
 
   // Ciudadanía
   { key: "ai-analyst", path: "/ai-analyst", label: "AI Analyst / Copiloto", section: "ciudadania", icon: AiIcon, state: "preview", element: AiAnalyst },
