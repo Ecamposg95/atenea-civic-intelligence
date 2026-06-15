@@ -7,13 +7,16 @@ import { getSources } from "@/api/sources";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CoverageBars, type CoverageDatum } from "@/components/dashboards/CoverageBars";
 import { ParticipationChart } from "@/components/dashboards/ParticipationChart";
+import { MapCanvas } from "@/components/maps/MapCanvas";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { Sparkline } from "@/components/ui/Sparkline";
 import {
   AlertIcon,
   DatabaseIcon,
   LayersIcon,
+  MapIcon,
   ShieldIcon,
   UserIcon,
 } from "@/components/ui/icons";
@@ -23,10 +26,26 @@ import type { SourceInfo } from "@/types/sources";
 
 const nf = new Intl.NumberFormat("en-US");
 
-const ALERT_STYLE: Record<AnalyticsAlert["level"], string> = {
-  info: "border-accent/30 bg-accent/10 text-accent",
-  warning: "border-state-warning/30 bg-state-warning/10 text-state-warning",
-  critical: "border-state-critical/30 bg-state-critical/10 text-state-critical",
+/** Tone-driven presentation for alert rows (left border + icon color). */
+const ALERT_TONE: Record<
+  AnalyticsAlert["level"],
+  { border: string; icon: string; pill: string }
+> = {
+  info: {
+    border: "border-l-accent",
+    icon: "text-accent",
+    pill: "border-accent/30 bg-accent/10 text-accent",
+  },
+  warning: {
+    border: "border-l-state-warning",
+    icon: "text-state-warning",
+    pill: "border-state-warning/30 bg-state-warning/10 text-state-warning",
+  },
+  critical: {
+    border: "border-l-state-critical",
+    icon: "text-state-critical",
+    pill: "border-state-critical/30 bg-state-critical/10 text-state-critical",
+  },
 };
 
 const KIND_BADGE: Record<string, string> = {
@@ -36,18 +55,38 @@ const KIND_BADGE: Record<string, string> = {
   portal: "border-line text-ink-muted",
 };
 
+/** Compact Spanish relative time from an ISO timestamp. */
+function relativeTime(iso: string | undefined): string {
+  if (!iso) return "—";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "—";
+  const diff = Math.max(0, Date.now() - then);
+  const sec = Math.round(diff / 1000);
+  if (sec < 60) return "hace unos segundos";
+  const min = Math.round(sec / 60);
+  if (min < 60) return `hace ${min} min`;
+  const hrs = Math.round(min / 60);
+  if (hrs < 24) return `hace ${hrs} h`;
+  const days = Math.round(hrs / 24);
+  return `hace ${days} d`;
+}
+
 export function DashboardPage() {
   const [data, setData] = useState<AnalyticsOverview | null>(null);
   const [areas, setAreas] = useState<AreasResponse | null>(null);
   const [sources, setSources] = useState<SourceInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [fitKey, setFitKey] = useState(0);
 
   useEffect(() => {
     getOverview()
       .then(setData)
       .catch((e) => setError(e.message));
     getAreas()
-      .then(setAreas)
+      .then((fc) => {
+        setAreas(fc);
+        if (fc.features.length > 0) setFitKey((k) => k + 1);
+      })
       .catch(() => setAreas({ type: "FeatureCollection", features: [] }));
     getSources()
       .then(setSources)
@@ -55,6 +94,8 @@ export function DashboardPage() {
   }, []);
 
   const s = data?.summary;
+  const activity = data?.trends.activity ?? [];
+  const activitySeries = useMemo(() => activity.map((p) => p.value), [activity]);
 
   const coverage: CoverageDatum[] = useMemo(() => {
     if (!areas) return [];
@@ -68,143 +109,279 @@ export function DashboardPage() {
       .sort((a, b) => b.count - a.count);
   }, [areas]);
 
+  const hasAreas = !!areas && areas.features.length > 0;
+
   return (
-    <AppLayout title="Command Center" crumb="Civic Intelligence Overview">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <div className="eyebrow">Executive briefing</div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
-            Civic Intelligence Dashboard
-          </h1>
-          <p className="mt-1 max-w-xl text-sm text-ink-muted">
-            A real-time institutional view across electoral coverage,
-            participation and territorial data governance.
-          </p>
+    <AppLayout title="Centro de Mando" crumb="Civic Intelligence Overview">
+      {/* ---- Hero ---- */}
+      <section className="relative mb-7 overflow-hidden">
+        <div className="aura -left-16 -top-24 h-72 w-72" aria-hidden="true" />
+        <div className="aura aura-teal right-0 -top-16 h-64 w-64" aria-hidden="true" />
+
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="reveal min-w-0" style={{ animationDelay: "0ms" }}>
+            <div className="eyebrow">Executive briefing</div>
+            <h1 className="mt-2 font-display text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-5xl">
+              <span className="text-gradient">Centro de Mando</span>
+              <br className="hidden sm:block" />
+              <span className="text-ink"> Civic Intelligence</span>
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-muted">
+              Vista institucional en tiempo real de cobertura electoral,
+              participación y gobernanza de datos territoriales.
+            </p>
+
+            {/* Live status chips */}
+            <div
+              className="reveal mt-5 flex flex-wrap items-center gap-2.5"
+              style={{ animationDelay: "120ms" }}
+            >
+              <span className="pill border-line-strong font-mono uppercase tracking-wider text-ink-muted">
+                Producción
+              </span>
+              <span className="pill border-teal/30 bg-teal/10 text-teal">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-pulse-glow rounded-full bg-teal" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-teal" />
+                </span>
+                Sistemas operativos
+              </span>
+              <span className="pill border-line text-ink-muted">
+                Actualizado {relativeTime(data?.generated_at)}
+              </span>
+            </div>
+          </div>
+
+          {/* Real 14-day activity sparkline + export */}
+          <div
+            className="reveal flex shrink-0 items-end gap-4"
+            style={{ animationDelay: "200ms" }}
+          >
+            {activitySeries.length > 0 && (
+              <div className="card-premium px-4 py-3">
+                <div className="eyebrow mb-1.5">Actividad 14d</div>
+                <Sparkline
+                  data={activitySeries}
+                  width={150}
+                  height={40}
+                  className="w-[150px]"
+                />
+              </div>
+            )}
+            <Button variant="primary" className="shadow-glow-accent">
+              Exportar briefing
+            </Button>
+          </div>
         </div>
-        <Button>Export briefing</Button>
-      </div>
+      </section>
 
       {error && (
-        <div className="mb-5 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
+        <div className="reveal mb-5 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
           {error}
         </div>
       )}
 
+      {/* ---- KPI row (animated counters, real values, no fabricated trends) ---- */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Áreas electorales"
           value={s ? nf.format(s.electoral_areas) : "—"}
+          countTo={s ? s.electoral_areas : undefined}
+          tone="accent"
           icon={<LayersIcon width={18} height={18} />}
+          delay={0}
         />
         <MetricCard
           label="Instituciones"
           value={s ? nf.format(s.organizations) : "—"}
+          countTo={s ? s.organizations : undefined}
+          tone="teal"
           icon={<ShieldIcon width={18} height={18} />}
+          delay={80}
         />
         <MetricCard
           label="Usuarios activos"
           value={s ? nf.format(s.users) : "—"}
+          countTo={s ? s.users : undefined}
+          tone="accent"
           icon={<UserIcon width={18} height={18} />}
+          delay={160}
         />
         <MetricCard
           label="Fuentes de datos"
           value={s ? nf.format(s.data_sources) : "—"}
+          countTo={s ? s.data_sources : undefined}
+          tone="teal"
           icon={<DatabaseIcon width={18} height={18} />}
+          delay={240}
         />
       </div>
 
+      {/* ---- Activity chart + governance ---- */}
       <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card
-          title="Actividad de la plataforma"
-          className="lg:col-span-2"
-          action={<span className="pill border-line text-ink-muted">Últimos 14 días</span>}
-        >
-          {data ? (
-            <ParticipationChart
-              data={data.trends.activity}
-              valueFormat="number"
-              seriesLabel="Eventos"
-            />
-          ) : (
-            <div className="h-[220px] animate-pulse rounded-lg bg-panel-hover" />
-          )}
-        </Card>
+        <div className="reveal lg:col-span-2" style={{ animationDelay: "120ms" }}>
+          <Card
+            title="Actividad de la plataforma"
+            accentDot
+            className="h-full"
+            action={
+              <div className="flex items-center gap-2">
+                <span className="eyebrow hidden sm:inline">Audit log</span>
+                <span className="pill border-line text-ink-muted">Últimos 14 días</span>
+              </div>
+            }
+          >
+            {data ? (
+              <ParticipationChart
+                data={data.trends.activity}
+                height={260}
+                valueFormat="number"
+                seriesLabel="Eventos"
+              />
+            ) : (
+              <div className="h-[260px] animate-pulse rounded-lg bg-panel-hover" />
+            )}
+          </Card>
+        </div>
 
-        <Card title="Governance & alerts">
-          <div className="space-y-2">
-            {data?.alerts.map((a, i) => (
-              <div
-                key={i}
-                className="flex items-start justify-between gap-3 rounded-lg border border-line bg-bg-sunken px-3 py-2.5"
-              >
-                <div className="flex items-start gap-2.5">
-                  {a.level === "critical" ? (
-                    <AlertIcon width={16} height={16} className="mt-0.5 text-state-critical" />
-                  ) : (
-                    <ShieldIcon width={16} height={16} className="mt-0.5 text-teal" />
-                  )}
-                  <div>
-                    <div className="text-sm text-ink">{a.title}</div>
-                    <div className="text-xs text-ink-faint">{a.detail}</div>
+        <div className="reveal" style={{ animationDelay: "200ms" }}>
+          <Card title="Gobernanza y alertas" accentDot className="h-full">
+            <div className="space-y-2.5">
+              {data?.alerts.map((a, i) => {
+                const tone = ALERT_TONE[a.level];
+                return (
+                  <div
+                    key={i}
+                    className={`reveal flex items-start justify-between gap-3 rounded-lg border border-l-2 border-line ${tone.border} bg-bg-sunken px-3 py-2.5 transition-colors hover:bg-panel-hover`}
+                    style={{ animationDelay: `${260 + i * 70}ms` }}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      {a.level === "critical" || a.level === "warning" ? (
+                        <AlertIcon
+                          width={16}
+                          height={16}
+                          className={`mt-0.5 shrink-0 ${tone.icon}`}
+                        />
+                      ) : (
+                        <ShieldIcon
+                          width={16}
+                          height={16}
+                          className={`mt-0.5 shrink-0 ${tone.icon}`}
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <div className="text-sm text-ink">{a.title}</div>
+                        <div className="text-xs text-ink-faint">{a.detail}</div>
+                      </div>
+                    </div>
+                    <span className={`pill shrink-0 ${tone.pill}`}>{a.level}</span>
                   </div>
+                );
+              })}
+              {data && data.alerts.length === 0 && (
+                <div className="flex items-center gap-2.5 rounded-lg border border-l-2 border-line border-l-teal bg-bg-sunken px-3 py-2.5">
+                  <ShieldIcon width={16} height={16} className="text-teal" />
+                  <p className="text-sm text-ink-muted">Sin alertas activas.</p>
                 </div>
-                <span className={`pill ${ALERT_STYLE[a.level]}`}>{a.level}</span>
-              </div>
-            ))}
-            {data && data.alerts.length === 0 && (
-              <p className="text-sm text-ink-faint">No active alerts.</p>
-            )}
-            {!data && <div className="h-[120px] animate-pulse rounded-lg bg-panel-hover" />}
-          </div>
-        </Card>
-      </div>
-
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card
-          title="Territorial coverage"
-          action={<Link to="/maps" className="text-xs text-accent hover:underline">Ver mapa</Link>}
-        >
-          {!areas ? (
-            <div className="h-[200px] animate-pulse rounded-lg bg-panel-hover" />
-          ) : coverage.length > 0 ? (
-            <CoverageBars data={coverage} />
-          ) : (
-            <div className="grid h-[200px] place-items-center text-center text-sm text-ink-faint">
-              <div>
-                Sin cartografía cargada todavía.
-                <br />
-                Ingesta el Marco Geográfico Electoral del INE para poblar este panel.
-              </div>
+              )}
+              {!data && <div className="h-[180px] animate-pulse rounded-lg bg-panel-hover" />}
             </div>
-          )}
-        </Card>
-
-        <Card
-          title="Data sources"
-          action={<Link to="/sources" className="text-xs text-accent hover:underline">Ver todas</Link>}
-        >
-          <div className="space-y-2">
-            {sources.slice(0, 5).map((src) => (
-              <div
-                key={src.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-line bg-bg-sunken px-3 py-2.5"
-              >
-                <div className="flex items-center gap-2.5">
-                  <DatabaseIcon width={16} height={16} className="text-accent" />
-                  <span className="text-sm text-ink">{src.name}</span>
-                </div>
-                <span className={`pill ${KIND_BADGE[src.kind] ?? "border-line"}`}>
-                  {src.kind}
-                </span>
-              </div>
-            ))}
-            {sources.length === 0 && (
-              <div className="h-[120px] animate-pulse rounded-lg bg-panel-hover" />
-            )}
-          </div>
-        </Card>
+          </Card>
+        </div>
       </div>
 
+      {/* ---- Territorial coverage (mini-map) + data sources ---- */}
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="reveal" style={{ animationDelay: "160ms" }}>
+          <Card
+            title="Cobertura territorial"
+            accentDot
+            className="h-full"
+            action={
+              <Link
+                to="/maps"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-accent transition-colors hover:text-accent-strong"
+              >
+                <MapIcon width={14} height={14} /> Ver mapa
+              </Link>
+            }
+          >
+            {!areas ? (
+              <div className="h-[230px] animate-pulse rounded-lg bg-panel-hover" />
+            ) : hasAreas ? (
+              <div className="space-y-4">
+                <div className="relative h-[230px] overflow-hidden rounded-card">
+                  <MapCanvas
+                    areas={areas}
+                    showAreas
+                    choropleth
+                    basemap="dark"
+                    fitKey={fitKey}
+                    onSelect={() => {}}
+                  />
+                  {/* Soften interaction cues to keep it a non-interactive briefing view */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-bg/80 to-transparent" />
+                </div>
+                {coverage.length > 0 && <CoverageBars data={coverage} height={140} />}
+              </div>
+            ) : (
+              <div className="grid h-[230px] place-items-center text-center text-sm text-ink-faint">
+                <div>
+                  Sin cartografía cargada todavía.
+                  <br />
+                  Ingesta el Marco Geográfico Electoral del INE para poblar este panel.
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        <div className="reveal" style={{ animationDelay: "240ms" }}>
+          <Card
+            title="Fuentes de datos"
+            accentDot
+            className="h-full"
+            action={
+              <Link
+                to="/sources"
+                className="text-xs font-medium text-accent transition-colors hover:text-accent-strong"
+              >
+                Ver todas
+              </Link>
+            }
+          >
+            <div className="space-y-2.5">
+              {sources.slice(0, 5).map((src, i) => (
+                <div
+                  key={src.id}
+                  className="reveal group flex items-center justify-between gap-3 rounded-lg border border-line bg-bg-sunken px-3 py-2.5 transition-all hover:-translate-y-0.5 hover:border-line-strong hover:bg-panel-hover"
+                  style={{ animationDelay: `${300 + i * 60}ms` }}
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="metric-chip h-8 w-8 shrink-0 text-accent transition-colors group-hover:text-teal">
+                      <DatabaseIcon width={15} height={15} />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm text-ink">{src.name}</div>
+                      {src.formats.length > 0 && (
+                        <div className="truncate font-mono text-[10px] uppercase tracking-wide text-ink-faint">
+                          {src.formats.slice(0, 4).join(" · ")}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <span className={`pill shrink-0 ${KIND_BADGE[src.kind] ?? "border-line"}`}>
+                    {src.kind}
+                  </span>
+                </div>
+              ))}
+              {sources.length === 0 && (
+                <div className="h-[180px] animate-pulse rounded-lg bg-panel-hover" />
+              )}
+            </div>
+          </Card>
+        </div>
+      </div>
     </AppLayout>
   );
 }
