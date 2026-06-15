@@ -61,6 +61,34 @@ const CHORO_FILL: maplibregl.FillLayerSpecification["paint"] = {
   ] as never,
 };
 
+// Recursively extend bounds with valid [lng, lat] positions from any GeoJSON
+// coordinates nesting (Point/Line/Polygon/Multi*). Validates ranges so a
+// malformed/misordered coordinate can never throw "Invalid LngLat".
+function extendBounds(b: maplibregl.LngLatBounds, coords: unknown): boolean {
+  if (!Array.isArray(coords)) return false;
+  if (typeof coords[0] === "number" && typeof coords[1] === "number") {
+    const lng = coords[0] as number;
+    const lat = coords[1] as number;
+    if (
+      Number.isFinite(lng) &&
+      Number.isFinite(lat) &&
+      lng >= -180 &&
+      lng <= 180 &&
+      lat >= -90 &&
+      lat <= 90
+    ) {
+      b.extend([lng, lat]);
+      return true;
+    }
+    return false;
+  }
+  let any = false;
+  for (const c of coords) {
+    if (extendBounds(b, c)) any = true;
+  }
+  return any;
+}
+
 export function MapCanvas({ areas, showAreas, wmsLayers = [], choropleth, basemap, fitKey, onSelect }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -163,12 +191,16 @@ export function MapCanvas({ areas, showAreas, wmsLayers = [], choropleth, basema
     let any = false;
     for (const f of areas.features) {
       const g = f.geometry as GeoJSON.Geometry | null;
-      if (!g) continue;
-      const coords = (g as GeoJSON.Polygon | GeoJSON.MultiPolygon).coordinates as number[][][] | number[][][][];
-      const flat = JSON.stringify(coords).match(/-?\d+\.\d+/g)?.map(Number) ?? [];
-      for (let i = 0; i + 1 < flat.length; i += 2) { b.extend([flat[i], flat[i + 1]]); any = true; }
+      if (!g || !("coordinates" in g)) continue;
+      if (extendBounds(b, (g as { coordinates: unknown }).coordinates)) any = true;
     }
-    if (any) map.fitBounds(b, { padding: 40, maxZoom: 6, duration: 600 });
+    if (any) {
+      try {
+        map.fitBounds(b, { padding: 40, maxZoom: 6, duration: 600 });
+      } catch {
+        /* bounds unusable — leave the current view */
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitKey]);
 
