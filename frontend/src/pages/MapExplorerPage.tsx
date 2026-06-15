@@ -241,8 +241,8 @@ export function MapExplorerPage() {
             </button>
           </div>
 
-          {/* Map frame with inner vignette + accent hairline */}
-          <div className="card-premium relative flex-1 overflow-hidden p-0">
+          {/* Map frame with inner vignette + accent hairline (static — no hover lift) */}
+          <div className="relative flex-1 overflow-hidden rounded-card border border-line-strong bg-panel p-0 shadow-panel">
             <div className="relative h-full w-full">
               <MapCanvas
                 key={basemap}
