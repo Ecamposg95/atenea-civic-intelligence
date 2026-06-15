@@ -10,9 +10,20 @@ CSV = (
 ).encode("latin-1")
 
 
-def test_datasets_registry_has_municipios():
+def test_datasets_registry_has_expected_keys():
     keys = {d["key"] for d in ieem.list_datasets()}
-    assert "municipios" in keys
+    assert {"municipios", "distritos_locales"} <= keys
+
+
+def test_distritos_dataset_parses_numbered_catalog():
+    csv = (
+        "INSTITUTO ELECTORAL DEL ESTADO DE MÉXICO,\r\n"
+        "DISTRITOS,\r\n"
+        "1,TOLUCA\r\n"
+    ).encode("latin-1")
+    result = ieem.fetch_dataset("distritos_locales", fetch=lambda url: csv)
+    assert result["columns"] == ["Distrito", "Cabecera"]
+    assert result["rows"][0] == {"Distrito": "1", "Cabecera": "TOLUCA"}
 
 
 def test_fetch_dataset_skips_preamble_and_maps_columns():

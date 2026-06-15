@@ -31,6 +31,12 @@ DATASETS: dict[str, dict[str, Any]] = {
         "kind": "numbered",
         "columns": ["Clave", "Municipio"],
     },
+    "distritos_locales": {
+        "label": "Distritos electorales locales",
+        "file": "Distritos_Electorales_Locales_2025.csv",
+        "kind": "numbered",
+        "columns": ["Distrito", "Cabecera"],
+    },
 }
 
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { getIeemDataset } from "@/api/intel";
+import { getIeemDataset, getIeemDatasets } from "@/api/intel";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -9,11 +9,10 @@ import { MetricCard } from "@/components/ui/MetricCard";
 import { SearchIcon } from "@/components/ui/icons";
 import { useAsync } from "@/hooks/useAsync";
 
-const DATASETS = [{ key: "municipios", label: "Municipios" }];
-
 export function IeemPage() {
   const [key, setKey] = useState("municipios");
   const [q, setQ] = useState("");
+  const datasets = useAsync(() => getIeemDatasets(), []).data ?? [];
   const { data, loading, error, reload } = useAsync(
     () => getIeemDataset(key),
     [key],
@@ -46,7 +45,7 @@ export function IeemPage() {
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        {DATASETS.map((d) => (
+        {datasets.map((d) => (
           <button
             key={d.key}
             type="button"
