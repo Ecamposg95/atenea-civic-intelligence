@@ -3,7 +3,11 @@ import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
+  CartesianGrid,
   Cell,
+  Legend,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -18,8 +22,9 @@ import { PreviewBanner } from "@/components/modules/PreviewBanner";
 import { Card } from "@/components/ui/Card";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { Sparkline } from "@/components/ui/Sparkline";
+import { RadialGauge } from "@/components/charts/RadialGauge";
 import { AnalyticsIcon, ShieldIcon, VotersIcon } from "@/components/ui/icons";
-import { ENTITY_RESULTS, NATIONAL, PARTY_RESULTS } from "./fixtures";
+import { ENTITY_RESULTS, HISTORICAL, NATIONAL, PARTY_RESULTS } from "./fixtures";
 
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 const nf = new Intl.NumberFormat("es-MX");
@@ -36,13 +41,14 @@ const TOOLTIP_STYLE = {
   color: "#e6f2f5",
 } as const;
 
-type View = "nacional" | "entidad";
+type View = "nacional" | "entidad" | "historico";
 type SortKey = "entity" | "turnout" | "margin" | "votes";
 type SortDir = "asc" | "desc";
 
 const VIEWS: { id: View; label: string }[] = [
   { id: "nacional", label: "Nacional" },
   { id: "entidad", label: "Por entidad" },
+  { id: "historico", label: "Histórico" },
 ];
 
 export function ResultadosPage() {
@@ -101,7 +107,9 @@ export function ResultadosPage() {
         />
       </div>
 
-      {view === "nacional" ? <NacionalView /> : <EntidadView />}
+      {view === "nacional" && <NacionalView />}
+      {view === "entidad" && <EntidadView />}
+      {view === "historico" && <HistoricoView />}
     </AppLayout>
   );
 }
@@ -109,7 +117,35 @@ export function ResultadosPage() {
 function NacionalView() {
   return (
     <>
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="reveal mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3" style={{ animationDelay: "80ms" }}>
+        <Card title="Participación nacional" accentDot className="flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2 py-2">
+            <RadialGauge value={NATIONAL.turnout} label="Participación" size={148} />
+            <span className="text-[11px] text-ink-faint">Avance de cómputo (muestra)</span>
+          </div>
+        </Card>
+        <Card title="Casillas computadas" accentDot className="flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2 py-2">
+            <RadialGauge value={NATIONAL.counted} label="Computadas" size={148} />
+            <span className="text-[11px] text-ink-faint">Cobertura de casillas (muestra)</span>
+          </div>
+        </Card>
+        <Card title="Fuerza líder" accentDot className="flex flex-col justify-center">
+          <div className="space-y-2.5 py-1">
+            {PARTY_RESULTS.slice(0, 3).map((p) => (
+              <div key={p.party} className="flex items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-2 text-sm text-ink-muted">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+                  {p.party}
+                </span>
+                <span className="font-mono text-sm tabular-nums text-ink">{pct(p.share)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="reveal" style={{ animationDelay: "120ms" }}>
           <Card
             title="Distribución del voto"
@@ -310,6 +346,93 @@ function EntidadView() {
           </table>
         </div>
       </Card>
+    </div>
+  );
+}
+
+function HistoricoView() {
+  const turnoutTrend = HISTORICAL.map((c) => ({ period: c.year, value: c.turnout }));
+  const maxTurnout = [...HISTORICAL].sort((a, b) => b.turnout - a.turnout)[0];
+  const minTurnout = [...HISTORICAL].sort((a, b) => a.turnout - b.turnout)[0];
+
+  return (
+    <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="reveal lg:col-span-2" style={{ animationDelay: "120ms" }}>
+        <Card
+          title="Voto por coalición · ciclos electorales (%)"
+          accentDot
+          className="h-full"
+          action={<span className="pill border-line text-ink-muted">muestra · histórico</span>}
+        >
+          <div style={{ width: "100%", height: 300 }}>
+            <ResponsiveContainer>
+              <LineChart data={HISTORICAL} margin={{ left: -12, top: 8, right: 8 }}>
+                <CartesianGrid stroke="#15242b" vertical={false} />
+                <XAxis dataKey="year" stroke="#52646d" tick={{ fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#15242b" }} />
+                <YAxis
+                  stroke="#52646d"
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
+                  domain={[0, 0.5]}
+                />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  formatter={(v: number, n: string) => [pct(v), n]}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Line type="monotone" dataKey="coalicionA" name="Coalición A" stroke="#22d3ee" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="coalicionB" name="Coalición B" stroke="#f5b53d" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="coalicionC" name="Coalición C" stroke="#2dd4bf" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
+      <div className="reveal" style={{ animationDelay: "200ms" }}>
+        <Card
+          title="Participación histórica"
+          accentDot
+          className="h-full"
+          action={<span className="pill border-line text-ink-muted">muestra</span>}
+        >
+          <div style={{ width: "100%", height: 180 }}>
+            <ResponsiveContainer>
+              <LineChart data={turnoutTrend} margin={{ left: -12, top: 8, right: 8 }}>
+                <CartesianGrid stroke="#15242b" vertical={false} />
+                <XAxis dataKey="period" stroke="#52646d" tick={{ fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#15242b" }} />
+                <YAxis
+                  stroke="#52646d"
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
+                  domain={[0.3, 0.7]}
+                />
+                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [pct(v), "Participación"]} />
+                <Line type="monotone" dataKey="value" stroke="#22d3ee" strokeWidth={2} dot={{ r: 3, fill: "#22d3ee" }} activeDot={{ r: 5, fill: "#f5b53d" }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            <div className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
+              <span className="eyebrow block">Máxima participación (muestra)</span>
+              <span className="mt-1 block font-mono text-sm tabular-nums text-teal">
+                {maxTurnout ? `${pct(maxTurnout.turnout)} · ${maxTurnout.year}` : "—"}
+              </span>
+            </div>
+            <div className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
+              <span className="eyebrow block">Mínima participación (muestra)</span>
+              <span className="mt-1 block font-mono text-sm tabular-nums text-state-warning">
+                {minTurnout ? `${pct(minTurnout.turnout)} · ${minTurnout.year}` : "—"}
+              </span>
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -24,6 +24,8 @@ export interface AnalyticsOverview {
   };
   by_action: { action: string; count: number }[];
   by_actor: { actor_id: string; count: number }[];
+  by_entity_type: { entity_type: string; count: number }[];
+  by_hour: { hour: number; count: number }[];
   alerts: AnalyticsAlert[];
   generated_at: string;
 }

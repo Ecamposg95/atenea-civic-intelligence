@@ -1,6 +1,11 @@
 import type { AreaProperties } from "@/types/maps";
 
-interface Props { area: (AreaProperties & { metric: number }) | null; onClose: () => void; }
+interface Props {
+  area: (AreaProperties & { metric: number }) | null;
+  onClose: () => void;
+  /** Optional: state name for a selected municipio (its `code`), shown explicitly. */
+  stateName?: string | null;
+}
 
 const LEVEL_LABEL: Record<string, string> = {
   state: "Entidad",
@@ -8,7 +13,7 @@ const LEVEL_LABEL: Record<string, string> = {
   municipality: "Municipio",
 };
 
-export function AreaDetailPanel({ area, onClose }: Props) {
+export function AreaDetailPanel({ area, onClose, stateName }: Props) {
   if (!area) return null;
   const pct = Math.max(0, Math.min(1, area.metric)) * 100;
   return (
@@ -40,6 +45,28 @@ export function AreaDetailPanel({ area, onClose }: Props) {
           ✕
         </button>
       </div>
+
+      {/* Explicit metadata: level, code, and (for municipios) the parent state. */}
+      <dl className="mt-3 space-y-1.5 border-t border-line pt-3 text-xs">
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-ink-faint">Nivel</dt>
+          <dd className="font-medium text-ink-muted">
+            {LEVEL_LABEL[area.level] ?? area.level}
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-ink-faint">Código</dt>
+          <dd className="truncate font-mono text-ink-muted">{area.code ?? "—"}</dd>
+        </div>
+        {area.level === "municipality" && (
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="text-ink-faint">Entidad</dt>
+            <dd className="truncate font-medium text-teal">
+              {stateName ?? area.code ?? "—"}
+            </dd>
+          </div>
+        )}
+      </dl>
 
       <div className="mt-4">
         <div className="mb-1.5 flex items-baseline justify-between">

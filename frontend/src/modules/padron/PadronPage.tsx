@@ -17,8 +17,18 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { PreviewBanner } from "@/components/modules/PreviewBanner";
 import { Card } from "@/components/ui/Card";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { RadialGauge } from "@/components/charts/RadialGauge";
+import { ParticipationChart } from "@/components/dashboards/ParticipationChart";
 import { DatabaseIcon, LayersIcon, UserIcon, VotersIcon } from "@/components/ui/icons";
-import { AGE_BANDS, ENTITY_COVERAGE, SEX_DISTRIBUTION, SUMMARY } from "./fixtures";
+import {
+  AGE_BANDS,
+  ENTITY_COVERAGE,
+  PADRON_HISTORY,
+  SEX_DISTRIBUTION,
+  SUMMARY,
+} from "./fixtures";
+
+const compact = new Intl.NumberFormat("es-MX", { notation: "compact", maximumFractionDigits: 1 });
 
 const nf = new Intl.NumberFormat("es-MX");
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
@@ -30,11 +40,12 @@ const TOOLTIP_STYLE = {
   color: "#e6f2f5",
 } as const;
 
-type Tab = "demografia" | "cobertura";
+type Tab = "demografia" | "cobertura" | "tendencia";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "demografia", label: "Demografía" },
   { id: "cobertura", label: "Cobertura" },
+  { id: "tendencia", label: "Tendencia histórica" },
 ];
 
 export function PadronPage() {
@@ -97,7 +108,9 @@ export function PadronPage() {
         ))}
       </div>
 
-      {tab === "demografia" ? <DemografiaTab /> : <CoberturaTab />}
+      {tab === "demografia" && <DemografiaTab />}
+      {tab === "cobertura" && <CoberturaTab />}
+      {tab === "tendencia" && <TendenciaTab />}
     </AppLayout>
   );
 }
@@ -207,8 +220,42 @@ function CoberturaTab() {
   // Normalize fill so differences read clearly (floor at ~35% width).
   const fillWidth = (cov: number) => 0.35 + ((cov - minCov) / span) * 0.65;
 
+  const avgCov = ENTITY_COVERAGE.reduce((s, e) => s + e.cobertura, 0) / ENTITY_COVERAGE.length;
+  const best = [...ENTITY_COVERAGE].sort((a, b) => b.cobertura - a.cobertura)[0];
+  const worst = [...ENTITY_COVERAGE].sort((a, b) => a.cobertura - b.cobertura)[0];
+
   return (
-    <div className="reveal mt-5" style={{ animationDelay: "120ms" }}>
+    <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="reveal lg:col-span-1" style={{ animationDelay: "120ms" }}>
+        <Card title="Cobertura nacional" accentDot className="h-full">
+          <div className="flex flex-col items-center gap-4 py-2">
+            <RadialGauge value={SUMMARY.cobertura} label="Cobertura" size={148} />
+            <div className="grid w-full grid-cols-2 gap-3">
+              <div className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
+                <span className="eyebrow block">Promedio entidades</span>
+                <span className="mt-1 block font-mono text-lg tabular-nums text-accent">
+                  {pct(avgCov)}
+                </span>
+              </div>
+              <div className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
+                <span className="eyebrow block">Mayor cobertura</span>
+                <span className="mt-1 block font-mono text-sm tabular-nums text-teal">
+                  {best ? pct(best.cobertura) : "—"}
+                </span>
+                <span className="text-[11px] text-ink-faint">{best?.entity}</span>
+              </div>
+            </div>
+            <div className="w-full rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
+              <span className="eyebrow block">Menor cobertura (muestra)</span>
+              <span className="mt-1 block font-mono text-sm tabular-nums text-state-warning">
+                {worst ? `${pct(worst.cobertura)} · ${worst.entity}` : "—"}
+              </span>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div className="reveal lg:col-span-2" style={{ animationDelay: "200ms" }}>
       <Card
         title="Cobertura por entidad"
         accentDot
@@ -260,6 +307,66 @@ function CoberturaTab() {
           )}
         </div>
       </Card>
+      </div>
+    </div>
+  );
+}
+
+function TendenciaTab() {
+  const padronTrend = PADRON_HISTORY.map((y) => ({ period: y.year, value: y.padron }));
+  const listaTrend = PADRON_HISTORY.map((y) => ({ period: y.year, value: y.listaNominal }));
+  const covTrend = PADRON_HISTORY.map((y) => ({ period: y.year, value: y.cobertura }));
+  const first = PADRON_HISTORY[0];
+  const last = PADRON_HISTORY[PADRON_HISTORY.length - 1];
+  const growth = first && last ? (last.padron - first.padron) / first.padron : 0;
+
+  return (
+    <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="reveal lg:col-span-2" style={{ animationDelay: "120ms" }}>
+        <Card
+          title="Padrón electoral · evolución anual"
+          accentDot
+          className="h-full"
+          action={<span className="pill border-line text-ink-muted">muestra · personas</span>}
+        >
+          <ParticipationChart data={padronTrend} valueFormat="number" seriesLabel="Padrón" height={260} />
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <div className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
+              <span className="eyebrow block">{first?.year}</span>
+              <span className="mt-1 block font-mono text-sm tabular-nums text-ink">
+                {first ? compact.format(first.padron) : "—"}
+              </span>
+            </div>
+            <div className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
+              <span className="eyebrow block">{last?.year}</span>
+              <span className="mt-1 block font-mono text-sm tabular-nums text-accent">
+                {last ? compact.format(last.padron) : "—"}
+              </span>
+            </div>
+            <div className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
+              <span className="eyebrow block">Crecimiento</span>
+              <span className="mt-1 block font-mono text-sm tabular-nums text-teal">
+                +{pct(growth)}
+              </span>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div className="reveal" style={{ animationDelay: "200ms" }}>
+        <Card
+          title="Lista nominal · evolución"
+          accentDot
+          className="h-full"
+          action={<span className="pill border-line text-ink-muted">muestra</span>}
+        >
+          <ParticipationChart data={listaTrend} valueFormat="number" seriesLabel="Lista nominal" height={180} />
+          <div className="mt-4">
+            <span className="eyebrow block">Cobertura por año (muestra)</span>
+            <ParticipationChart data={covTrend} valueFormat="percent" seriesLabel="Cobertura" height={120} />
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

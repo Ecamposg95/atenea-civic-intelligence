@@ -29,6 +29,19 @@ export interface SexDatum {
   share: number;
 }
 
+/** Distribution of population by highest schooling level (%) — muestra. */
+export interface SchoolingLevel {
+  level: string;
+  share: number; // %
+  color?: string;
+}
+
+/** Share of occupied dwellings by a basic service / amenity (%) — muestra. */
+export interface DwellingService {
+  service: string;
+  share: number; // ratio 0..1
+}
+
 export interface DemografiaData {
   summary: {
     poblacion: number;
@@ -37,11 +50,33 @@ export interface DemografiaData {
     escolaridad: number;
     viviendas: number;
     edadMediana: number;
+    /** Dependency ratio (population <15 and 65+ over working-age), ratio 0..1. */
+    dependencia: number;
   };
   ageSex: AgeSexBand[];
   sexSplit: SexDatum[];
+  schooling: SchoolingLevel[];
+  dwellings: DwellingService[];
   entities: EntityDemografia[];
 }
+
+/** Population by highest schooling attained (%) — muestra. */
+export const SCHOOLING: SchoolingLevel[] = [
+  { level: "Sin escolaridad", share: 4.2, color: "#f4607a" },
+  { level: "Primaria", share: 19.8, color: "#7c8aa5" },
+  { level: "Secundaria", share: 28.6, color: "#f5b53d" },
+  { level: "Media superior", share: 24.1, color: "#2dd4bf" },
+  { level: "Superior", share: 23.3, color: "#22d3ee" },
+];
+
+/** Coverage of basic dwelling services (%) — muestra. */
+export const DWELLINGS: DwellingService[] = [
+  { service: "Energía eléctrica", share: 0.992 },
+  { service: "Agua entubada", share: 0.956 },
+  { service: "Drenaje", share: 0.934 },
+  { service: "Internet", share: 0.681 },
+  { service: "Computadora", share: 0.443 },
+];
 
 /** Population by entity / sex / schooling / dwellings — muestra. */
 export const ENTITIES: EntityDemografia[] = [
@@ -87,8 +122,11 @@ export const DEMOGRAFIA_DATA: DemografiaData = {
     escolaridad: 9.7,
     viviendas: 35_220_000,
     edadMediana: 29,
+    dependencia: 0.476,
   },
   ageSex: AGE_SEX,
   sexSplit: SEX_SPLIT,
+  schooling: SCHOOLING,
+  dwellings: DWELLINGS,
   entities: ENTITIES,
 };

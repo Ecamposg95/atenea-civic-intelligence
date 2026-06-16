@@ -10,7 +10,10 @@ import { Legend } from "@/components/maps/Legend";
 import { MapCanvas, type Basemap, type WmsOverlay } from "@/components/maps/MapCanvas";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { MapIcon, SearchIcon } from "@/components/ui/icons";
-import type { AreaProperties, AreasResponse, MapLayer } from "@/types/maps";
+import type { AreaFeature, AreaProperties, AreasResponse, MapLayer } from "@/types/maps";
+import { sampleMetric } from "@/types/maps";
+
+import { municipiosByState } from "./mapMetrics";
 
 const LEVEL_LABEL: Record<string, string> = {
   "": "Todos los niveles",
@@ -117,6 +120,31 @@ export function MapExplorerPage() {
     };
   }, [areas, search]);
 
+  // Bounded list of search matches for the results dropdown (avoids rendering
+  // all 1854 municipios at once).
+  const searchMatches = useMemo<AreaFeature[]>(() => {
+    if (!search.trim() || !filteredAreas) return [];
+    return filteredAreas.features.slice(0, 12);
+  }, [filteredAreas, search]);
+
+  // REAL metric (municipio level only): # municipios per state, grouped by the
+  // municipio's `code` (= its state name). Distinct from the sample metric.
+  const stateRanking = useMemo(
+    () => (level === "municipality" ? municipiosByState(areas) : []),
+    [areas, level],
+  );
+
+  // Select + center a feature chosen from the search results.
+  const selectFeature = (f: AreaFeature) => {
+    setSelected({ ...f.properties, metric: sampleMetric(f.properties.id) });
+    setSearch(f.properties.name); // narrows filteredAreas to this feature
+    setFitKey((k) => k + 1); // MapCanvas fits bounds to the filtered set
+  };
+
+  // For a selected municipio, surface its parent state (= its `code`).
+  const selectedStateName =
+    selected?.level === "municipality" ? selected.code : null;
+
   return (
     <AppLayout title="Map Explorer" crumb="Electoral & Territorial Layers">
       <PageHeader
@@ -209,7 +237,7 @@ export function MapExplorerPage() {
               Coropleta
             </button>
 
-            {/* Search */}
+            {/* Search + results dropdown */}
             <div className="relative min-w-[10rem] flex-1">
               <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
               <input
@@ -218,6 +246,26 @@ export function MapExplorerPage() {
                 placeholder="Buscar área…"
                 className="field-input !py-2 pl-9"
               />
+              {searchMatches.length > 0 && (
+                <ul className="animate-fade-up absolute left-0 right-0 top-[calc(100%+0.35rem)] z-20 max-h-64 overflow-auto rounded-lg border border-line-strong/70 bg-panel/95 p-1 shadow-glow backdrop-blur-md">
+                  {searchMatches.map((f) => (
+                    <li key={f.properties.id}>
+                      <button
+                        type="button"
+                        onClick={() => selectFeature(f)}
+                        className="flex w-full items-baseline justify-between gap-3 rounded-md px-2.5 py-1.5 text-left text-sm text-ink transition-colors hover:bg-panel-hover"
+                      >
+                        <span className="truncate">{f.properties.name}</span>
+                        {f.properties.code && (
+                          <span className="shrink-0 font-mono text-[10px] text-ink-faint">
+                            {f.properties.code}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* Fit-bounds */}
@@ -253,7 +301,51 @@ export function MapExplorerPage() {
                 }}
               />
               {choropleth && <Legend label="Participación" />}
-              <AreaDetailPanel area={selected} onClose={() => setSelected(null)} />
+
+              {/* REAL data panel: # municipios per state (not a sample). */}
+              {stateRanking.length > 0 && (
+                <div className="animate-fade-up absolute left-3 top-3 z-10 w-60 overflow-hidden rounded-xl border border-line-strong/70 bg-panel/80 p-3 shadow-glow backdrop-blur-md">
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-0 top-0 h-px bg-accent-gradient opacity-70"
+                  />
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="eyebrow !tracking-[0.14em] text-ink-muted">
+                      Estados por # municipios
+                    </span>
+                    <span className="pill border-accent/30 bg-accent/10 !px-1.5 !py-0.5 text-[9px] text-accent">
+                      real
+                    </span>
+                  </div>
+                  <ol className="max-h-56 space-y-1 overflow-auto">
+                    {stateRanking.slice(0, 10).map((s, i) => (
+                      <li
+                        key={s.state}
+                        className="flex items-baseline justify-between gap-2 text-xs"
+                      >
+                        <span className="min-w-0 truncate text-ink-muted">
+                          <span className="mr-1.5 font-mono text-ink-faint">
+                            {i + 1}.
+                          </span>
+                          {s.state}
+                        </span>
+                        <span className="shrink-0 font-mono font-semibold tabular-nums text-ink">
+                          {s.count}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                  <div className="mt-2 border-t border-line pt-1.5 font-mono text-[10px] text-ink-faint">
+                    {stateRanking.length} estados · conteo real
+                  </div>
+                </div>
+              )}
+
+              <AreaDetailPanel
+                area={selected}
+                stateName={selectedStateName}
+                onClose={() => setSelected(null)}
+              />
             </div>
           </div>
         </div>

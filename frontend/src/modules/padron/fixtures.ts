@@ -28,6 +28,24 @@ export const TOP_ENTITIES: EntityPadron[] = [
   { entity: "Puebla", padron: 4_700_000 },
 ];
 
+/** Multi-year padrón / lista nominal history — muestra (personas). */
+export interface PadronYear {
+  year: string;
+  padron: number;
+  listaNominal: number;
+  cobertura: number; // ratio 0..1
+}
+
+export const PADRON_HISTORY: PadronYear[] = [
+  { year: "2018", padron: 89_300_000, listaNominal: 89_100_000, cobertura: 0.948 },
+  { year: "2019", padron: 90_800_000, listaNominal: 90_200_000, cobertura: 0.951 },
+  { year: "2020", padron: 92_400_000, listaNominal: 91_700_000, cobertura: 0.954 },
+  { year: "2021", padron: 94_100_000, listaNominal: 93_300_000, cobertura: 0.957 },
+  { year: "2022", padron: 95_700_000, listaNominal: 94_800_000, cobertura: 0.96 },
+  { year: "2023", padron: 97_100_000, listaNominal: 96_300_000, cobertura: 0.962 },
+  { year: "2024", padron: 98_500_000, listaNominal: 97_800_000, cobertura: 0.964 },
+];
+
 /** Cobertura (lista nominal / padrón) por entidad — muestra. */
 export const ENTITY_COVERAGE: EntityCoverage[] = [
   { entity: "Estado de México", padron: 12_900_000, listaNominal: 12_540_000, cobertura: 0.972 },

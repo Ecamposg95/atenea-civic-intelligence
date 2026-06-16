@@ -17,6 +17,24 @@ export const PARTY_RESULTS: PartyResult[] = [
   { party: "Otros", color: "#7c8aa5", votes: 4_187_220, share: 0.093 },
 ];
 
+/** Historical national results by election cycle — muestra. */
+export interface HistoricalCycle {
+  year: string;
+  turnout: number; // ratio 0..1
+  coalicionA: number; // share 0..1
+  coalicionB: number;
+  coalicionC: number;
+}
+
+export const HISTORICAL: HistoricalCycle[] = [
+  { year: "2009", turnout: 0.447, coalicionA: 0.31, coalicionB: 0.37, coalicionC: 0.18 },
+  { year: "2012", turnout: 0.631, coalicionA: 0.38, coalicionB: 0.32, coalicionC: 0.22 },
+  { year: "2015", turnout: 0.479, coalicionA: 0.29, coalicionB: 0.41, coalicionC: 0.19 },
+  { year: "2018", turnout: 0.633, coalicionA: 0.43, coalicionB: 0.22, coalicionC: 0.28 },
+  { year: "2021", turnout: 0.521, coalicionA: 0.36, coalicionB: 0.30, coalicionC: 0.24 },
+  { year: "2024", turnout: 0.612, coalicionA: 0.41, coalicionB: 0.316, coalicionC: 0.181 },
+];
+
 export const ENTITY_RESULTS: EntityResult[] = [
   { entity: "Ciudad de México", turnout: 0.66, winner: "Coalición A", margin: 0.12, votes: 5_082_000 },
   { entity: "Estado de México", turnout: 0.61, winner: "Coalición A", margin: 0.09, votes: 7_869_000 },

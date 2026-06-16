@@ -86,3 +86,49 @@ export const EXPORT_SHARES: ExportShare[] = [
   { name: "Energía", value: 51, color: "#06b6d4" },
   { name: "Otros", value: 82, color: "#f4607a" },
 ];
+
+/** Annual trade balance: exports vs imports per year — muestra (MMD USD). */
+export interface TradeBalancePoint {
+  year: string;
+  exportaciones: number; // miles de millones USD
+  importaciones: number; // miles de millones USD
+}
+
+export const TRADE_BALANCE: TradeBalancePoint[] = [
+  { year: "2019", exportaciones: 461, importaciones: 455 },
+  { year: "2020", exportaciones: 417, importaciones: 383 },
+  { year: "2021", exportaciones: 494, importaciones: 506 },
+  { year: "2022", exportaciones: 578, importaciones: 604 },
+  { year: "2023", exportaciones: 593, importaciones: 599 },
+  { year: "2024", exportaciones: 617, importaciones: 612 },
+];
+
+/** Top commercial / retail subsectors by establishments — muestra. */
+export interface ComercioSubsector {
+  name: string;
+  value: number; // miles de establecimientos
+  color?: string;
+}
+
+export const COMERCIO_SUBSECTORS: ComercioSubsector[] = [
+  { name: "Abarrotes y alimentos", value: 612, color: "#22d3ee" },
+  { name: "Comercio al por mayor", value: 248, color: "#f5b53d" },
+  { name: "Textil y calzado", value: 196, color: "#2dd4bf" },
+  { name: "Ferretería y construcción", value: 154, color: "#7c8aa5" },
+  { name: "Electrónica y hogar", value: 121, color: "#06b6d4" },
+  { name: "Automotriz y refacciones", value: 98, color: "#f4607a" },
+];
+
+/** Economic complexity ranking inputs per entity — muestra. */
+export interface ComplexityPoint {
+  entity: string;
+  eci: number; // índice de complejidad económica
+  diversidad: number; // número de productos exportados (proxy)
+}
+
+export const COMPLEXITY: ComplexityPoint[] = ENTITIES.map((e) => ({
+  entity: e.entity,
+  eci: e.complejidad,
+  // Sample diversity proxy derived from ECI so the chart stays self-consistent.
+  diversidad: Math.round(110 + (e.complejidad + 0.5) * 95),
+}));

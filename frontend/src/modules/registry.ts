@@ -9,6 +9,7 @@ import {
   DatabaseIcon,
   LayersIcon,
   MapIcon,
+  SearchIcon,
   SettingsIcon,
   ShieldIcon,
   UserIcon,
@@ -137,6 +138,15 @@ const Configuracion = lazy(() =>
     default: m.ConfiguracionPage,
   })),
 );
+const Organizaciones = lazy(() =>
+  import("@/modules/organizaciones/OrgsPage").then((m) => ({ default: m.OrgsPage })),
+);
+const Busqueda = lazy(() =>
+  import("@/modules/busqueda/BusquedaPage").then((m) => ({ default: m.BusquedaPage })),
+);
+const Historial = lazy(() =>
+  import("@/modules/historial/HistorialPage").then((m) => ({ default: m.HistorialPage })),
+);
 
 export const MODULES: ModuleDef[] = [
   // Plataforma (active)
@@ -144,6 +154,7 @@ export const MODULES: ModuleDef[] = [
   { key: "maps", path: "/maps", label: "Map Explorer", section: "plataforma", icon: MapIcon, state: "active", element: MapExplorer },
   { key: "analytics", path: "/analytics", label: "Activity Analytics", section: "plataforma", icon: AnalyticsIcon, state: "active", element: Analytics },
   { key: "sources", path: "/sources", label: "Fuentes de datos", section: "plataforma", icon: DatabaseIcon, state: "active", element: Sources },
+  { key: "busqueda", path: "/busqueda", label: "Búsqueda global", section: "plataforma", icon: SearchIcon, state: "active", element: Busqueda },
 
   // Inteligencia Electoral
   { key: "resultados", path: "/resultados", label: "Resultados Electorales", section: "inteligencia", icon: AnalyticsIcon, state: "preview", element: Resultados },
@@ -194,10 +205,12 @@ export const MODULES: ModuleDef[] = [
   // Gobernanza
   { key: "auditoria", path: "/auditoria", label: "Auditoría & Cumplimiento", section: "gobernanza", icon: ShieldIcon, state: "active", element: Auditoria, roles: ["superadmin", "admin"] },
   { key: "indice", path: "/indice", label: "Índice Cívico-Territorial", section: "gobernanza", icon: AnalyticsIcon, state: "preview", element: Indice },
+  { key: "historial", path: "/historial", label: "Historial de ingestas", section: "gobernanza", icon: DatabaseIcon, state: "active", element: Historial, roles: ["superadmin", "admin"] },
   { key: "reportes", path: "/reportes", label: "Reportes Ejecutivos", section: "gobernanza", icon: DatabaseIcon, state: "active", element: Reportes, roles: ["superadmin", "admin"] },
 
   // Administración (role-gated, active)
   { key: "users", path: "/users", label: "Usuarios", section: "administracion", icon: UserIcon, state: "active", element: Users, roles: ["superadmin", "admin"] },
   { key: "organization", path: "/organization", label: "Organización", section: "administracion", icon: SettingsIcon, state: "active", element: Organization, roles: ["superadmin", "admin"] },
   { key: "configuracion", path: "/configuracion", label: "Configuración", section: "administracion", icon: SettingsIcon, state: "active", element: Configuracion, roles: ["superadmin", "admin"] },
+  { key: "organizaciones", path: "/organizaciones", label: "Organizaciones", section: "administracion", icon: ShieldIcon, state: "active", element: Organizaciones, roles: ["superadmin"] },
 ];

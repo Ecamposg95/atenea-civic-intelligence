@@ -115,7 +115,10 @@ export function IeemPage() {
                   <thead className="sticky top-0 z-10">
                     <tr className="border-b border-line bg-bg-sunken text-left font-mono text-[11px] uppercase tracking-wider text-ink-faint">
                       {data.columns.map((c) => (
-                        <th key={c} className="px-4 py-3 font-medium">
+                        <th
+                          key={c}
+                          className="whitespace-nowrap px-4 py-3 font-medium"
+                        >
                           {c}
                         </th>
                       ))}
@@ -140,7 +143,7 @@ export function IeemPage() {
                           {data.columns.map((c) => (
                             <td
                               key={c}
-                              className="px-4 py-3 font-mono text-ink-muted"
+                              className="whitespace-nowrap px-4 py-3 font-mono text-ink-muted"
                             >
                               {r[c]}
                             </td>
