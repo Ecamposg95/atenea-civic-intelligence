@@ -23,10 +23,14 @@ def list_audit(
     db: DbSession,
     pagination: Annotated[PaginationParams, Depends()],
     action: Optional[str] = Query(None, description="Filter by exact action"),
+    actor: Optional[str] = Query(None, description="Filter by exact actor id"),
+    entity_type: Optional[str] = Query(None, description="Filter by exact entity type"),
     since: Optional[datetime] = Query(None, description="Only entries at/after this UTC time"),
+    until: Optional[datetime] = Query(None, description="Only entries at/before this UTC time"),
 ) -> Page[AuditEntry]:
     items, total = audit_service.list_events(
-        db, ctx, action=action, since=since,
+        db, ctx, action=action, actor=actor, entity_type=entity_type,
+        since=since, until=until,
         limit=pagination.limit, offset=pagination.offset,
     )
     return Page[AuditEntry](

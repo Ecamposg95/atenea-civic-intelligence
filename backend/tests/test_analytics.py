@@ -45,3 +45,14 @@ def test_overview_includes_breakdowns(client):
     assert "by_actor" in body and isinstance(body["by_actor"], list)
     # at least the auth.login action present
     assert any(x["action"] == "auth.login" for x in body["by_action"])
+
+    # entity-type breakdown: list of {entity_type, count}, nulls skipped.
+    assert "by_entity_type" in body and isinstance(body["by_entity_type"], list)
+    assert all({"entity_type", "count"} <= set(x) for x in body["by_entity_type"])
+    assert all(x["entity_type"] is not None for x in body["by_entity_type"])
+
+    # hour-of-day breakdown: exactly 24 buckets, 0..23, with counts.
+    by_hour = body["by_hour"]
+    assert isinstance(by_hour, list) and len(by_hour) == 24
+    assert [x["hour"] for x in by_hour] == list(range(24))
+    assert all({"hour", "count"} <= set(x) for x in by_hour)

@@ -11,9 +11,13 @@ SOURCE = "World Bank Open Data"
 
 INDICATORS: dict[str, str] = {
     "NY.GDP.MKTP.CD": "PIB (USD corrientes)",
+    "NY.GDP.PCAP.CD": "PIB per cápita (USD)",
     "SP.POP.TOTL": "Población total",
+    "SP.URB.TOTL.IN.ZS": "Población urbana (%)",
+    "SP.DYN.LE00.IN": "Esperanza de vida (años)",
     "SL.UEM.TOTL.ZS": "Desempleo (% fuerza laboral)",
     "FP.CPI.TOTL.ZG": "Inflación (% anual)",
+    "IT.NET.USER.ZS": "Usuarios de internet (%)",
     "SI.POV.NAHC": "Pobreza (% nacional)",
 }
 

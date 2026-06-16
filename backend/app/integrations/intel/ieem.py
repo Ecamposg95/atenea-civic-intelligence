@@ -15,15 +15,18 @@ from __future__ import annotations
 import csv
 import io
 from typing import Any, Callable
+from urllib.parse import quote
 
 from app.integrations.ine.base import get_bytes
 
 BASE = "https://dorganizacion.ieem.org.mx/numeralia/docs"
 SOURCE = "IEEM Numeralia — Registro Federal de Electores (Estado de México)"
 
-# key -> { label, file, kind, columns }
+# key -> { label, file, kind, columns, header_match }
 #   kind="numbered": keep rows whose first cell is an integer, map to `columns`.
-#   kind="table"   : generic header-first CSV.
+#   kind="table"   : header-first CSV. If `header_match` is set, preamble rows
+#                    are skipped until a row whose first cell equals that token
+#                    (case-insensitive) — that row becomes the header.
 DATASETS: dict[str, dict[str, Any]] = {
     "municipios": {
         "label": "Catálogo de municipios",
@@ -36,6 +39,20 @@ DATASETS: dict[str, dict[str, Any]] = {
         "file": "Distritos_Electorales_Locales_2025.csv",
         "kind": "numbered",
         "columns": ["Distrito", "Cabecera"],
+    },
+    # State-level padrón / lista nominal aggregate. The real file name carries
+    # spaces and accents, so the URL is percent-encoded when fetched. The file
+    # carries 3 decorative preamble rows ("INSTITUTO ELECTORAL…", title, "Fecha
+    # de corte…") before the real header row that starts with "ENTIDAD", so we
+    # use the table parser with `header_match` to locate it. If the upstream
+    # layout shifts, the parse degrades gracefully (falls back to first row as
+    # header) and a fetch failure raises IneSourceError (router → 502 →
+    # frontend DataState).
+    "padron_lista_nominal": {
+        "label": "Padrón electoral y lista nominal (estatal)",
+        "file": "Padrón Electoral y Lista Nominal Edomex_31032026.csv",
+        "kind": "table",
+        "header_match": "ENTIDAD",
     },
 }
 
@@ -77,13 +94,22 @@ def _parse_numbered(
     return out
 
 
-def _parse_table(rows: list[list[str]]) -> tuple[list[str], list[dict[str, str]]]:
+def _parse_table(
+    rows: list[list[str]], header_match: str | None = None
+) -> tuple[list[str], list[dict[str, str]]]:
     if not rows:
         return [], []
-    header = rows[0]
+    start = 0
+    if header_match:
+        token = header_match.strip().lower()
+        for i, r in enumerate(rows):
+            if r and r[0].strip().lower() == token:
+                start = i
+                break
+    header = rows[start]
     out = [
         {header[i]: (r[i] if i < len(r) else "") for i in range(len(header))}
-        for r in rows[1:]
+        for r in rows[start + 1 :]
     ]
     return header, out
 
@@ -94,7 +120,8 @@ def fetch_dataset(
     if key not in DATASETS:
         raise KeyError(key)
     meta = DATASETS[key]
-    url = f"{BASE}/{meta['file']}"
+    # File names may contain spaces/accents → percent-encode the path segment.
+    url = f"{BASE}/{quote(meta['file'])}"
     fetcher = fetch or (lambda u: get_bytes(u))
     rows = _read_rows(fetcher(url))
 
@@ -102,7 +129,7 @@ def fetch_dataset(
         columns = list(meta["columns"])
         data = _parse_numbered(rows, columns)
     else:
-        columns, data = _parse_table(rows)
+        columns, data = _parse_table(rows, meta.get("header_match"))
 
     return {
         "key": key,

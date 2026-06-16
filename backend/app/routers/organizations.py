@@ -3,13 +3,18 @@
 Non-superadmins only ever see their own organization.
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy import func, select
 
 from app.dependencies import DbSession, Tenant
 from app.models.organization import Organization
-from app.schemas.organization import OrganizationRead
+from app.schemas.organization import (
+    OrganizationCreate,
+    OrganizationRead,
+    OrganizationUpdate,
+)
 from app.schemas.pagination import Page
+from app.services import orgs_service
 from app.utils.pagination import PaginationParams
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -45,3 +50,35 @@ def list_organizations(
         limit=pagination.limit,
         offset=pagination.offset,
     )
+
+
+@router.post(
+    "",
+    response_model=OrganizationRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create organization (superadmin only)",
+)
+def create_organization(
+    payload: OrganizationCreate,
+    db: DbSession,
+    ctx: Tenant,
+) -> OrganizationRead:
+    """Create a new organization. Restricted to superadmins."""
+    org = orgs_service.create_organization(db, ctx, payload)
+    return OrganizationRead.model_validate(org)
+
+
+@router.patch(
+    "/{org_id}",
+    response_model=OrganizationRead,
+    summary="Update organization (superadmin only)",
+)
+def update_organization(
+    org_id: str,
+    payload: OrganizationUpdate,
+    db: DbSession,
+    ctx: Tenant,
+) -> OrganizationRead:
+    """Update an organization. Restricted to superadmins."""
+    org = orgs_service.update_organization(db, ctx, org_id, payload)
+    return OrganizationRead.model_validate(org)

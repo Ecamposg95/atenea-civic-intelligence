@@ -44,7 +44,10 @@ def list_events(
     ctx: TenantContext,
     *,
     action: Optional[str] = None,
+    actor: Optional[str] = None,
+    entity_type: Optional[str] = None,
     since: Optional[datetime] = None,
+    until: Optional[datetime] = None,
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[AuditLog], int]:
@@ -54,8 +57,14 @@ def list_events(
         filters.append(AuditLog.organization_id == ctx.organization_id)
     if action:
         filters.append(AuditLog.action == action)
+    if actor:
+        filters.append(AuditLog.actor_id == actor)
+    if entity_type:
+        filters.append(AuditLog.entity_type == entity_type)
     if since is not None:
         filters.append(AuditLog.created_at >= since)
+    if until is not None:
+        filters.append(AuditLog.created_at <= until)
 
     total = db.scalar(select(func.count(AuditLog.id)).where(*filters))
     items = (

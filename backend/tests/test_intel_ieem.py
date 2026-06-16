@@ -12,7 +12,44 @@ CSV = (
 
 def test_datasets_registry_has_expected_keys():
     keys = {d["key"] for d in ieem.list_datasets()}
-    assert {"municipios", "distritos_locales"} <= keys
+    assert {"municipios", "distritos_locales", "padron_lista_nominal"} <= keys
+
+
+def test_padron_dataset_skips_preamble_to_real_header():
+    # Real shape: decorative preamble rows, then a header starting with ENTIDAD.
+    csv = (
+        "INSTITUTO ELECTORAL DEL ESTADO DE MÉXICO,\r\n"
+        "PADRÓN ELECTORAL Y LISTA NOMINAL ESTADO DE MEXICO,\r\n"
+        ",,Fecha de corte: 31 de marzo de 2026\r\n"
+        "ENTIDAD,MUNICIPIO,PADRON,LISTA\r\n"
+        "15,0,73195,33876\r\n"
+        "15,65,1928,1909\r\n"
+    ).encode("latin-1")
+    result = ieem.fetch_dataset("padron_lista_nominal", fetch=lambda url: csv)
+    assert result["key"] == "padron_lista_nominal"
+    # The "ENTIDAD" row becomes the header; preamble rows are dropped.
+    assert result["columns"] == ["ENTIDAD", "MUNICIPIO", "PADRON", "LISTA"]
+    assert result["count"] == 2
+    assert result["rows"][0] == {
+        "ENTIDAD": "15",
+        "MUNICIPIO": "0",
+        "PADRON": "73195",
+        "LISTA": "33876",
+    }
+
+
+def test_padron_dataset_url_is_percent_encoded():
+    # The real file name has spaces + accents; the fetched URL must be encoded.
+    captured: dict[str, str] = {}
+
+    def fake_fetch(url: str) -> bytes:
+        captured["url"] = url
+        return b"Concepto,Total\r\n"
+
+    ieem.fetch_dataset("padron_lista_nominal", fetch=fake_fetch)
+    assert " " not in captured["url"]
+    assert "%20" in captured["url"]
+    assert "%C3%B3" in captured["url"]  # encoded "ó" from "Padrón"
 
 
 def test_distritos_dataset_parses_numbered_catalog():
