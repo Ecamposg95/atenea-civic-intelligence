@@ -129,6 +129,14 @@ const Demografia = lazy(() =>
 const Indice = lazy(() =>
   import("@/modules/indice/IndicePage").then((m) => ({ default: m.IndicePage })),
 );
+const Reportes = lazy(() =>
+  import("@/modules/reportes/ReportesPage").then((m) => ({ default: m.ReportesPage })),
+);
+const Configuracion = lazy(() =>
+  import("@/modules/configuracion/ConfiguracionPage").then((m) => ({
+    default: m.ConfiguracionPage,
+  })),
+);
 
 export const MODULES: ModuleDef[] = [
   // Plataforma (active)
@@ -186,16 +194,10 @@ export const MODULES: ModuleDef[] = [
   // Gobernanza
   { key: "auditoria", path: "/auditoria", label: "Auditoría & Cumplimiento", section: "gobernanza", icon: ShieldIcon, state: "active", element: Auditoria, roles: ["superadmin", "admin"] },
   { key: "indice", path: "/indice", label: "Índice Cívico-Territorial", section: "gobernanza", icon: AnalyticsIcon, state: "preview", element: Indice },
-  {
-    key: "reportes", path: "/reportes", label: "Reportes Ejecutivos", section: "gobernanza", icon: DatabaseIcon, state: "soon",
-    soon: {
-      summary: "Briefings ejecutivos generados y exportables (PDF/CSV).",
-      features: ["Plantillas de briefing", "Exportación programada", "Distribución por rol"],
-      dataSource: "Composición sobre módulos activos de la plataforma.",
-    },
-  },
+  { key: "reportes", path: "/reportes", label: "Reportes Ejecutivos", section: "gobernanza", icon: DatabaseIcon, state: "active", element: Reportes, roles: ["superadmin", "admin"] },
 
   // Administración (role-gated, active)
   { key: "users", path: "/users", label: "Usuarios", section: "administracion", icon: UserIcon, state: "active", element: Users, roles: ["superadmin", "admin"] },
   { key: "organization", path: "/organization", label: "Organización", section: "administracion", icon: SettingsIcon, state: "active", element: Organization, roles: ["superadmin", "admin"] },
+  { key: "configuracion", path: "/configuracion", label: "Configuración", section: "administracion", icon: SettingsIcon, state: "active", element: Configuracion, roles: ["superadmin", "admin"] },
 ];
