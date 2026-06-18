@@ -6,15 +6,54 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { PreviewBanner } from "@/components/modules/PreviewBanner";
 import { Card } from "@/components/ui/Card";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import { Donut, type DonutDatum } from "@/components/charts/Donut";
 import { StackedBars } from "@/components/charts/StackedBars";
 import { DatabaseIcon, LayersIcon, MapIcon, AnalyticsIcon } from "@/components/ui/icons";
+import { CHART_PALETTE, PANEL_HEIGHTS } from "@/constants/ui";
 import { getUnidades } from "./client";
 import type { DenueData, SampleUnit } from "./fixtures";
 
 const nf = new Intl.NumberFormat("es-MX");
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 const compact = new Intl.NumberFormat("es-MX", { notation: "compact", maximumFractionDigits: 1 });
+
+// DataTable column definitions — memoized at module level (static fixtures, no closure deps).
+const UNIT_COLUMNS: Column<SampleUnit>[] = [
+  {
+    key: "name",
+    header: "Unidad",
+    render: (u) => u.name,
+    sortValue: (u) => u.name,
+    align: "left",
+  },
+  {
+    key: "sector",
+    header: "Sector",
+    render: (u) => u.sector,
+    sortValue: (u) => u.sector,
+    align: "left",
+  },
+  {
+    key: "municipio",
+    header: "Municipio",
+    render: (u) => u.municipio,
+    sortValue: (u) => u.municipio,
+    align: "left",
+  },
+  {
+    key: "coords",
+    header: "Coordenadas",
+    render: (u) => (
+      <span className="font-mono text-xs tabular-nums text-ink-faint">
+        {u.lat.toFixed(4)}, {u.lng.toFixed(4)}
+      </span>
+    ),
+    align: "right",
+    hideOnCard: true,
+  },
+];
 
 export function DenuePage() {
   const [data, setData] = useState<DenueData | null>(null);
@@ -45,11 +84,12 @@ export function DenuePage() {
   );
 }
 
+// P-2: SkeletonCard replaces hand-rolled animate-pulse divs.
 function LoadingState() {
   return (
     <div className="reveal grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="card-premium h-28 animate-pulse p-5" />
+        <SkeletonCard key={i} className="h-28" />
       ))}
     </div>
   );
@@ -58,6 +98,7 @@ function LoadingState() {
 function DenueBody({ data }: { data: DenueData }) {
   const { summary, sectors, sizeBands, units } = data;
 
+  // P-5: Keep per-datum s.color (explicit fixture palette) — donut uses semantic colors.
   const sectorDonut: DonutDatum[] = sectors.map((s) => ({
     name: s.sector,
     value: s.count,
@@ -70,7 +111,8 @@ function DenueBody({ data }: { data: DenueData }) {
   );
 
   return (
-    <>
+    // P-8: reveal wraps primary content.
+    <div className="reveal">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Unidades económicas"
@@ -115,6 +157,7 @@ function DenueBody({ data }: { data: DenueData }) {
               {sectors.map((s) => (
                 <div key={s.sector} className="flex items-center justify-between gap-3 text-sm">
                   <span className="inline-flex items-center gap-2 text-ink-muted">
+                    {/* P-5: s.color is an explicit per-datum fixture color — preserve. */}
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
                     {s.sector}
                   </span>
@@ -132,12 +175,16 @@ function DenueBody({ data }: { data: DenueData }) {
             className="h-full"
             action={<span className="pill border-line text-ink-muted">muestra</span>}
           >
-            <StackedBars
-              data={sizeData}
-              xKey="band"
-              series={[{ key: "establecimientos", color: "#22d3ee" }]}
-              height={240}
-            />
+            {/* P-6: PANEL_HEIGHTS.chartMd replaces hardcoded height={240}. */}
+            {/* P-5: CHART_PALETTE[0] replaces hardcoded "#22d3ee" generic series color. */}
+            <div className={PANEL_HEIGHTS.chartMd}>
+              <StackedBars
+                data={sizeData}
+                xKey="band"
+                series={[{ key: "establecimientos", color: CHART_PALETTE[0] }]}
+                height="100%"
+              />
+            </div>
             <div className="mt-4 flex items-center justify-between rounded-lg border border-line bg-bg-sunken px-3 py-3">
               <span className="eyebrow">Predominio micro (0–5)</span>
               <span className="font-mono text-lg tabular-nums text-state-warning">
@@ -148,11 +195,13 @@ function DenueBody({ data }: { data: DenueData }) {
         </div>
       </div>
 
+      {/* P-4: DataTable replaces hand-rolled <table> in UnitsTable. */}
       <UnitsTable units={units} />
-    </>
+    </div>
   );
 }
 
+// P-4: DataTable + P-7: aria-label on search input.
 function UnitsTable({ units }: { units: SampleUnit[] }) {
   const [query, setQuery] = useState("");
 
@@ -174,53 +223,29 @@ function UnitsTable({ units }: { units: SampleUnit[] }) {
         action={<span className="pill border-line text-ink-muted">{units.length} registros</span>}
       >
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          {/* P-7: aria-label + focus-ring on search input. */}
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Filtrar por nombre, sector o municipio…"
-            className="field-input max-w-sm"
+            aria-label="Filtrar unidades económicas"
+            className="field-input focus-ring max-w-sm"
           />
           <span className="pill border-line text-ink-muted">
             {rows.length} de {units.length}
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line text-left">
-                <th className="eyebrow py-2.5 pr-2">Unidad</th>
-                <th className="eyebrow py-2.5 pr-2">Sector</th>
-                <th className="eyebrow py-2.5 pr-2">Municipio</th>
-                <th className="eyebrow py-2.5 pr-2 text-right">Coordenadas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((u, i) => (
-                <tr
-                  key={u.id}
-                  className="reveal border-b border-line/60 transition-colors hover:bg-panel-hover"
-                  style={{ animationDelay: `${40 + i * 25}ms` }}
-                >
-                  <td className="py-2.5 pr-2 text-ink">{u.name}</td>
-                  <td className="py-2.5 pr-2 text-ink-muted">{u.sector}</td>
-                  <td className="py-2.5 pr-2 text-ink-muted">{u.municipio}</td>
-                  <td className="py-2.5 pr-2 text-right font-mono text-xs tabular-nums text-ink-faint">
-                    {u.lat.toFixed(4)}, {u.lng.toFixed(4)}
-                  </td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-8 text-center text-sm text-ink-faint">
-                    Sin coincidencias para “{query}”.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable<SampleUnit>
+          columns={UNIT_COLUMNS}
+          rows={rows}
+          rowKey={(u) => u.id}
+          defaultSortKey="name"
+          defaultSortDir="asc"
+          emptyMessage={`Sin coincidencias para "${query}".`}
+          pageSize={12}
+        />
       </Card>
     </div>
   );
