@@ -7,10 +7,10 @@ export function RadialGauge({ value, label, size = 132 }: { value: number; label
   return (
     <div className="relative grid place-items-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#15242b" strokeWidth={10} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#22d3ee" strokeWidth={10}
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--chart-grid)" strokeWidth={10} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--chart-1)" strokeWidth={10}
           strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off}
-          style={{ transition: "stroke-dashoffset .8s cubic-bezier(.16,1,.3,1)", filter: "drop-shadow(0 0 6px rgba(34,211,238,.5))" }} />
+          style={{ transition: "stroke-dashoffset .8s cubic-bezier(.16,1,.3,1)", filter: "drop-shadow(0 0 6px color-mix(in srgb, var(--chart-1) 50%, transparent))" }} />
       </svg>
       <div className="absolute text-center">
         <div className="font-display text-2xl font-bold tabular-nums text-ink">{(v * 100).toFixed(0)}%</div>

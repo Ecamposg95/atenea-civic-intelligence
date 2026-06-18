@@ -9,7 +9,7 @@ export function Heatmap({ data, columns = 7 }: { data: HeatCell[]; columns?: num
         return (
           <div key={i} title={`${d.label}: ${d.value}`}
             className="aspect-square rounded-[3px] border border-line/60"
-            style={{ background: `rgba(34,211,238,${0.08 + t * 0.8})` }} />
+            style={{ background: `color-mix(in srgb, var(--chart-1) ${Math.round((0.08 + t * 0.8) * 100)}%, transparent)` }} />
         );
       })}
     </div>

@@ -2,18 +2,24 @@
 // Single home for UI values previously duplicated across pages/charts.
 import type { CSSProperties } from "react";
 
-/** Recharts <Tooltip contentStyle> — matches the DataV panel look. */
+/** Recharts <Tooltip contentStyle> — resolves against the active theme via CSS vars. */
 export const CHART_TOOLTIP_STYLE: CSSProperties = {
-  background: "#06090c",
-  border: "1px solid #223a44",
+  background: "rgb(var(--c-panel))",
+  border: "1px solid rgb(var(--c-line-strong))",
   borderRadius: 12,
-  color: "#e6f2f5",
+  color: "rgb(var(--c-ink))",
   fontSize: 12,
-  boxShadow: "0 18px 50px -24px rgba(0,0,0,0.9)",
+  boxShadow: "var(--chart-tooltip-shadow)",
 };
 
-/** Ordered series palette (cyan → amber → teal → critical) for charts. */
-export const CHART_PALETTE = ["#22d3ee", "#f5b53d", "#2dd4bf", "#f4607a", "#8ba0a8"];
+/** Ordered series palette — CSS vars so series colors track the theme. */
+export const CHART_PALETTE = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
 
 /** Tailwind class fragments for a colored pill, keyed by tone. */
 export const TONE_BADGE = {

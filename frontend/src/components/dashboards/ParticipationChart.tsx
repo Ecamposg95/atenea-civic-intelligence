@@ -54,16 +54,16 @@ export function ParticipationChart({
               <stop offset="100%" stopColor={color} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="#15242b" vertical={false} />
+          <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
           <XAxis
             dataKey="period"
-            stroke="#52646d"
+            stroke="var(--chart-axis)"
             tick={{ fontSize: 12 }}
             tickLine={false}
-            axisLine={{ stroke: "#15242b" }}
+            axisLine={{ stroke: "var(--chart-grid)" }}
           />
           <YAxis
-            stroke="#52646d"
+            stroke="var(--chart-axis)"
             tick={{ fontSize: 12 }}
             tickLine={false}
             axisLine={false}
@@ -76,9 +76,9 @@ export function ParticipationChart({
             allowDecimals={isPercent}
           />
           <Tooltip
-            cursor={{ stroke: "#223a44", strokeWidth: 1 }}
+            cursor={{ stroke: "var(--chart-axis-strong)", strokeWidth: 1 }}
             contentStyle={CHART_TOOLTIP_STYLE}
-            labelStyle={{ color: "#8ba0a8" }}
+            labelStyle={{ color: "var(--chart-5)" }}
             formatter={(value: number) => [fmt(value), seriesLabel]}
           />
           <Area

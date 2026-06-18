@@ -8,14 +8,13 @@ import {
   YAxis,
 } from "recharts";
 
-import { CHART_TOOLTIP_STYLE } from "@/constants/ui";
+import { CHART_PALETTE, CHART_TOOLTIP_STYLE } from "@/constants/ui";
 
 export interface CoverageDatum {
   level: string;
   count: number;
 }
 
-const COLORS = ["#22d3ee", "#2dd4bf", "#f5b53d", "#8ba0a8", "#06b6d4", "#f5b53d"];
 
 export function CoverageBars({ data, height = 200 }: { data: CoverageDatum[]; height?: number }) {
   return (
@@ -30,19 +29,19 @@ export function CoverageBars({ data, height = 200 }: { data: CoverageDatum[]; he
           <YAxis
             type="category"
             dataKey="level"
-            stroke="#52646d"
-            tick={{ fontSize: 12, fill: "#8ba0a8" }}
+            stroke="var(--chart-axis)"
+            tick={{ fontSize: 12, fill: "var(--chart-5)" }}
             tickLine={false}
             axisLine={false}
             width={96}
           />
           <Tooltip
-            cursor={{ fill: "rgba(34,211,238,0.08)" }}
+            cursor={{ fill: "color-mix(in srgb, var(--chart-1) 8%, transparent)" }}
             contentStyle={CHART_TOOLTIP_STYLE}
           />
           <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={16}>
             {data.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />
             ))}
           </Bar>
         </BarChart>
