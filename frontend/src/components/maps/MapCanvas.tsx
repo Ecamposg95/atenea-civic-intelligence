@@ -48,10 +48,10 @@ const RASTER: Record<Basemap, { tiles: string[]; attribution: string; paint: Rec
 
 // CARTO positron (light) tile URLs — same subdomain pattern as dark_nolabels.
 const LIGHT_TILES = [
-  "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-  "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-  "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-  "https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+  "https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png",
+  "https://b.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png",
+  "https://c.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png",
+  "https://d.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png",
 ];
 
 const styleFor = (b: Basemap, tiles?: string[]): StyleSpecification => {
