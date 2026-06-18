@@ -4,44 +4,19 @@ export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
-      colors: {
-        // All-black "big-screen / DataV" palette: pure black canvas, near-black
-        // panels separated by cyan-tinted hairlines, cyan primary + amber secondary.
-        bg: {
-          DEFAULT: "#000000",
-          sunken: "#000000",
-        },
-        panel: {
-          DEFAULT: "#06090c",
-          raised: "#0a0e13",
-          hover: "#0f151c",
-        },
-        accent: {
-          DEFAULT: "#22d3ee",
-          strong: "#06b6d4",
-        },
-        teal: {
-          DEFAULT: "#2dd4bf",
-        },
-        amber: {
-          DEFAULT: "#f5b53d",
-        },
-        line: {
-          DEFAULT: "#15242b",
-          strong: "#223a44",
-        },
-        ink: {
-          DEFAULT: "#e6f2f5",
-          muted: "#8ba0a8",
-          faint: "#52646d",
-        },
-        state: {
-          info: "#22d3ee",
-          warning: "#f5b53d",
-          critical: "#f4607a",
-          ok: "#2dd4bf",
-        },
-      },
+      colors: (() => {
+        const ch = (v) => `rgb(var(${v}) / <alpha-value>)`;
+        return {
+          bg: { DEFAULT: ch("--c-bg"), sunken: ch("--c-bg-sunken") },
+          panel: { DEFAULT: ch("--c-panel"), raised: ch("--c-panel-raised"), hover: ch("--c-panel-hover") },
+          accent: { DEFAULT: ch("--c-accent"), strong: ch("--c-accent-strong") },
+          teal: { DEFAULT: ch("--c-teal") },
+          amber: { DEFAULT: ch("--c-amber") },
+          line: { DEFAULT: ch("--c-line"), strong: ch("--c-line-strong") },
+          ink: { DEFAULT: ch("--c-ink"), muted: ch("--c-ink-muted"), faint: ch("--c-ink-faint") },
+          state: { info: ch("--c-info"), warning: ch("--c-warning"), critical: ch("--c-critical"), ok: ch("--c-ok") },
+        };
+      })(),
       borderRadius: {
         card: "14px",
         pill: "999px",
