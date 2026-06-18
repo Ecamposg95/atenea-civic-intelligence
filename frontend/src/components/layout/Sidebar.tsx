@@ -12,7 +12,7 @@ import { useAuthStore } from "@/store/authStore";
 import type { UserRole } from "@/types/auth";
 
 const navItem =
-  "group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all";
+  "group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all focus-ring";
 const sectionLabel =
   "mt-5 mb-1.5 flex items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint";
 

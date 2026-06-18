@@ -23,7 +23,7 @@ export function Modal({ open, title, onClose, children, footer, width = "max-w-l
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-base font-semibold tracking-tight text-ink">{title}</h3>
           <button
-            className="text-ink-faint transition-colors hover:text-ink"
+            className="focus-ring rounded text-ink-faint transition-colors hover:text-ink"
             onClick={onClose}
             aria-label="Cerrar"
           >

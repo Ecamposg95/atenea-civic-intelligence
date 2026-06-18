@@ -35,7 +35,7 @@ export function Topbar({ title, crumb, onMenu }: TopbarProps) {
           type="button"
           onClick={onMenu}
           aria-label="Abrir menú"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-ink-muted hover:text-ink lg:hidden"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-ink-muted hover:text-ink focus-ring lg:hidden"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="3" y1="6" x2="21" y2="6" />
@@ -56,7 +56,7 @@ export function Topbar({ title, crumb, onMenu }: TopbarProps) {
           <span className="h-1.5 w-1.5 rounded-full bg-teal" />
           Systems operational
         </span>
-        <button className="btn-ghost !px-2.5 sm:!px-4" onClick={handleLogout} title="Sign out">
+        <button className="btn-ghost focus-ring !px-2.5 sm:!px-4" onClick={handleLogout} title="Sign out">
           <LogoutIcon width={16} height={16} />
           <span className="hidden sm:inline">Sign out</span>
         </button>
