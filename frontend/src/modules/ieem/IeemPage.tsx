@@ -169,7 +169,7 @@ export function IeemPage() {
       </div>
 
       {/* ── Dataset table — plain header above DataTable (DataTable renders its own .card-premium) ── */}
-      <div className="reveal hud-corners" style={{ animationDelay: "80ms" }}>
+      <div className="reveal" style={{ animationDelay: "80ms" }}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <span className="flex items-center gap-2 text-sm font-semibold tracking-tight text-ink">
             <span className="h-1.5 w-1.5 rounded-full bg-accent-gradient shadow-glow" aria-hidden="true" />
@@ -209,7 +209,7 @@ export function IeemPage() {
                 defaultSortKey={data.columns[0]}
                 defaultSortDir="asc"
               />
-              <p className="mt-2 px-1 text-[11px] text-ink-faint">
+              <p className="mt-3 px-4 text-xs text-ink-faint">
                 Fuente: {data.source}
               </p>
             </>

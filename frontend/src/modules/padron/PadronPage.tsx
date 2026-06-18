@@ -283,11 +283,11 @@ function CoberturaTab() {
       <div className="reveal lg:col-span-2" style={{ animationDelay: "200ms" }}>
         {/* Plain header row — DataTable renders its own .card-premium, no wrapping Card needed. */}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-ink">
+          <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-ink">
             <span className="h-1.5 w-1.5 rounded-full bg-accent-gradient shadow-glow" aria-hidden="true" />
             Cobertura por entidad — muestra
             <span className="pill border-line text-ink-muted">Lista nominal / padrón</span>
-          </h3>
+          </h2>
           <div className="flex flex-wrap items-center gap-3">
             <input
               type="search"
