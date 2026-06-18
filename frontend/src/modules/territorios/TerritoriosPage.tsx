@@ -64,10 +64,7 @@ const STATE_COLUMNS: Column<StateGroup>[] = [
   },
 ];
 
-function makeMuniColumns(
-  onDrill: (f: AreaFeature) => void,
-): Column<AreaFeature>[] {
-  void onDrill; // referenced in onRowClick at call site instead
+function makeMuniColumns(): Column<AreaFeature>[] {
   return [
     {
       key: "name",
@@ -231,7 +228,7 @@ export function TerritoriosPage() {
 
   // Stable muni columns — recreated only when selectMunicipio identity changes
   // (it doesn't — it's stable). onRowClick is passed separately to DataTable.
-  const muniColumns = useMemo(() => makeMuniColumns((_f) => undefined), []);
+  const muniColumns = useMemo(() => makeMuniColumns(), []);
 
   return (
     <AppLayout title="Territorios & Secciones" crumb="Inteligencia Electoral">
@@ -294,11 +291,10 @@ export function TerritoriosPage() {
         </nav>
       </PageHeader>
 
-      {/* Real-count stats — wrapped in DataState so errors surface at the top */}
+      {/* Real-count stats — error display deferred to the drill-list DataState */}
       <DataState
         loading={loading}
-        error={error}
-        onRetry={reload}
+        error={null}
         skeleton={
           <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[0, 1, 2].map((i) => (
@@ -347,9 +343,8 @@ export function TerritoriosPage() {
         >
           <DataState
             loading={loading}
-            error={error}
+            error={null}
             isEmpty={isEmpty}
-            onRetry={reload}
             emptyMessage="Sin cartografía para este ámbito."
             skeleton={
               <div className="h-full w-full animate-pulse bg-panel-hover" />
@@ -484,8 +479,7 @@ export function TerritoriosPage() {
       {!selectedState && (
         <DataState
           loading={loading}
-          error={error}
-          onRetry={reload}
+          error={null}
           isEmpty={topStates.length === 0}
           emptyMessage="Sin datos de distribución disponibles."
           skeleton={
