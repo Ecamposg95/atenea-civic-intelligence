@@ -132,25 +132,32 @@ export function DataTable<T>({
 
       {/* Mobile card fallback */}
       <div className="divide-y divide-line/60 md:hidden">
-        {visible.map((row) => (
-          <button
-            key={rowKey(row)}
-            type="button"
-            onClick={onRowClick ? () => onRowClick(row) : undefined}
-            className="focus-ring block w-full px-4 py-3 text-left"
-          >
-            {columns
-              .filter((c) => !c.hideOnCard)
-              .map((c) => (
-                <div key={c.key} className="flex justify-between gap-3 py-0.5 text-sm">
-                  <span className="text-ink-faint">{c.header}</span>
-                  <span className="text-ink">
-                    {c.render ? c.render(row) : String((row as Record<string, unknown>)[c.key] ?? "")}
-                  </span>
-                </div>
-              ))}
-          </button>
-        ))}
+        {visible.map((row) => {
+          const inner = columns
+            .filter((c) => !c.hideOnCard)
+            .map((c) => (
+              <div key={c.key} className="flex justify-between gap-3 py-0.5 text-sm">
+                <span className="text-ink-faint">{c.header}</span>
+                <span className="text-ink">
+                  {c.render ? c.render(row) : String((row as Record<string, unknown>)[c.key] ?? "")}
+                </span>
+              </div>
+            ));
+          return onRowClick ? (
+            <button
+              key={rowKey(row)}
+              type="button"
+              onClick={() => onRowClick(row)}
+              className="focus-ring block w-full px-4 py-3 text-left"
+            >
+              {inner}
+            </button>
+          ) : (
+            <div key={rowKey(row)} className="px-4 py-3">
+              {inner}
+            </div>
+          );
+        })}
       </div>
 
       {/* Pagination */}
