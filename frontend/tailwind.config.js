@@ -35,7 +35,7 @@ export default {
       },
       boxShadow: {
         panel: "var(--shadow-panel)",
-        glow: "var(--glow-accent)",
+        glow: "var(--glow)",
         "glow-accent": "var(--glow-accent)",
         "glow-teal": "var(--glow-teal)",
         "glow-amber": "var(--glow-amber)",
