@@ -16,10 +16,14 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PreviewBanner } from "@/components/modules/PreviewBanner";
 import { Card } from "@/components/ui/Card";
+import type { Column } from "@/components/ui/DataTable";
+import { DataTable } from "@/components/ui/DataTable";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { RadialGauge } from "@/components/charts/RadialGauge";
 import { ParticipationChart } from "@/components/dashboards/ParticipationChart";
 import { DatabaseIcon, LayersIcon, UserIcon, VotersIcon } from "@/components/ui/icons";
+import { CHART_TOOLTIP_STYLE, PANEL_HEIGHTS } from "@/constants/ui";
 import {
   AGE_BANDS,
   ENTITY_COVERAGE,
@@ -27,18 +31,16 @@ import {
   SEX_DISTRIBUTION,
   SUMMARY,
 } from "./fixtures";
+import type { EntityCoverage } from "./fixtures";
 
 const compact = new Intl.NumberFormat("es-MX", { notation: "compact", maximumFractionDigits: 1 });
-
 const nf = new Intl.NumberFormat("es-MX");
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
-const TOOLTIP_STYLE = {
-  background: "#06090c",
-  border: "1px solid #223a44",
-  borderRadius: 10,
-  color: "#e6f2f5",
-} as const;
+// Sex-split colors are semantically meaningful — keep as defined in fixtures,
+// do NOT swap to CHART_PALETTE generics.
+const SEX_HOMBRES = "#22d3ee";
+const SEX_MUJERES = "#2dd4bf";
 
 type Tab = "demografia" | "cobertura" | "tendencia";
 
@@ -63,28 +65,28 @@ export function PadronPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Padrón electoral"
+          label="Padrón electoral (muestra)"
           value={nf.format(SUMMARY.padron)}
           tone="accent"
           icon={<VotersIcon width={18} height={18} />}
           delay={0}
         />
         <MetricCard
-          label="Lista nominal"
+          label="Lista nominal (muestra)"
           value={nf.format(SUMMARY.listaNominal)}
           tone="teal"
           icon={<UserIcon width={18} height={18} />}
           delay={80}
         />
         <MetricCard
-          label="Cobertura"
+          label="Cobertura (muestra)"
           value={pct(SUMMARY.cobertura)}
           tone="accent"
           icon={<LayersIcon width={18} height={18} />}
           delay={160}
         />
         <MetricCard
-          label="Edad mediana"
+          label="Edad mediana (muestra)"
           value={`${SUMMARY.edadMediana} años`}
           tone="teal"
           icon={<DatabaseIcon width={18} height={18} />}
@@ -92,20 +94,14 @@ export function PadronPage() {
         />
       </div>
 
-      {/* Tabs */}
-      <div className="reveal mt-5 inline-flex rounded-xl border border-line bg-bg-sunken p-1">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t.id ? "bg-accent text-bg shadow-glow-accent" : "text-ink-muted hover:text-ink"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* Accessible tab switch — SegmentedControl (roving tabindex + keyboard nav) */}
+      <div className="reveal mt-5">
+        <SegmentedControl<Tab>
+          options={TABS}
+          value={tab}
+          onChange={setTab}
+          ariaLabel="Vista del padrón electoral"
+        />
       </div>
 
       {tab === "demografia" && <DemografiaTab />}
@@ -120,30 +116,30 @@ function DemografiaTab() {
     <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
       <div className="reveal" style={{ animationDelay: "120ms" }}>
         <Card
-          title="Distribución por edad y sexo (%)"
+          title="Distribución por edad y sexo — muestra (%)"
           accentDot
           className="h-full"
           action={
             <div className="flex items-center gap-3 text-xs text-ink-muted">
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#22d3ee" }} />
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SEX_HOMBRES }} />
                 Hombres
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#2dd4bf" }} />
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SEX_MUJERES }} />
                 Mujeres
               </span>
             </div>
           }
         >
-          <div style={{ width: "100%", height: 280 }}>
-            <ResponsiveContainer>
+          <div className={`w-full ${PANEL_HEIGHTS.chartMd}`}>
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={AGE_BANDS} margin={{ left: -16 }}>
                 <XAxis dataKey="band" stroke="#52646d" tick={{ fontSize: 12 }} />
                 <YAxis stroke="#52646d" tick={{ fontSize: 12 }} />
-                <Tooltip cursor={{ fill: "rgba(34,211,238,0.06)" }} contentStyle={TOOLTIP_STYLE} />
-                <Bar dataKey="hombres" fill="#22d3ee" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="mujeres" fill="#2dd4bf" radius={[4, 4, 0, 0]} />
+                <Tooltip cursor={{ fill: "rgba(34,211,238,0.06)" }} contentStyle={CHART_TOOLTIP_STYLE} />
+                <Bar dataKey="hombres" fill={SEX_HOMBRES} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="mujeres" fill={SEX_MUJERES} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -152,13 +148,13 @@ function DemografiaTab() {
 
       <div className="reveal" style={{ animationDelay: "200ms" }}>
         <Card
-          title="Distribución por sexo"
+          title="Distribución por sexo — muestra"
           accentDot
           className="h-full"
-          action={<span className="pill border-line text-ink-muted">Lista nominal</span>}
+          action={<span className="pill border-line text-ink-muted">Lista nominal · muestra</span>}
         >
-          <div style={{ width: "100%", height: 220 }}>
-            <ResponsiveContainer>
+          <div className="h-[220px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={SEX_DISTRIBUTION}
@@ -174,7 +170,7 @@ function DemografiaTab() {
                 </Pie>
                 <Tooltip
                   formatter={(v: number, n: string) => [pct(v), n]}
-                  contentStyle={TOOLTIP_STYLE}
+                  contentStyle={CHART_TOOLTIP_STYLE}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -193,7 +189,7 @@ function DemografiaTab() {
           </div>
 
           <div className="mt-3 flex items-center justify-between rounded-lg border border-line bg-bg-sunken px-3 py-3">
-            <span className="eyebrow">Edad mediana</span>
+            <span className="eyebrow">Edad mediana (muestra)</span>
             <span className="font-mono text-lg tabular-nums text-accent">
               {SUMMARY.edadMediana} años
             </span>
@@ -204,21 +200,50 @@ function DemografiaTab() {
   );
 }
 
+const COVERAGE_COLUMNS: Column<EntityCoverage>[] = [
+  {
+    key: "entity",
+    header: "Entidad",
+    render: (r) => <span className="text-ink">{r.entity}</span>,
+  },
+  {
+    key: "padron",
+    header: "Padrón",
+    align: "right",
+    sortValue: (r) => r.padron,
+    render: (r) => (
+      <span className="font-mono tabular-nums text-ink-muted">{nf.format(r.padron)}</span>
+    ),
+    hideOnCard: true,
+  },
+  {
+    key: "listaNominal",
+    header: "Lista nominal",
+    align: "right",
+    sortValue: (r) => r.listaNominal,
+    render: (r) => (
+      <span className="font-mono tabular-nums text-ink-muted">{nf.format(r.listaNominal)}</span>
+    ),
+  },
+  {
+    key: "cobertura",
+    header: "Cobertura",
+    align: "right",
+    sortValue: (r) => r.cobertura,
+    render: (r) => (
+      <span className="font-mono tabular-nums text-accent">{pct(r.cobertura)}</span>
+    ),
+  },
+];
+
 function CoberturaTab() {
   const [query, setQuery] = useState("");
 
-  const rows = useMemo(() => {
+  const filteredRows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return ENTITY_COVERAGE.filter((e) => e.entity.toLowerCase().includes(q)).sort(
-      (a, b) => b.cobertura - a.cobertura,
-    );
+    if (!q) return ENTITY_COVERAGE;
+    return ENTITY_COVERAGE.filter((e) => e.entity.toLowerCase().includes(q));
   }, [query]);
-
-  const minCov = Math.min(...ENTITY_COVERAGE.map((e) => e.cobertura));
-  const maxCov = Math.max(...ENTITY_COVERAGE.map((e) => e.cobertura));
-  const span = maxCov - minCov || 1;
-  // Normalize fill so differences read clearly (floor at ~35% width).
-  const fillWidth = (cov: number) => 0.35 + ((cov - minCov) / span) * 0.65;
 
   const avgCov = ENTITY_COVERAGE.reduce((s, e) => s + e.cobertura, 0) / ENTITY_COVERAGE.length;
   const best = [...ENTITY_COVERAGE].sort((a, b) => b.cobertura - a.cobertura)[0];
@@ -227,7 +252,7 @@ function CoberturaTab() {
   return (
     <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
       <div className="reveal lg:col-span-1" style={{ animationDelay: "120ms" }}>
-        <Card title="Cobertura nacional" accentDot className="h-full">
+        <Card title="Cobertura nacional — muestra" accentDot className="h-full">
           <div className="flex flex-col items-center gap-4 py-2">
             <RadialGauge value={SUMMARY.cobertura} label="Cobertura" size={148} />
             <div className="grid w-full grid-cols-2 gap-3">
@@ -256,66 +281,54 @@ function CoberturaTab() {
       </div>
 
       <div className="reveal lg:col-span-2" style={{ animationDelay: "200ms" }}>
-      <Card
-        title="Cobertura por entidad"
-        accentDot
-        action={<span className="pill border-line text-ink-muted">Lista nominal / padrón</span>}
-      >
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filtrar por entidad…"
-            className="field-input max-w-xs"
-          />
-          <span className="pill border-line text-ink-muted">
-            {rows.length} de {ENTITY_COVERAGE.length} entidades
-          </span>
-        </div>
+        <Card
+          title="Cobertura por entidad — muestra"
+          accentDot
+          action={<span className="pill border-line text-ink-muted">Lista nominal / padrón</span>}
+        >
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Filtrar por entidad…"
+              className="field-input focus-ring max-w-xs"
+              aria-label="Filtrar entidades"
+            />
+            <span className="pill border-line text-ink-muted">
+              {filteredRows.length} de {ENTITY_COVERAGE.length} entidades
+            </span>
+          </div>
 
-        <div className="space-y-2.5">
-          {rows.map((e, i) => (
-            <div
-              key={e.entity}
-              className="reveal group relative overflow-hidden rounded-lg border border-line bg-bg-sunken px-3 py-2.5 transition-all hover:-translate-y-0.5 hover:border-line-strong hover:bg-panel-hover"
-              style={{ animationDelay: `${60 + i * 40}ms` }}
-            >
-              {/* Proportional fill bar */}
-              <span
-                className="pointer-events-none absolute inset-y-0 left-0 bg-accent/10"
-                style={{ width: `${fillWidth(e.cobertura) * 100}%` }}
-                aria-hidden="true"
-              />
-              <div className="relative flex items-center justify-between gap-3">
-                <span className="text-sm text-ink">{e.entity}</span>
-                <div className="flex items-center gap-4">
-                  <span className="font-mono text-xs tabular-nums text-ink-faint">
-                    {nf.format(e.listaNominal)}
-                  </span>
-                  <span className="w-14 text-right font-mono text-sm tabular-nums text-accent">
-                    {pct(e.cobertura)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-          {rows.length === 0 && (
-            <p className="py-8 text-center text-sm text-ink-faint">
-              Sin coincidencias para “{query}”.
-            </p>
-          )}
-        </div>
-      </Card>
+          <DataTable<EntityCoverage>
+            columns={COVERAGE_COLUMNS}
+            rows={filteredRows}
+            rowKey={(r) => r.entity}
+            pageSize={10}
+            defaultSortKey="cobertura"
+            defaultSortDir="desc"
+            emptyMessage={`Sin coincidencias para "${query}".`}
+          />
+        </Card>
       </div>
     </div>
   );
 }
 
 function TendenciaTab() {
-  const padronTrend = PADRON_HISTORY.map((y) => ({ period: y.year, value: y.padron }));
-  const listaTrend = PADRON_HISTORY.map((y) => ({ period: y.year, value: y.listaNominal }));
-  const covTrend = PADRON_HISTORY.map((y) => ({ period: y.year, value: y.cobertura }));
+  const padronTrend = useMemo(
+    () => PADRON_HISTORY.map((y) => ({ period: y.year, value: y.padron })),
+    [],
+  );
+  const listaTrend = useMemo(
+    () => PADRON_HISTORY.map((y) => ({ period: y.year, value: y.listaNominal })),
+    [],
+  );
+  const covTrend = useMemo(
+    () => PADRON_HISTORY.map((y) => ({ period: y.year, value: y.cobertura })),
+    [],
+  );
+
   const first = PADRON_HISTORY[0];
   const last = PADRON_HISTORY[PADRON_HISTORY.length - 1];
   const growth = first && last ? (last.padron - first.padron) / first.padron : 0;
@@ -324,12 +337,17 @@ function TendenciaTab() {
     <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
       <div className="reveal lg:col-span-2" style={{ animationDelay: "120ms" }}>
         <Card
-          title="Padrón electoral · evolución anual"
+          title="Padrón electoral · evolución anual — muestra"
           accentDot
           className="h-full"
           action={<span className="pill border-line text-ink-muted">muestra · personas</span>}
         >
-          <ParticipationChart data={padronTrend} valueFormat="number" seriesLabel="Padrón" height={260} />
+          <ParticipationChart
+            data={padronTrend}
+            valueFormat="number"
+            seriesLabel="Padrón (muestra)"
+            height={260}
+          />
           <div className="mt-4 grid grid-cols-3 gap-3">
             <div className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
               <span className="eyebrow block">{first?.year}</span>
@@ -355,15 +373,25 @@ function TendenciaTab() {
 
       <div className="reveal" style={{ animationDelay: "200ms" }}>
         <Card
-          title="Lista nominal · evolución"
+          title="Lista nominal · evolución — muestra"
           accentDot
           className="h-full"
           action={<span className="pill border-line text-ink-muted">muestra</span>}
         >
-          <ParticipationChart data={listaTrend} valueFormat="number" seriesLabel="Lista nominal" height={180} />
+          <ParticipationChart
+            data={listaTrend}
+            valueFormat="number"
+            seriesLabel="Lista nominal (muestra)"
+            height={180}
+          />
           <div className="mt-4">
             <span className="eyebrow block">Cobertura por año (muestra)</span>
-            <ParticipationChart data={covTrend} valueFormat="percent" seriesLabel="Cobertura" height={120} />
+            <ParticipationChart
+              data={covTrend}
+              valueFormat="percent"
+              seriesLabel="Cobertura (muestra)"
+              height={120}
+            />
           </div>
         </Card>
       </div>
