@@ -32,7 +32,6 @@ const USER_COLUMNS: Column<User>[] = [
   {
     key: "full_name",
     header: "Usuario",
-    sortValue: (u) => u.full_name,
     render: (u) => (
       <div className="flex items-center gap-3">
         <span className="metric-chip h-8 w-8 shrink-0 font-display text-[11px] font-bold text-accent">
@@ -54,7 +53,6 @@ const USER_COLUMNS: Column<User>[] = [
   {
     key: "role",
     header: "Rol",
-    sortValue: (u) => u.role,
     render: (u) => (
       <span className={`pill ${TONE_BADGE[ROLE_BADGE[u.role] ?? "neutral"]}`}>{u.role}</span>
     ),
@@ -62,7 +60,6 @@ const USER_COLUMNS: Column<User>[] = [
   {
     key: "is_active",
     header: "Estado",
-    sortValue: (u) => (u.is_active ? 1 : 0),
     render: (u) => (
       <div className="flex flex-wrap items-center gap-1.5">
         {u.is_active ? (
@@ -150,14 +147,17 @@ export function UsersPage() {
     setQuery(searchInput.trim());
   };
 
-  const withRefresh = async (fn: () => Promise<unknown>) => {
-    try {
-      await fn();
-      await fetchUsers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "La operación falló");
-    }
-  };
+  const withRefresh = useCallback(
+    async (fn: () => Promise<unknown>) => {
+      try {
+        await fn();
+        await fetchUsers();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "La operación falló");
+      }
+    },
+    [fetchUsers],
+  );
 
   // Actions column references withRefresh/setEditing/setConfirmDelete/
   // setTempPassword (all stable) and includeDeleted (boolean state).
@@ -224,10 +224,7 @@ export function UsersPage() {
         ),
       },
     ],
-    // withRefresh recreated each render (arrow fn) but render fns are closures
-    // called lazily; only includeDeleted changes visible rendered output.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [includeDeleted],
+    [includeDeleted, withRefresh],
   );
 
   const page = Math.floor(offset / PAGE_SIZE) + 1;
