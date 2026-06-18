@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 
 import { LogoutIcon } from "@/components/ui/icons";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useAuthStore } from "@/store/authStore";
 
 interface TopbarProps {
@@ -52,6 +53,7 @@ export function Topbar({ title, crumb, onMenu }: TopbarProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <ThemeToggle />
         <span className="pill hidden border-teal/30 bg-teal/10 text-teal md:inline-flex">
           <span className="h-1.5 w-1.5 rounded-full bg-teal" />
           Systems operational
