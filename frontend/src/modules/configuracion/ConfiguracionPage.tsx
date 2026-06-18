@@ -9,8 +9,11 @@ import { getIeemDataset } from "@/api/intel";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
+import { DataState } from "@/components/ui/DataState";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import { DatabaseIcon, LayersIcon, SettingsIcon } from "@/components/ui/icons";
+import { KIND_BADGE, TONE_BADGE } from "@/constants/ui";
 import {
   INTEGRATIONS,
   STATUS_META,
@@ -52,11 +55,11 @@ type ExportState = {
 
 const IDLE: ExportState = { loading: false, message: null, tone: null };
 
-// ── Status pill ──────────────────────────────────────────────────────────────
+// ── Status pill (uses TONE_BADGE from constants/ui for consistent theming) ───
 function StatusPill({ status }: { status: IntegrationStatus }) {
   const meta = STATUS_META[status];
   return (
-    <span className={`pill border-line ${meta.tone}`}>
+    <span className={`pill ${TONE_BADGE[meta.toneKey]}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} aria-hidden="true" />
       {meta.label}
     </span>
@@ -64,6 +67,18 @@ function StatusPill({ status }: { status: IntegrationStatus }) {
 }
 
 // ── Integration row ──────────────────────────────────────────────────────────
+/** Derive a TONE_BADGE class for the format chip via KIND_BADGE. */
+function formatPillClass(format: string): string {
+  const lower = format.toLowerCase();
+  let kind = "neutral";
+  if (lower.startsWith("api")) kind = "api";
+  else if (lower.startsWith("geojson")) kind = "geojson";
+  else if (lower.startsWith("wms")) kind = "wms";
+  else if (lower.startsWith("ckan")) kind = "ckan";
+  const tone = KIND_BADGE[kind] ?? "neutral";
+  return `pill ${TONE_BADGE[tone]}`;
+}
+
 function IntegrationRow({ source }: { source: IntegrationSource }) {
   return (
     <div className="card-premium hud-corners p-4">
@@ -73,7 +88,7 @@ function IntegrationRow({ source }: { source: IntegrationSource }) {
             <span className="font-display text-sm font-semibold tracking-tight text-ink">
               {source.name}
             </span>
-            <span className="pill border-line font-mono text-[10px] text-ink-faint">
+            <span className={`${formatPillClass(source.format)} font-mono text-[10px]`}>
               {source.format}
             </span>
           </div>
@@ -130,7 +145,7 @@ function ExportAction({
         <div className="mt-4 flex items-center gap-3">
           <button
             type="button"
-            className="btn-ghost gap-2"
+            className="btn-ghost focus-ring gap-2"
             onClick={onRun}
             disabled={state.loading}
           >
@@ -259,8 +274,8 @@ export function ConfiguracionPage() {
         />
       </div>
 
-      {/* Integraciones status board */}
-      <section className="mt-8">
+      {/* Integraciones status board — wrapped in DataState for graceful degradation */}
+      <section className="mt-8 reveal" style={{ animationDelay: "80ms" }}>
         <div className="mb-4 flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-accent-gradient shadow-glow" />
           <h2 className="font-display text-lg font-semibold tracking-tight text-ink">
@@ -276,34 +291,49 @@ export function ConfiguracionPage() {
           navegador nunca almacena secretos.
         </p>
 
-        <div className="flex flex-col gap-6">
-          {grouped.map(({ status, items }) => (
-            <div key={status}>
-              <div className="eyebrow mb-2 flex items-center gap-2">
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${STATUS_META[status].dot}`}
-                  aria-hidden="true"
-                />
-                {STATUS_META[status].label} · {items.length}
-              </div>
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                {items.map((source) => (
-                  <div
-                    key={source.key}
-                    className="reveal"
-                    style={{ animationDelay: "60ms" }}
-                  >
-                    <IntegrationRow source={source} />
-                  </div>
-                ))}
-              </div>
+        {/* DataState provides degraded-error UI + retry if status fetch ever becomes async (P-2). */}
+        <DataState
+          loading={false}
+          error={null}
+          isEmpty={INTEGRATIONS.length === 0}
+          emptyMessage="No hay fuentes registradas."
+          skeleton={
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <SkeletonCard key={i} lines={2} />
+              ))}
             </div>
-          ))}
-        </div>
+          }
+        >
+          <div className="flex flex-col gap-6">
+            {grouped.map(({ status, items }) => (
+              <div key={status}>
+                <div className="eyebrow mb-2 flex items-center gap-2">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${STATUS_META[status].dot}`}
+                    aria-hidden="true"
+                  />
+                  {STATUS_META[status].label} · {items.length}
+                </div>
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  {items.map((source, idx) => (
+                    <div
+                      key={source.key}
+                      className="reveal"
+                      style={{ animationDelay: `${60 + idx * 40}ms` }}
+                    >
+                      <IntegrationRow source={source} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </DataState>
       </section>
 
       {/* Export hub */}
-      <section className="mt-8">
+      <section className="mt-8 reveal" style={{ animationDelay: "120ms" }}>
         <div className="mb-4 flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-accent-gradient shadow-glow" />
           <h2 className="font-display text-lg font-semibold tracking-tight text-ink">
@@ -316,22 +346,26 @@ export function ConfiguracionPage() {
         </p>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <ExportAction
-            title="Geometría de estados (GeoJSON)"
-            description="Exporta los polígonos de los estados (nivel 'state') tal como los sirve el backend de mapas, en formato GeoJSON estándar."
-            buttonLabel="Descargar estados.geojson"
-            icon={<LayersIcon width={16} height={16} />}
-            state={geoState}
-            onRun={() => void exportAreas()}
-          />
-          <ExportAction
-            title="IEEM · municipios (CSV)"
-            description="Exporta el dataset de municipios de la numeralia IEEM (Estado de México) serializado a CSV listo para hoja de cálculo."
-            buttonLabel="Descargar ieem_municipios.csv"
-            icon={<DatabaseIcon width={16} height={16} />}
-            state={ieemState}
-            onRun={() => void exportIeem()}
-          />
+          <div className="reveal" style={{ animationDelay: "140ms" }}>
+            <ExportAction
+              title="Geometría de estados (GeoJSON)"
+              description="Exporta los polígonos de los estados (nivel 'state') tal como los sirve el backend de mapas, en formato GeoJSON estándar."
+              buttonLabel="Descargar estados.geojson"
+              icon={<LayersIcon width={16} height={16} />}
+              state={geoState}
+              onRun={() => void exportAreas()}
+            />
+          </div>
+          <div className="reveal" style={{ animationDelay: "180ms" }}>
+            <ExportAction
+              title="IEEM · municipios (CSV)"
+              description="Exporta el dataset de municipios de la numeralia IEEM (Estado de México) serializado a CSV listo para hoja de cálculo."
+              buttonLabel="Descargar ieem_municipios.csv"
+              icon={<DatabaseIcon width={16} height={16} />}
+              state={ieemState}
+              onRun={() => void exportIeem()}
+            />
+          </div>
         </div>
       </section>
     </AppLayout>

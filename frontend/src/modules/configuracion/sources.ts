@@ -6,6 +6,8 @@
 // No secrets are stored here — token-gated sources only document the env
 // var to set on the server (Railway), never a value to type in the browser.
 
+import type { Tone } from "@/constants/ui";
+
 export type IntegrationStatus = "activa" | "preview" | "bloqueada";
 
 export interface IntegrationSource {
@@ -30,21 +32,21 @@ export interface IntegrationSource {
 
 export const STATUS_META: Record<
   IntegrationStatus,
-  { label: string; tone: string; dot: string }
+  { label: string; toneKey: Tone; dot: string }
 > = {
   activa: {
     label: "Activa",
-    tone: "text-state-ok",
-    dot: "bg-state-ok",
+    toneKey: "ok",
+    dot: "bg-teal",
   },
   preview: {
     label: "Preview",
-    tone: "text-state-warning",
+    toneKey: "warning",
     dot: "bg-state-warning",
   },
   bloqueada: {
     label: "Bloqueada",
-    tone: "text-state-critical",
+    toneKey: "critical",
     dot: "bg-state-critical",
   },
 };
