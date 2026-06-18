@@ -16,9 +16,13 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { PreviewBanner } from "@/components/modules/PreviewBanner";
 import { Card } from "@/components/ui/Card";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import { Donut, type DonutDatum } from "@/components/charts/Donut";
 import { RadialGauge } from "@/components/charts/RadialGauge";
 import { DatabaseIcon, LayersIcon, UserIcon, VotersIcon } from "@/components/ui/icons";
+import { CHART_TOOLTIP_STYLE, PANEL_HEIGHTS } from "@/constants/ui";
 import { getDemografia } from "./client";
 import type { DemografiaData, EntityDemografia } from "./fixtures";
 
@@ -26,22 +30,49 @@ const nf = new Intl.NumberFormat("es-MX");
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 const compact = new Intl.NumberFormat("es-MX", { notation: "compact", maximumFractionDigits: 1 });
 
-const TOOLTIP_STYLE = {
-  background: "#06090c",
-  border: "1px solid #223a44",
-  borderRadius: 10,
-  color: "#e6f2f5",
-  fontSize: 12,
-} as const;
-
-type SortKey = "entity" | "poblacion" | "escolaridad" | "viviendas";
-type SortDir = "asc" | "desc";
-
 type DemoTab = "poblacion" | "escolaridad";
 
 const DEMO_TABS: { id: DemoTab; label: string }[] = [
   { id: "poblacion", label: "Población" },
   { id: "escolaridad", label: "Escolaridad y vivienda" },
+];
+
+// DataTable column definitions — memoized at module level (static fixtures, no closure deps).
+const ENTITY_COLUMNS: Column<EntityDemografia>[] = [
+  {
+    key: "entity",
+    header: "Entidad",
+    render: (e) => e.entity,
+    sortValue: (e) => e.entity,
+    align: "left",
+  },
+  {
+    key: "poblacion",
+    header: "Población",
+    render: (e) => nf.format(e.poblacion),
+    sortValue: (e) => e.poblacion,
+    align: "right",
+  },
+  {
+    key: "escolaridad",
+    header: "Escolaridad (años)",
+    render: (e) => (
+      <span className="text-teal">{e.escolaridad.toFixed(1)}</span>
+    ),
+    sortValue: (e) => e.escolaridad,
+    align: "right",
+    hideOnCard: true,
+  },
+  {
+    key: "viviendas",
+    header: "Viviendas",
+    render: (e) => (
+      <span className="text-ink-faint">{nf.format(e.viviendas)}</span>
+    ),
+    sortValue: (e) => e.viviendas,
+    align: "right",
+    hideOnCard: true,
+  },
 ];
 
 export function DemografiaPage() {
@@ -73,11 +104,12 @@ export function DemografiaPage() {
   );
 }
 
+// P-2: SkeletonCard replaces inline animate-pulse divs.
 function LoadingState() {
   return (
     <div className="reveal grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="card-premium h-28 animate-pulse p-5" />
+        <SkeletonCard key={i} className="h-28" />
       ))}
     </div>
   );
@@ -120,24 +152,19 @@ function DemografiaBody({ data }: { data: DemografiaData }) {
         />
       </div>
 
-      {/* Segmented view switch */}
-      <div className="reveal mt-5 inline-flex rounded-xl border border-line bg-bg-sunken p-1">
-        {DEMO_TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t.id ? "bg-accent text-bg shadow-glow-accent" : "text-ink-muted hover:text-ink"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* P-3: SegmentedControl replaces hand-rolled tab bar */}
+      <div className="reveal mt-5">
+        <SegmentedControl<DemoTab>
+          options={DEMO_TABS}
+          value={tab}
+          onChange={setTab}
+          ariaLabel="Vista de demografía"
+        />
       </div>
 
       {tab === "poblacion" ? <PoblacionTab data={data} /> : <EscolaridadTab data={data} />}
 
+      {/* P-4: EntityTable → DataTable */}
       <EntityTable entities={entities} />
     </>
   );
@@ -149,6 +176,7 @@ function PoblacionTab({ data }: { data: DemografiaData }) {
   const sexDonut: DonutDatum[] = sexSplit.map((s) => ({
     name: s.sex,
     value: Number((s.share * 100).toFixed(1)),
+    // P-5: semantic per-datum colors — preserve (sex-split fixture colors).
     color: s.color,
   }));
 
@@ -171,6 +199,7 @@ function PoblacionTab({ data }: { data: DemografiaData }) {
           className="h-full"
           action={
             <div className="flex items-center gap-3 text-xs text-ink-muted">
+              {/* P-5: semantic colors for sex split — preserved from fixtures. */}
               <span className="inline-flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#22d3ee" }} />
                 Hombres
@@ -182,8 +211,9 @@ function PoblacionTab({ data }: { data: DemografiaData }) {
             </div>
           }
         >
-          <div style={{ width: "100%", height: 300 }}>
-            <ResponsiveContainer>
+          {/* P-6: PANEL_HEIGHTS.chartMd instead of hardcoded height */}
+          <div className={PANEL_HEIGHTS.chartMd}>
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={pyramid} layout="vertical" stackOffset="sign" margin={{ left: -8 }}>
                 <CartesianGrid stroke="#15242b" horizontal={false} />
                 <XAxis
@@ -204,11 +234,13 @@ function PoblacionTab({ data }: { data: DemografiaData }) {
                   axisLine={false}
                   width={48}
                 />
+                {/* P-5: CHART_TOOLTIP_STYLE replaces local TOOLTIP_STYLE */}
                 <Tooltip
                   cursor={{ fill: "rgba(34,211,238,0.06)" }}
-                  contentStyle={TOOLTIP_STYLE}
+                  contentStyle={CHART_TOOLTIP_STYLE}
                   formatter={(v: number, n: string) => [`${Math.abs(v).toFixed(1)}%`, n]}
                 />
+                {/* P-5: semantic bar colors for sex — preserve (cyan=hombres, teal=mujeres) */}
                 <Bar dataKey="hombres" stackId="p" fill="#22d3ee" radius={[2, 0, 0, 2]} />
                 <Bar dataKey="mujeres" stackId="p" fill="#2dd4bf" radius={[0, 2, 2, 0]} />
               </BarChart>
@@ -229,6 +261,7 @@ function PoblacionTab({ data }: { data: DemografiaData }) {
             {sexSplit.map((s) => (
               <div key={s.sex} className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
                 <span className="inline-flex items-center gap-2 text-xs text-ink-muted">
+                  {/* P-5: per-datum fixture color — preserve */}
                   <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
                   {s.sex}
                 </span>
@@ -260,14 +293,34 @@ function EscolaridadTab({ data }: { data: DemografiaData }) {
           className="h-full"
           action={<span className="pill border-line text-ink-muted">muestra</span>}
         >
-          <div style={{ width: "100%", height: 280 }}>
-            <ResponsiveContainer>
+          {/* P-6: PANEL_HEIGHTS.chartMd instead of hardcoded height */}
+          <div className={PANEL_HEIGHTS.chartMd}>
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={schooling} margin={{ left: -16, top: 8 }}>
                 <CartesianGrid stroke="#15242b" vertical={false} />
-                <XAxis dataKey="level" stroke="#52646d" tick={{ fontSize: 11 }} tickLine={false} axisLine={{ stroke: "#15242b" }} interval={0} />
-                <YAxis stroke="#52646d" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v}%`} />
-                <Tooltip cursor={{ fill: "rgba(34,211,238,0.06)" }} contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [`${v}%`, "Población"]} />
+                <XAxis
+                  dataKey="level"
+                  stroke="#52646d"
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: "#15242b" }}
+                  interval={0}
+                />
+                <YAxis
+                  stroke="#52646d"
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) => `${v}%`}
+                />
+                {/* P-5: CHART_TOOLTIP_STYLE replaces local TOOLTIP_STYLE */}
+                <Tooltip
+                  cursor={{ fill: "rgba(34,211,238,0.06)" }}
+                  contentStyle={CHART_TOOLTIP_STYLE}
+                  formatter={(v: number) => [`${v}%`, "Población"]}
+                />
                 <Bar dataKey="share" radius={[4, 4, 0, 0]}>
+                  {/* P-5: per-level semantic colors from fixtures — preserve */}
                   {schooling.map((s) => (
                     <Cell key={s.level} fill={s.color ?? "#22d3ee"} />
                   ))}
@@ -327,109 +380,48 @@ function EscolaridadTab({ data }: { data: DemografiaData }) {
   );
 }
 
-const COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
-  { key: "entity", label: "Entidad", numeric: false },
-  { key: "poblacion", label: "Población", numeric: true },
-  { key: "escolaridad", label: "Escolaridad", numeric: true },
-  { key: "viviendas", label: "Viviendas", numeric: true },
-];
-
+// P-4: DataTable replaces hand-rolled EntityTable (handles sort/paginate; no double-card).
 function EntityTable({ entities }: { entities: EntityDemografia[] }) {
   const [query, setQuery] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("poblacion");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  const rows = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const filtered = entities.filter((e) => e.entity.toLowerCase().includes(q));
-    const sorted = [...filtered].sort((a, b) => {
-      if (sortKey === "entity") return a.entity.localeCompare(b.entity, "es");
-      return a[sortKey] - b[sortKey];
-    });
-    return sortDir === "asc" ? sorted : sorted.reverse();
-  }, [entities, query, sortKey, sortDir]);
-
-  const toggleSort = (key: SortKey) => {
-    if (key === sortKey) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir(key === "entity" ? "asc" : "desc");
-    }
-  };
+    if (!q) return entities;
+    return entities.filter((e) => e.entity.toLowerCase().includes(q));
+  }, [entities, query]);
 
   return (
     <div className="reveal mt-5" style={{ animationDelay: "280ms" }}>
-      <Card
-        title="Población por entidad"
-        accentDot
-        action={<span className="pill border-line text-ink-muted">muestra</span>}
-      >
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      {/* Plain element above DataTable — no wrapping Card (DataTable renders its own .card-premium). */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-ink">
+          Población por entidad
+          <span className="ml-2 pill border-line text-ink-muted">muestra</span>
+        </h2>
+        <div className="flex flex-wrap items-center gap-3">
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Filtrar por entidad…"
-            className="field-input max-w-xs"
+            aria-label="Filtrar entidades"
+            className="field-input focus-ring max-w-xs"
           />
           <span className="pill border-line text-ink-muted">
-            {rows.length} de {entities.length} entidades
+            {filtered.length} de {entities.length} entidades
           </span>
         </div>
+      </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line text-left">
-                {COLUMNS.map((c) => (
-                  <th key={c.key} className={c.numeric ? "py-2.5 pr-2 text-right" : "py-2.5 pr-2"}>
-                    <button
-                      type="button"
-                      onClick={() => toggleSort(c.key)}
-                      className={`eyebrow inline-flex items-center gap-1 transition-colors hover:text-ink ${
-                        sortKey === c.key ? "text-accent" : ""
-                      } ${c.numeric ? "flex-row-reverse" : ""}`}
-                    >
-                      {c.label}
-                      <span className="text-[10px]">
-                        {sortKey === c.key ? (sortDir === "asc" ? "▲" : "▼") : "↕"}
-                      </span>
-                    </button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((e, i) => (
-                <tr
-                  key={e.entity}
-                  className="reveal border-b border-line/60 transition-colors hover:bg-panel-hover"
-                  style={{ animationDelay: `${40 + i * 25}ms` }}
-                >
-                  <td className="py-2.5 pr-2 text-ink">{e.entity}</td>
-                  <td className="py-2.5 pr-2 text-right font-mono tabular-nums text-ink">
-                    {nf.format(e.poblacion)}
-                  </td>
-                  <td className="py-2.5 pr-2 text-right font-mono tabular-nums text-teal">
-                    {e.escolaridad.toFixed(1)}
-                  </td>
-                  <td className="py-2.5 pr-2 text-right font-mono tabular-nums text-ink-faint">
-                    {nf.format(e.viviendas)}
-                  </td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={COLUMNS.length} className="py-8 text-center text-sm text-ink-faint">
-                    Sin coincidencias para “{query}”.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <DataTable<EntityDemografia>
+        columns={ENTITY_COLUMNS}
+        rows={filtered}
+        rowKey={(e) => e.entity}
+        defaultSortKey="poblacion"
+        defaultSortDir="desc"
+        emptyMessage={`Sin coincidencias para "${query}".`}
+        pageSize={16}
+      />
     </div>
   );
 }
