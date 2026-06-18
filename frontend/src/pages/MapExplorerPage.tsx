@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getAreas, getLayers } from "@/api/maps";
 import { getWmsLayers } from "@/api/sources";
+import { useThemeStore } from "@/store/themeStore";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { AreaDetailPanel } from "@/components/maps/AreaDetailPanel";
@@ -23,6 +24,7 @@ const LEVEL_LABEL: Record<string, string> = {
 };
 
 export function MapExplorerPage() {
+  const theme = useThemeStore((s) => s.theme);
   const [layers, setLayers] = useState<MapLayer[]>([]);
   const [areas, setAreas] = useState<AreasResponse | null>(null);
   // Tile templates for WMS layers, keyed by their synthetic "wms:<id>" id.
@@ -282,7 +284,7 @@ export function MapExplorerPage() {
           <div className="hud-corners relative h-[600px] overflow-hidden rounded-card border border-line-strong bg-panel p-0 shadow-panel">
             <div className="relative h-full w-full">
               <MapCanvas
-                key={basemap}
+                key={`${basemap}-${theme}`}
                 areas={filteredAreas}
                 showAreas={showAreas}
                 wmsLayers={wmsOverlays}

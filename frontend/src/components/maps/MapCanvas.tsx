@@ -4,6 +4,7 @@ import maplibregl, { type GeoJSONSource, type StyleSpecification } from "maplibr
 
 import type { AreasResponse, AreaProperties } from "@/types/maps";
 import { sampleMetric } from "@/types/maps";
+import { useThemeStore } from "@/store/themeStore";
 
 export interface WmsOverlay { id: string; tiles: string[]; visible: boolean; }
 export type Basemap = "dark" | "satellite";
@@ -45,11 +46,22 @@ const RASTER: Record<Basemap, { tiles: string[]; attribution: string; paint: Rec
   },
 };
 
-const styleFor = (b: Basemap): StyleSpecification => ({
-  version: 8,
-  sources: { base: { type: "raster", tiles: RASTER[b].tiles, tileSize: 256, attribution: RASTER[b].attribution } },
-  layers: [{ id: "base", type: "raster", source: "base", paint: RASTER[b].paint as never }],
-});
+// CARTO positron (light) tile URLs — same subdomain pattern as dark_nolabels.
+const LIGHT_TILES = [
+  "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+  "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+  "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+  "https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+];
+
+const styleFor = (b: Basemap, tiles?: string[]): StyleSpecification => {
+  const t = tiles ?? RASTER[b].tiles;
+  return {
+    version: 8,
+    sources: { base: { type: "raster", tiles: t, tileSize: 256, attribution: RASTER[b].attribution } },
+    layers: [{ id: "base", type: "raster", source: "base", paint: RASTER[b].paint as never }],
+  };
+};
 
 const EMPTY_FC: AreasResponse = { type: "FeatureCollection", features: [] };
 
@@ -115,12 +127,19 @@ export function MapCanvas({ areas, showAreas, wmsLayers = [], choropleth, basema
   const onSelectRef = useRef(onSelect);
   useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
 
+  // Follow the app theme for the standard (non-satellite) basemap.
+  // Satellite is unchanged. The parent remounts MapCanvas via key when theme
+  // changes so this snapshot value captured at init time is always correct.
+  const theme = useThemeStore((s) => s.theme);
+  const standardTiles = theme === "light" ? LIGHT_TILES : undefined; // undefined → use RASTER default (dark_nolabels)
+
   // Init once. Basemap change re-inits via key on the wrapper (see Task 20).
+  // Theme change also re-inits via key (parent includes theme in the key).
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: styleFor(basemap),
+      style: styleFor(basemap, basemap === "dark" ? standardTiles : undefined),
       center: [-102.55, 23.63],
       zoom: 4.2,
       attributionControl: { compact: true },

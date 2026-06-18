@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { getOverview } from "@/api/analytics";
 import { getAreas } from "@/api/maps";
 import { getSources } from "@/api/sources";
+import { useThemeStore } from "@/store/themeStore";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CoverageBars, type CoverageDatum } from "@/components/dashboards/CoverageBars";
@@ -78,6 +79,7 @@ function relativeTime(iso: string | undefined): string {
 }
 
 export function DashboardPage() {
+  const theme = useThemeStore((s) => s.theme);
   const {
     data,
     loading: overviewLoading,
@@ -406,6 +408,7 @@ export function DashboardPage() {
               <div className="space-y-4">
                 <div className={`relative ${PANEL_HEIGHTS.mapMini} overflow-hidden rounded-card`}>
                   <MapCanvas
+                    key={theme}
                     areas={areas}
                     showAreas
                     choropleth
