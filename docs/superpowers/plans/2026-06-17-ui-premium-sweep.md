@@ -300,10 +300,10 @@ export function SegmentedControl<T extends string>({
       move(i - 1);
     } else if (e.key === "Home") {
       e.preventDefault();
-      move(-i); // -> index 0
+      move(0);
     } else if (e.key === "End") {
       e.preventDefault();
-      move(options.length - 1 - i);
+      move(options.length - 1);
     }
   };
 
