@@ -263,6 +263,8 @@ export function IndicePage() {
                 rows={rows}
                 rowKey={(s) => s.id}
                 pageSize={20}
+                defaultSortKey="index"
+                defaultSortDir="desc"
                 emptyMessage={
                   search
                     ? `Ninguna entidad coincide con "${search}".`

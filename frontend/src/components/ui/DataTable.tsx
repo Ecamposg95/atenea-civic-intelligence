@@ -24,6 +24,10 @@ interface Props<T> {
   emptyMessage?: string;
   /** Optional click handler per row. */
   onRowClick?: (row: T) => void;
+  /** Initial sort column key (must match a column with `sortValue`). */
+  defaultSortKey?: string;
+  /** Initial sort direction when `defaultSortKey` is set. Defaults to "asc". */
+  defaultSortDir?: SortDir;
 }
 
 const SortGlyph = ({ dir }: { dir: SortDir | null }) => (
@@ -39,9 +43,11 @@ export function DataTable<T>({
   pageSize = 20,
   emptyMessage = "Sin datos.",
   onRowClick,
+  defaultSortKey,
+  defaultSortDir = "asc",
 }: Props<T>) {
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortKey, setSortKey] = useState<string | null>(defaultSortKey ?? null);
+  const [sortDir, setSortDir] = useState<SortDir>(defaultSortDir);
   const [page, setPage] = useState(1);
 
   const sorted = useMemo(() => {
