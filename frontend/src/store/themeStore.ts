@@ -2,6 +2,8 @@ import { create } from "zustand";
 
 export type Theme = "dark" | "light";
 
+// NOTE: this key is also hardcoded in index.html's anti-flash inline script.
+// If you rename it, update index.html too.
 const STORAGE_KEY = "agora-theme";
 
 function readInitial(): Theme {

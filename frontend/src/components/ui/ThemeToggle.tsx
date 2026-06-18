@@ -10,7 +10,6 @@ export function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={isDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
-      aria-pressed={!isDark}
       title={isDark ? "Tema claro" : "Tema oscuro"}
       className="focus-ring grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-ink-muted transition-colors hover:border-accent hover:text-ink"
     >

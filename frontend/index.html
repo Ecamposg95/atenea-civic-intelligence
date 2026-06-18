@@ -2,13 +2,17 @@
 <html lang="en">
   <head>
     <script>
+      /* Anti-flash: set the theme class + native color-scheme before paint.
+         Storage key "agora-theme" mirrors STORAGE_KEY in src/store/themeStore.ts. */
       (function () {
+        var theme = "dark";
         try {
-          var t = localStorage.getItem("agora-theme");
-          document.documentElement.classList.add(t === "light" ? "light" : "dark");
+          if (localStorage.getItem("agora-theme") === "light") theme = "light";
         } catch (e) {
-          document.documentElement.classList.add("dark");
+          /* localStorage unavailable -> dark */
         }
+        document.documentElement.classList.add(theme);
+        document.documentElement.style.colorScheme = theme;
       })();
     </script>
     <meta charset="UTF-8" />
