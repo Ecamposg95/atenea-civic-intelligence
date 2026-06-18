@@ -31,7 +31,7 @@ const fmtNum = (v: number) => `${v}`;
 
 export function ParticipationChart({
   data,
-  height = 220,
+  height,
   valueFormat = "number",
   seriesLabel = "Eventos",
   color = CHART_PALETTE[0],

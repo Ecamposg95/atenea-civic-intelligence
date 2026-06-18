@@ -151,6 +151,14 @@
     @apply animate-fade-up;
   }
 
+  @media print {
+    .reveal {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+
   .aura {
     @apply pointer-events-none absolute;
     background: radial-gradient(

@@ -123,7 +123,7 @@ export function ReportesPage() {
             </div>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[360px_1fr]">
               <SkeletonCard lines={5} />
-              <SkeletonCard lines={1} className="min-h-[200px]" />
+              <SkeletonCard lines={1} className="min-h-[340px]" />
             </div>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <SkeletonCard lines={4} />
