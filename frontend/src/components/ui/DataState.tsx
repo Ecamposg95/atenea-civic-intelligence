@@ -19,6 +19,10 @@ interface DataStateProps {
  * Presentational wrapper that renders the right on-theme UI for an async
  * state: loading skeleton, premium error card with retry, empty state, or
  * the resolved children.
+ *
+ * Empty-state convention: for a REAL dataset whose table hasn't been ingested
+ * yet, pass `emptyMessage="Ingesta pendiente"` (honest empty, never fake data).
+ * For preview modules with sample fixtures, keep the PreviewBanner instead.
  */
 export function DataState({
   loading,
