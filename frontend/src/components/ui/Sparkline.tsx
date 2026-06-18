@@ -13,8 +13,8 @@ export function Sparkline({
   data,
   width = 120,
   height = 36,
-  stroke = "#22d3ee",
-  fillFrom = "rgba(34,211,238,0.35)",
+  stroke = "var(--chart-1)",
+  fillFrom = "color-mix(in srgb, var(--chart-1) 35%, transparent)",
   className,
 }: SparklineProps) {
   const rawId = useId();

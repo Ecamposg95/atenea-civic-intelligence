@@ -156,16 +156,16 @@ function NacionalView() {
             <div className={PANEL_HEIGHTS.chartMd}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={PARTY_RESULTS} layout="vertical" margin={{ left: 24 }}>
-                  <XAxis type="number" tickFormatter={pct} stroke="#52646d" tick={{ fontSize: 12 }} />
+                  <XAxis type="number" tickFormatter={pct} stroke="var(--chart-axis)" tick={{ fontSize: 12 }} />
                   <YAxis
                     type="category"
                     dataKey="party"
-                    stroke="#52646d"
+                    stroke="var(--chart-axis)"
                     tick={{ fontSize: 12 }}
                     width={110}
                   />
                   <Tooltip
-                    cursor={{ fill: "rgba(34,211,238,0.06)" }}
+                    cursor={{ fill: "color-mix(in srgb, var(--chart-1) 6%, transparent)" }}
                     formatter={(v: number) => pct(v)}
                     contentStyle={CHART_TOOLTIP_STYLE}
                   />
@@ -199,7 +199,7 @@ function NacionalView() {
                     innerRadius={58}
                     outerRadius={92}
                     paddingAngle={2}
-                    stroke="#06090c"
+                    stroke="rgb(var(--c-panel))"
                     strokeWidth={2}
                   >
                     {PARTY_RESULTS.map((p) => (
@@ -354,16 +354,16 @@ function HistoricoView() {
           <div className={PANEL_HEIGHTS.chartMd}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={HISTORICAL} margin={{ left: -12, top: 8, right: 8 }}>
-                <CartesianGrid stroke="#15242b" vertical={false} />
+                <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
                 <XAxis
                   dataKey="year"
-                  stroke="#52646d"
+                  stroke="var(--chart-axis)"
                   tick={{ fontSize: 12 }}
                   tickLine={false}
-                  axisLine={{ stroke: "#15242b" }}
+                  axisLine={{ stroke: "var(--chart-grid)" }}
                 />
                 <YAxis
-                  stroke="#52646d"
+                  stroke="var(--chart-axis)"
                   tick={{ fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
@@ -415,16 +415,16 @@ function HistoricoView() {
           <div className="h-[180px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={turnoutTrend} margin={{ left: -12, top: 8, right: 8 }}>
-                <CartesianGrid stroke="#15242b" vertical={false} />
+                <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
                 <XAxis
                   dataKey="period"
-                  stroke="#52646d"
+                  stroke="var(--chart-axis)"
                   tick={{ fontSize: 12 }}
                   tickLine={false}
-                  axisLine={{ stroke: "#15242b" }}
+                  axisLine={{ stroke: "var(--chart-grid)" }}
                 />
                 <YAxis
-                  stroke="#52646d"
+                  stroke="var(--chart-axis)"
                   tick={{ fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}

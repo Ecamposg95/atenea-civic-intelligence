@@ -31,26 +31,26 @@ const TONE: Record<
   accent: {
     text: "text-accent",
     glow: "shadow-glow-accent",
-    stroke: "#22d3ee",
-    fill: "rgba(34,211,238,0.32)",
+    stroke: "var(--chart-1)",
+    fill: "color-mix(in srgb, var(--chart-1) 32%, transparent)",
   },
   teal: {
     text: "text-teal",
     glow: "shadow-glow-teal",
-    stroke: "#2dd4bf",
-    fill: "rgba(45,212,191,0.30)",
+    stroke: "var(--chart-3)",
+    fill: "color-mix(in srgb, var(--chart-3) 30%, transparent)",
   },
   warning: {
     text: "text-state-warning",
     glow: "shadow-glow",
-    stroke: "#f5b53d",
-    fill: "rgba(216,178,90,0.28)",
+    stroke: "var(--chart-2)",
+    fill: "color-mix(in srgb, var(--chart-2) 28%, transparent)",
   },
   critical: {
     text: "text-state-critical",
     glow: "shadow-glow",
-    stroke: "#f4607a",
-    fill: "rgba(244,96,122,0.28)",
+    stroke: "var(--chart-4)",
+    fill: "color-mix(in srgb, var(--chart-4) 28%, transparent)",
   },
 };
 

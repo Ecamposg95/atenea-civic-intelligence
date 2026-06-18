@@ -299,7 +299,7 @@ export function MapExplorerPage() {
                 className="pointer-events-none absolute inset-0 z-[5] rounded-card"
                 style={{
                   boxShadow:
-                    "inset 0 0 120px 16px rgba(2, 8, 20, 0.55), inset 0 0 0 1px rgba(127, 240, 224, 0.06)",
+                    "inset 0 0 120px 16px color-mix(in srgb, rgb(var(--c-bg)) 55%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--chart-3) 6%, transparent)",
                 }}
               />
               {choropleth && <Legend label="Participación" />}

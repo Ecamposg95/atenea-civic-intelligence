@@ -286,11 +286,11 @@ function ComercioTab({ data }: { data: EconomyData }) {
           <div className={PANEL_HEIGHTS.chartMd}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={balanceRows} margin={{ left: -16, top: 8 }}>
-                <CartesianGrid stroke="#15242b" vertical={false} />
-                <XAxis dataKey="year" stroke="#52646d" tick={{ fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#15242b" }} />
-                <YAxis stroke="#52646d" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+                <XAxis dataKey="year" stroke="var(--chart-axis)" tick={{ fontSize: 12 }} tickLine={false} axisLine={{ stroke: "var(--chart-grid)" }} />
+                <YAxis stroke="var(--chart-axis)" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                 {/* P-5: CHART_TOOLTIP_STYLE replaces local TOOLTIP_STYLE */}
-                <Tooltip cursor={{ fill: "rgba(34,211,238,0.06)" }} contentStyle={CHART_TOOLTIP_STYLE} />
+                <Tooltip cursor={{ fill: "color-mix(in srgb, var(--chart-1) 6%, transparent)" }} contentStyle={CHART_TOOLTIP_STYLE} />
                 <Bar dataKey="exportaciones" fill={CHART_PALETTE[0]} radius={[3, 3, 0, 0]} />
                 <Bar dataKey="importaciones" fill={CHART_PALETTE[1]} radius={[3, 3, 0, 0]} />
               </BarChart>
@@ -361,11 +361,11 @@ function ComplejidadTab({ data }: { data: EconomyData }) {
           <div className={`${PANEL_HEIGHTS.chartMd} min-h-[320px]`}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rows} layout="vertical" margin={{ left: 24, right: 12 }}>
-                <CartesianGrid stroke="#15242b" horizontal={false} />
-                <XAxis type="number" stroke="#52646d" tick={{ fontSize: 12 }} tickLine={false} axisLine={{ stroke: "#15242b" }} />
-                <YAxis type="category" dataKey="entity" stroke="#52646d" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={120} />
+                <CartesianGrid stroke="var(--chart-grid)" horizontal={false} />
+                <XAxis type="number" stroke="var(--chart-axis)" tick={{ fontSize: 12 }} tickLine={false} axisLine={{ stroke: "var(--chart-grid)" }} />
+                <YAxis type="category" dataKey="entity" stroke="var(--chart-axis)" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={120} />
                 {/* P-5: CHART_TOOLTIP_STYLE replaces local TOOLTIP_STYLE */}
-                <Tooltip cursor={{ fill: "rgba(34,211,238,0.06)" }} contentStyle={CHART_TOOLTIP_STYLE} formatter={(v: number) => [v.toFixed(2), "ECI"]} />
+                <Tooltip cursor={{ fill: "color-mix(in srgb, var(--chart-1) 6%, transparent)" }} contentStyle={CHART_TOOLTIP_STYLE} formatter={(v: number) => [v.toFixed(2), "ECI"]} />
                 <Bar dataKey="eci" fill={CHART_PALETTE[0]} radius={[0, 3, 3, 0]} />
               </BarChart>
             </ResponsiveContainer>

@@ -215,20 +215,20 @@ function PoblacionTab({ data }: { data: DemografiaData }) {
           <div className={PANEL_HEIGHTS.chartMd}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={pyramid} layout="vertical" stackOffset="sign" margin={{ left: -8 }}>
-                <CartesianGrid stroke="#15242b" horizontal={false} />
+                <CartesianGrid stroke="var(--chart-grid)" horizontal={false} />
                 <XAxis
                   type="number"
                   domain={[-pyramidMax, pyramidMax]}
                   tickFormatter={(v: number) => `${Math.abs(v)}%`}
-                  stroke="#52646d"
+                  stroke="var(--chart-axis)"
                   tick={{ fontSize: 12 }}
                   tickLine={false}
-                  axisLine={{ stroke: "#15242b" }}
+                  axisLine={{ stroke: "var(--chart-grid)" }}
                 />
                 <YAxis
                   type="category"
                   dataKey="band"
-                  stroke="#52646d"
+                  stroke="var(--chart-axis)"
                   tick={{ fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
@@ -236,7 +236,7 @@ function PoblacionTab({ data }: { data: DemografiaData }) {
                 />
                 {/* P-5: CHART_TOOLTIP_STYLE replaces local TOOLTIP_STYLE */}
                 <Tooltip
-                  cursor={{ fill: "rgba(34,211,238,0.06)" }}
+                  cursor={{ fill: "color-mix(in srgb, var(--chart-1) 6%, transparent)" }}
                   contentStyle={CHART_TOOLTIP_STYLE}
                   formatter={(v: number, n: string) => [`${Math.abs(v).toFixed(1)}%`, n]}
                 />
@@ -297,17 +297,17 @@ function EscolaridadTab({ data }: { data: DemografiaData }) {
           <div className={PANEL_HEIGHTS.chartMd}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={schooling} margin={{ left: -16, top: 8 }}>
-                <CartesianGrid stroke="#15242b" vertical={false} />
+                <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
                 <XAxis
                   dataKey="level"
-                  stroke="#52646d"
+                  stroke="var(--chart-axis)"
                   tick={{ fontSize: 11 }}
                   tickLine={false}
-                  axisLine={{ stroke: "#15242b" }}
+                  axisLine={{ stroke: "var(--chart-grid)" }}
                   interval={0}
                 />
                 <YAxis
-                  stroke="#52646d"
+                  stroke="var(--chart-axis)"
                   tick={{ fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
@@ -315,14 +315,14 @@ function EscolaridadTab({ data }: { data: DemografiaData }) {
                 />
                 {/* P-5: CHART_TOOLTIP_STYLE replaces local TOOLTIP_STYLE */}
                 <Tooltip
-                  cursor={{ fill: "rgba(34,211,238,0.06)" }}
+                  cursor={{ fill: "color-mix(in srgb, var(--chart-1) 6%, transparent)" }}
                   contentStyle={CHART_TOOLTIP_STYLE}
                   formatter={(v: number) => [`${v}%`, "Población"]}
                 />
                 <Bar dataKey="share" radius={[4, 4, 0, 0]}>
                   {/* P-5: per-level semantic colors from fixtures — preserve */}
                   {schooling.map((s) => (
-                    <Cell key={s.level} fill={s.color ?? "#22d3ee"} />
+                    <Cell key={s.level} fill={s.color ?? "var(--chart-1)"} />
                   ))}
                 </Bar>
               </BarChart>

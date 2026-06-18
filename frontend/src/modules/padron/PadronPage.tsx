@@ -135,9 +135,9 @@ function DemografiaTab() {
           <div className={`w-full ${PANEL_HEIGHTS.chartMd}`}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={AGE_BANDS} margin={{ left: -16 }}>
-                <XAxis dataKey="band" stroke="#52646d" tick={{ fontSize: 12 }} />
-                <YAxis stroke="#52646d" tick={{ fontSize: 12 }} />
-                <Tooltip cursor={{ fill: "rgba(34,211,238,0.06)" }} contentStyle={CHART_TOOLTIP_STYLE} />
+                <XAxis dataKey="band" stroke="var(--chart-axis)" tick={{ fontSize: 12 }} />
+                <YAxis stroke="var(--chart-axis)" tick={{ fontSize: 12 }} />
+                <Tooltip cursor={{ fill: "color-mix(in srgb, var(--chart-1) 6%, transparent)" }} contentStyle={CHART_TOOLTIP_STYLE} />
                 <Bar dataKey="hombres" fill={SEX_HOMBRES} radius={[4, 4, 0, 0]} />
                 <Bar dataKey="mujeres" fill={SEX_MUJERES} radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -163,7 +163,7 @@ function DemografiaTab() {
                   innerRadius={58}
                   outerRadius={92}
                   paddingAngle={2}
-                  stroke="#06090c"
+                  stroke="rgb(var(--c-panel))"
                   strokeWidth={2}
                 >
                   {SEX_DISTRIBUTION.map((s) => <Cell key={s.sex} fill={s.color} />)}
