@@ -23,9 +23,15 @@ class IngestRunResult:
     skipped: int
 
 
-def _file_hash(path) -> str:
+def _file_hash(path) -> str | None:
+    """sha256 of the file, or None if there is no real file on disk (custom
+    readers may supply data without a file). A real read error on an EXISTING
+    file is NOT swallowed — it propagates so run_ingest records a FAILED run."""
+    p = Path(path)
+    if not p.exists():
+        return None
     h = hashlib.sha256()
-    h.update(Path(path).read_bytes())
+    h.update(p.read_bytes())
     return h.hexdigest()
 
 
@@ -56,11 +62,9 @@ def run_ingest(db, ctx, spec, file_path, *, source, extra=None, replace=False) -
     try:
         # Fix 2: hash + read + validate are all inside the try so any file/encoding error
         # records a FAILED run instead of propagating out of run_ingest uncaught.
-        # Hash is best-effort: custom readers may supply data without a real file on disk.
-        try:
-            run.file_hash = _file_hash(file_path)
-        except (FileNotFoundError, OSError):
-            run.file_hash = None
+        # Hash is None for fileless custom readers; a real read error on an
+        # existing file propagates to the except below (→ FAILED run).
+        run.file_hash = _file_hash(file_path)
         rows, _header = spec.reader(file_path, extra)
         good, discards = validate_rows(rows, spec.columns)
         run.rows_read = len(rows)
