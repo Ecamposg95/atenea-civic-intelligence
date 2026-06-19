@@ -40,6 +40,16 @@ class TenantMixin:
     )
 
 
+class CampaignMixin:
+    """Campaign scoping for operational/contest-bound entities."""
+    campaign_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("campaigns.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+
+
 class AuditMixin:
     """Timestamps, soft delete, and actor attribution."""
 

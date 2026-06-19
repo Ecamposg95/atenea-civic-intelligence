@@ -141,6 +141,11 @@ const Configuracion = lazy(() =>
 const Organizaciones = lazy(() =>
   import("@/modules/organizaciones/OrgsPage").then((m) => ({ default: m.OrgsPage })),
 );
+const Campaigns = lazy(() =>
+  import("@/modules/campaigns/CampaignsPage").then((m) => ({
+    default: m.CampaignsPage,
+  })),
+);
 const Busqueda = lazy(() =>
   import("@/modules/busqueda/BusquedaPage").then((m) => ({ default: m.BusquedaPage })),
 );
@@ -213,4 +218,5 @@ export const MODULES: ModuleDef[] = [
   { key: "organization", path: "/organization", label: "Organización", section: "administracion", icon: SettingsIcon, state: "active", element: Organization, roles: ["superadmin", "admin"] },
   { key: "configuracion", path: "/configuracion", label: "Configuración", section: "administracion", icon: SettingsIcon, state: "active", element: Configuracion, roles: ["superadmin", "admin"] },
   { key: "organizaciones", path: "/organizaciones", label: "Organizaciones", section: "administracion", icon: ShieldIcon, state: "active", element: Organizaciones, roles: ["superadmin"] },
+  { key: "campaigns", path: "/campaigns", label: "Campañas", section: "administracion", icon: AnalyticsIcon, state: "active", element: Campaigns, roles: ["superadmin", "admin"] },
 ];

@@ -7,7 +7,7 @@ so the suite needs no PostGIS — tenancy/auth/pagination behavior is unaffected
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -15,9 +15,13 @@ from app.core.security import hash_password
 from app.database import Base, get_db
 from app.main import app
 from app.models.audit_log import AuditLog
+from app.models.campaign import Campaign, CampaignMembership, Contest
+from app.models.catalog import Ambito, Cargo, Coalition, CoalitionParty, Party
 from app.models.electoral_area import ElectoralArea
 from app.models.organization import Organization
 from app.models.user import User, UserRole
+
+ALPHA_CAMPAIGN_ID = "11111111-1111-1111-1111-111111111111"
 
 engine = create_engine(
     "sqlite://",
@@ -37,6 +41,13 @@ Base.metadata.create_all(
         User.__table__,
         AuditLog.__table__,
         ElectoralArea.__table__,
+        Cargo.__table__,
+        Party.__table__,
+        Coalition.__table__,
+        CoalitionParty.__table__,
+        Campaign.__table__,
+        Contest.__table__,
+        CampaignMembership.__table__,
     ],
 )
 
@@ -89,6 +100,20 @@ def seed_data():
                 ),
             ]
         )
+        db.commit()
+
+        # Seed an Alpha campaign with admin membership so campaign tests have data.
+        alpha_admin = db.execute(select(User).where(User.email == "admin@alpha.gov")).scalar_one()
+        camp = Campaign(
+            id=ALPHA_CAMPAIGN_ID,
+            name="Alpha 2027",
+            cycle=2027,
+            organization_id=org_a.id,
+        )
+        db.add(camp)
+        db.flush()
+        db.add(CampaignMembership(user_id=alpha_admin.id, campaign_id=camp.id, role=UserRole.ADMIN))
+        db.add(Cargo(key="gubernatura", label="Gubernatura", ambito=Ambito.ESTATAL, territory_level="estado"))
         db.commit()
     finally:
         db.close()

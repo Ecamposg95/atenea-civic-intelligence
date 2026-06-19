@@ -3,6 +3,7 @@ import axios, { AxiosError } from "axios";
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
 const TOKEN_KEY = "agora.token";
+const CAMPAIGN_KEY = "agora-campaign";
 
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -15,6 +16,19 @@ apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Attach active campaign id on every request.
+apiClient.interceptors.request.use((config) => {
+  try {
+    const campaignId = localStorage.getItem(CAMPAIGN_KEY);
+    if (campaignId) {
+      config.headers["X-Campaign-Id"] = campaignId;
+    }
+  } catch {
+    /* ignore – localStorage may be unavailable */
   }
   return config;
 });
