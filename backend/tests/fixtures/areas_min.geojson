@@ -1,0 +1,4 @@
+{"type":"FeatureCollection","features":[
+ {"type":"Feature","properties":{"NOMBRE":"Distrito 01","CLAVE":"0901"},
+  "geometry":{"type":"Polygon","coordinates":[[[-99.1,19.4],[-99.0,19.4],[-99.0,19.5],[-99.1,19.5],[-99.1,19.4]]]}}
+]}
