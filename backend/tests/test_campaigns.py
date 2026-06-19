@@ -49,3 +49,15 @@ def test_member_can_list_and_create_contest(client):
     h = {**auth_headers(client, "admin@alpha.gov"), "X-Campaign-Id": ALPHA_CAMPAIGN_ID}
     r = client.get(f"/api/campaigns/{ALPHA_CAMPAIGN_ID}/contests", headers=h)
     assert r.status_code == 200 and isinstance(r.json(), list)
+
+
+def test_catalogs_readable(client):
+    h = auth_headers(client, "admin@alpha.gov")
+    r = client.get("/api/catalogs/cargos", headers=h)
+    assert r.status_code == 200 and isinstance(r.json(), list)
+
+
+def test_territory_children_readable(client):
+    h = auth_headers(client, "admin@alpha.gov")
+    r = client.get("/api/territory/children", headers=h)
+    assert r.status_code == 200 and isinstance(r.json(), list)

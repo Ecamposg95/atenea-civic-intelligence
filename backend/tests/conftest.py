@@ -16,7 +16,7 @@ from app.database import Base, get_db
 from app.main import app
 from app.models.audit_log import AuditLog
 from app.models.campaign import Campaign, CampaignMembership, Contest
-from app.models.catalog import Cargo, Coalition, CoalitionParty, Party
+from app.models.catalog import Ambito, Cargo, Coalition, CoalitionParty, Party
 from app.models.electoral_area import ElectoralArea
 from app.models.organization import Organization
 from app.models.user import User, UserRole
@@ -113,6 +113,7 @@ def seed_data():
         db.add(camp)
         db.flush()
         db.add(CampaignMembership(user_id=alpha_admin.id, campaign_id=camp.id, role=UserRole.ADMIN))
+        db.add(Cargo(key="gubernatura", label="Gubernatura", ambito=Ambito.ESTATAL, territory_level="estado"))
         db.commit()
     finally:
         db.close()
