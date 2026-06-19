@@ -24,3 +24,19 @@ def test_global_reference_area_has_null_tenant():
         db.rollback()
     finally:
         db.close()
+
+
+def test_tenant_and_global_areas_coexist_and_are_distinguishable():
+    """A global (NULL-org) reference area and a tenant-owned area coexist; the
+    tenant column distinguishes them (real cross-tenant isolation is enforced by
+    scoped_query, tested in test_scoping)."""
+    db = TestingSessionLocal()
+    try:
+        glob = ElectoralArea(name="Nacional", level=AreaLevel.NATION, organization_id=None)
+        owned = ElectoralArea(name="Zona propia", level=AreaLevel.COLONIA, organization_id="some-org-id")
+        db.add_all([glob, owned]); db.flush()
+        assert glob.organization_id is None
+        assert owned.organization_id == "some-org-id"
+        db.rollback()
+    finally:
+        db.close()

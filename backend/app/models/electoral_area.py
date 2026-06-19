@@ -86,19 +86,19 @@ class ElectoralArea(UUIDMixin, AuditMixin, Base):
         String(36), ForeignKey("electoral_areas.id", ondelete="SET NULL"), index=True, nullable=True
     )
     estado_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("electoral_areas.id"), index=True, nullable=True
+        String(36), ForeignKey("electoral_areas.id", ondelete="SET NULL"), index=True, nullable=True
     )
     municipio_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("electoral_areas.id"), index=True, nullable=True
+        String(36), ForeignKey("electoral_areas.id", ondelete="SET NULL"), index=True, nullable=True
     )
     distrito_federal_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("electoral_areas.id"), index=True, nullable=True
+        String(36), ForeignKey("electoral_areas.id", ondelete="SET NULL"), index=True, nullable=True
     )
     distrito_local_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("electoral_areas.id"), index=True, nullable=True
+        String(36), ForeignKey("electoral_areas.id", ondelete="SET NULL"), index=True, nullable=True
     )
     seccion_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("electoral_areas.id"), index=True, nullable=True
+        String(36), ForeignKey("electoral_areas.id", ondelete="SET NULL"), index=True, nullable=True
     )
 
     # ── Relationships ─────────────────────────────────────────────────────────
