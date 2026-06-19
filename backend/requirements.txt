@@ -27,3 +27,6 @@ httpx==0.28.1
 
 # --- Testing ---
 pytest==8.3.4
+
+# --- Ingestion ---
+openpyxl==3.1.5
