@@ -51,4 +51,8 @@ class CampaignMembership(UUIDMixin, AuditMixin, Base):
     __table_args__ = (UniqueConstraint("user_id", "campaign_id", name="uq_campaign_member"),)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
     campaign_id: Mapped[str] = mapped_column(ForeignKey("campaigns.id", ondelete="CASCADE"), index=True, nullable=False)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"), default=UserRole.VIEWER, nullable=False)
+    # create_type=False: the user_role PG enum is created once by the User model;
+    # re-declaring it here must not emit a second CREATE TYPE on Postgres.
+    role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole, name="user_role", create_type=False), default=UserRole.VIEWER, nullable=False
+    )
