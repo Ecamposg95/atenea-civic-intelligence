@@ -92,7 +92,7 @@ def upgrade() -> None:
         )
     try:
         op.create_index("ix_cargos_key", "cargos", ["key"], unique=True)
-    except sa.exc.ProgrammingError:
+    except (sa.exc.ProgrammingError, sa.exc.OperationalError):
         pass
 
     # ── parties ───────────────────────────────────────────────────────────────
@@ -107,7 +107,7 @@ def upgrade() -> None:
         )
     try:
         op.create_index("ix_parties_key", "parties", ["key"], unique=True)
-    except sa.exc.ProgrammingError:
+    except (sa.exc.ProgrammingError, sa.exc.OperationalError):
         pass
 
     # ── coalitions ────────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ def upgrade() -> None:
         )
     try:
         op.create_index("ix_coalitions_key", "coalitions", ["key"], unique=True)
-    except sa.exc.ProgrammingError:
+    except (sa.exc.ProgrammingError, sa.exc.OperationalError):
         pass
 
     # ── coalition_parties ─────────────────────────────────────────────────────
@@ -144,11 +144,11 @@ def upgrade() -> None:
         )
     try:
         op.create_index("ix_coalition_parties_coalition_id", "coalition_parties", ["coalition_id"])
-    except sa.exc.ProgrammingError:
+    except (sa.exc.ProgrammingError, sa.exc.OperationalError):
         pass
     try:
         op.create_index("ix_coalition_parties_party_id", "coalition_parties", ["party_id"])
-    except sa.exc.ProgrammingError:
+    except (sa.exc.ProgrammingError, sa.exc.OperationalError):
         pass
 
     # ── campaigns ─────────────────────────────────────────────────────────────
@@ -184,7 +184,7 @@ def upgrade() -> None:
         )
     try:
         op.create_index("ix_campaigns_organization_id", "campaigns", ["organization_id"])
-    except sa.exc.ProgrammingError:
+    except (sa.exc.ProgrammingError, sa.exc.OperationalError):
         pass
 
     # ── contests ──────────────────────────────────────────────────────────────
@@ -225,19 +225,19 @@ def upgrade() -> None:
         )
     try:
         op.create_index("ix_contests_organization_id", "contests", ["organization_id"])
-    except sa.exc.ProgrammingError:
+    except (sa.exc.ProgrammingError, sa.exc.OperationalError):
         pass
     try:
         op.create_index("ix_contests_campaign_id", "contests", ["campaign_id"])
-    except sa.exc.ProgrammingError:
+    except (sa.exc.ProgrammingError, sa.exc.OperationalError):
         pass
     try:
         op.create_index("ix_contests_cargo_id", "contests", ["cargo_id"])
-    except sa.exc.ProgrammingError:
+    except (sa.exc.ProgrammingError, sa.exc.OperationalError):
         pass
     try:
         op.create_index("ix_contests_territory_id", "contests", ["territory_id"])
-    except sa.exc.ProgrammingError:
+    except (sa.exc.ProgrammingError, sa.exc.OperationalError):
         pass
 
     # ── campaign_memberships ──────────────────────────────────────────────────
@@ -273,13 +273,13 @@ def upgrade() -> None:
         )
     try:
         op.create_index("ix_campaign_memberships_user_id", "campaign_memberships", ["user_id"])
-    except sa.exc.ProgrammingError:
+    except (sa.exc.ProgrammingError, sa.exc.OperationalError):
         pass
     try:
         op.create_index(
             "ix_campaign_memberships_campaign_id", "campaign_memberships", ["campaign_id"]
         )
-    except sa.exc.ProgrammingError:
+    except (sa.exc.ProgrammingError, sa.exc.OperationalError):
         pass
 
     # ── electoral_areas: hierarchy columns ────────────────────────────────────
@@ -309,7 +309,7 @@ def upgrade() -> None:
             op.create_index(
                 f"ix_electoral_areas_{col_name}", "electoral_areas", [col_name]
             )
-        except sa.exc.ProgrammingError:
+        except (sa.exc.ProgrammingError, sa.exc.OperationalError):
             pass
 
     # ── electoral_areas: make organization_id nullable ────────────────────────
