@@ -98,3 +98,26 @@ def test_read_excel(tmp_path):
     rows, header = read_tabular(f)
     assert header[:2] == ["nivel", "clave"]
     assert list(rows)[0]["clave"] == "15"
+
+
+def test_engine_missing_file_records_failed_run():
+    db = TestingSessionLocal()
+    try:
+        spec = DATASETS["census"]
+        result = run_ingest(db, _Ctx(), spec, FIX / "does_not_exist.csv", source=None, extra={"anio": 2020})
+        assert result.status == "failed"
+        run = db.get(IngestRun, result.run_id)
+        assert run is not None and run.status == IngestStatus.FAILED
+    finally:
+        db.query(IngestRun).delete(); db.commit(); db.close()
+
+
+def test_engine_missing_anio_recorded_not_raised():
+    db = TestingSessionLocal()
+    try:
+        spec = DATASETS["census"]
+        result = run_ingest(db, _Ctx(), spec, FIX / "census_min.csv", source=None, extra={})
+        assert result.status == "failed"  # recorded, not raised
+    finally:
+        from app.models.census import CensusMetric
+        db.query(CensusMetric).delete(); db.query(IngestRun).delete(); db.commit(); db.close()

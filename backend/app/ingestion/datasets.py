@@ -18,6 +18,9 @@ class DatasetSpec:
 
 
 def _census_mapper(row, ctx, run, extra):
+    # Fix 3: actionable error when 'anio' is absent rather than an opaque TypeError
+    if extra.get("anio") in (None, ""):
+        raise ValueError("census dataset requires 'anio' in extra")
     return dict(
         organization_id=ctx.organization_id,
         ingest_run_id=run.id,
@@ -30,6 +33,9 @@ def _census_mapper(row, ctx, run, extra):
 
 
 def _census_scope(model, ctx, extra):
+    # Fix 3: guard anio here too — scope runs on the replace path before any mapper
+    if extra.get("anio") in (None, ""):
+        raise ValueError("census dataset requires 'anio' in extra")
     org_clause = (
         model.organization_id.is_(None)
         if ctx.organization_id is None
