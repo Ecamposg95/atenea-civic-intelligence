@@ -28,7 +28,9 @@ class Organization(UUIDMixin, AuditMixin, Base):
         back_populates="organization", cascade="all, delete-orphan"
     )
     electoral_areas: Mapped[List["ElectoralArea"]] = relationship(
-        back_populates="organization", cascade="all, delete-orphan"
+        back_populates="organization",
+        cascade="all",
+        foreign_keys="ElectoralArea.organization_id",
     )
 
     def __repr__(self) -> str:  # pragma: no cover
