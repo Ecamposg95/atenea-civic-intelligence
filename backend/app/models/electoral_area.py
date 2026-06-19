@@ -101,6 +101,12 @@ class ElectoralArea(UUIDMixin, AuditMixin, Base):
         String(36), ForeignKey("electoral_areas.id", ondelete="SET NULL"), index=True, nullable=True
     )
 
+    # ── Ingest traceability ───────────────────────────────────────────────────
+    # Links a geometry-load ingest run to this area for auditability (SP0b-2a).
+    ingest_run_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("ingest_runs.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+
     # ── Relationships ─────────────────────────────────────────────────────────
     # NOTE: no ORM self-referential relationships (parent/children) — multiple
     # self-FKs make them ambiguous; SP0a queries use the columns directly.

@@ -40,3 +40,10 @@ def test_tenant_and_global_areas_coexist_and_are_distinguishable():
         db.rollback()
     finally:
         db.close()
+
+
+def test_area_has_ingest_run_id():
+    from app.models.electoral_area import ElectoralArea
+    cols = {c.name for c in ElectoralArea.__table__.columns}
+    assert "ingest_run_id" in cols
+    assert ElectoralArea.__table__.c.ingest_run_id.nullable is True
