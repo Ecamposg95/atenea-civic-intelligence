@@ -35,6 +35,7 @@ class ElectoralAreaRead(ElectoralAreaBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    organization_id: str
+    organization_id: str | None = None  # NULL = global reference cartography
+    ingest_run_id: str | None = None
     created_at: datetime
     updated_at: datetime
