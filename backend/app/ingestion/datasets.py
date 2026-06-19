@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable
 
+from app.ingestion.readers import read_tabular
 from app.ingestion.validation import ColumnSpec
 from app.models.census import CensusMetric
 
@@ -13,11 +14,12 @@ class DatasetSpec:
     key: str
     model: type
     columns: list[ColumnSpec]
-    row_mapper: Callable          # (row, ctx, run, extra) -> dict of model kwargs
+    row_mapper: Callable          # (row, ctx, run, extra, db=None) -> dict of model kwargs
     scope_filter: Callable = field(default=lambda model, ctx, extra: [])  # for --replace
+    reader: Callable = field(default=lambda path, extra: read_tabular(path))  # (path, extra) -> (rows, header)
 
 
-def _census_mapper(row, ctx, run, extra):
+def _census_mapper(row, ctx, run, extra, db=None):
     # Fix 3: actionable error when 'anio' is absent rather than an opaque TypeError
     if extra.get("anio") in (None, ""):
         raise ValueError("census dataset requires 'anio' in extra")

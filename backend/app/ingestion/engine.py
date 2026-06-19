@@ -8,7 +8,6 @@ from pathlib import Path
 
 from sqlalchemy import delete
 
-from app.ingestion.readers import read_tabular
 from app.ingestion.validation import validate_rows
 from app.models.ingestion import IngestRun, IngestStatus
 
@@ -57,8 +56,12 @@ def run_ingest(db, ctx, spec, file_path, *, source, extra=None, replace=False) -
     try:
         # Fix 2: hash + read + validate are all inside the try so any file/encoding error
         # records a FAILED run instead of propagating out of run_ingest uncaught.
-        run.file_hash = _file_hash(file_path)
-        rows, _header = read_tabular(file_path)
+        # Hash is best-effort: custom readers may supply data without a real file on disk.
+        try:
+            run.file_hash = _file_hash(file_path)
+        except (FileNotFoundError, OSError):
+            run.file_hash = None
+        rows, _header = spec.reader(file_path, extra)
         good, discards = validate_rows(rows, spec.columns)
         run.rows_read = len(rows)
         run.rows_skipped = len(discards)
@@ -77,7 +80,7 @@ def run_ingest(db, ctx, spec, file_path, *, source, extra=None, replace=False) -
         inserted = 0
         batch = []
         for r in good:
-            batch.append(spec.model(**spec.row_mapper(r, ctx, run, extra)))
+            batch.append(spec.model(**spec.row_mapper(r, ctx, run, extra, db)))
             if len(batch) >= BATCH:
                 db.add_all(batch)
                 db.flush()

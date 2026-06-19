@@ -121,3 +121,25 @@ def test_engine_missing_anio_recorded_not_raised():
     finally:
         from app.models.census import CensusMetric
         db.query(CensusMetric).delete(); db.query(IngestRun).delete(); db.commit(); db.close()
+
+
+def test_engine_reader_hook_used():
+    from app.ingestion.datasets import DatasetSpec, DATASETS
+    from app.ingestion.validation import ColumnSpec
+    from app.models.census import CensusMetric
+    from app.models.ingestion import IngestRun
+    calls = {"n": 0}
+    def fake_reader(path, extra):
+        calls["n"] += 1
+        return ([{"nivel": "estado", "clave": "01", "indicador": "X", "valor": "5"}],
+                ["nivel", "clave", "indicador", "valor"])
+    spec = DatasetSpec(key="census", model=CensusMetric,
+                       columns=[ColumnSpec("clave", required=True), ColumnSpec("valor", required=True, coerce="number")],
+                       row_mapper=DATASETS["census"].row_mapper, scope_filter=DATASETS["census"].scope_filter,
+                       reader=fake_reader)
+    db = TestingSessionLocal()
+    try:
+        res = run_ingest(db, _Ctx(), spec, "ignored.csv", source=None, extra={"anio": 2020})
+        assert calls["n"] == 1 and res.inserted == 1
+    finally:
+        db.query(CensusMetric).delete(); db.query(IngestRun).delete(); db.commit(); db.close()
