@@ -82,8 +82,13 @@ def _migrate() -> None:
     from alembic.config import Config
 
     # alembic.ini lives one directory above this file (backend/alembic.ini).
-    ini_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "alembic.ini")
+    backend_dir = os.path.dirname(os.path.dirname(__file__))  # /app/backend
+    ini_path = os.path.join(backend_dir, "alembic.ini")
     cfg = Config(ini_path)
+    # script_location in alembic.ini is relative and is otherwise resolved against
+    # the CWD (which is /app at runtime via `uvicorn --app-dir backend`), so the
+    # scripts dir would be looked up at /app/alembic and not found. Pin it absolute.
+    cfg.set_main_option("script_location", os.path.join(backend_dir, "alembic"))
 
     insp = inspect(engine)
     existing_tables = set(insp.get_table_names())
