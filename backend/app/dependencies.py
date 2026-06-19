@@ -7,13 +7,14 @@ never from request body or query params (Golden Rules #1, #2, #4).
 from dataclasses import dataclass
 from typing import Annotated, Iterable, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import decode_access_token
 from app.database import get_db
+from app.models.campaign import Campaign, CampaignMembership
 from app.models.user import User, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
@@ -92,6 +93,42 @@ def get_tenant_context(current_user: CurrentUser) -> TenantContext:
 
 
 Tenant = Annotated[TenantContext, Depends(get_tenant_context)]
+
+
+@dataclass(frozen=True)
+class CampaignContext(TenantContext):
+    campaign_id: str = ""
+
+
+def get_campaign_context(
+    db: DbSession,
+    ctx: Tenant,
+    x_campaign_id: Annotated[Optional[str], Header(alias="X-Campaign-Id")] = None,
+) -> CampaignContext:
+    if not x_campaign_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="X-Campaign-Id header required")
+    campaign = db.execute(
+        select(Campaign).where(Campaign.id == x_campaign_id, Campaign.deleted_at.is_(None))
+    ).scalar_one_or_none()
+    if campaign is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+    if not ctx.is_superadmin:
+        if campaign.organization_id != ctx.organization_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Campaign not in your organization")
+        member = db.execute(
+            select(CampaignMembership).where(
+                CampaignMembership.campaign_id == x_campaign_id,
+                CampaignMembership.user_id == ctx.user.id,
+            )
+        ).scalar_one_or_none()
+        if member is None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this campaign")
+    return CampaignContext(
+        user=ctx.user, organization_id=ctx.organization_id, role=ctx.role, campaign_id=x_campaign_id
+    )
+
+
+CampaignCtx = Annotated[CampaignContext, Depends(get_campaign_context)]
 
 
 def require_roles(*roles: UserRole):
