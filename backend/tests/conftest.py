@@ -17,7 +17,9 @@ from app.main import app
 from app.models.audit_log import AuditLog
 from app.models.campaign import Campaign, CampaignMembership, Contest
 from app.models.catalog import Ambito, Cargo, Coalition, CoalitionParty, Party
+from app.models.census import CensusMetric
 from app.models.electoral_area import ElectoralArea
+from app.models.ingestion import DataSource, IngestRun
 from app.models.organization import Organization
 from app.models.user import User, UserRole
 
@@ -48,6 +50,9 @@ Base.metadata.create_all(
         Campaign.__table__,
         Contest.__table__,
         CampaignMembership.__table__,
+        DataSource.__table__,
+        IngestRun.__table__,
+        CensusMetric.__table__,
     ],
 )
 
