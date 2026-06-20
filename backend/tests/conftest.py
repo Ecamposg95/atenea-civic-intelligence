@@ -18,8 +18,11 @@ from app.models.audit_log import AuditLog
 from app.models.campaign import Campaign, CampaignMembership, Contest
 from app.models.catalog import Ambito, Cargo, Coalition, CoalitionParty, Party
 from app.models.census import CensusMetric
+from app.models.economic_unit import EconomicUnit
+from app.models.election_result import ElectionResult
 from app.models.electoral_area import ElectoralArea
 from app.models.ingestion import DataSource, IngestRun
+from app.models.socio import SocioMetric
 from app.models.organization import Organization
 from app.models.user import User, UserRole
 
@@ -53,6 +56,9 @@ Base.metadata.create_all(
         DataSource.__table__,
         IngestRun.__table__,
         CensusMetric.__table__,
+        ElectionResult.__table__,
+        SocioMetric.__table__,
+        EconomicUnit.__table__,
     ],
 )
 
