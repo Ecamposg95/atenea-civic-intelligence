@@ -11,6 +11,7 @@ from app.ingestion.geo_readers import read_features
 from app.ingestion.readers import read_tabular
 from app.ingestion.validation import ColumnSpec
 from app.models.census import CensusMetric
+from app.models.economic_unit import EconomicUnit
 from app.models.electoral_area import ElectoralArea, AreaLevel
 from app.models.election_result import ElectionResult
 from app.models.socio import SocioMetric
@@ -137,6 +138,55 @@ def _socio_scope(model, ctx, extra):
     return clauses
 
 
+def _point_geometry(lon, lat, db=None):
+    """Dialect-safe POINT from lon/lat. PG → ST_SetSRID(ST_MakePoint…); else JSON text."""
+    if lon in (None, "") or lat in (None, ""):
+        return None
+    lon, lat = float(lon), float(lat)
+    dialect = db.get_bind().dialect.name if db is not None else "sqlite"
+    if dialect == "postgresql":
+        return func.ST_SetSRID(func.ST_MakePoint(lon, lat), 4326)
+    return json.dumps({"lon": lon, "lat": lat})
+
+
+def _denue_mapper(row, ctx, run, extra, db=None):
+    lon, lat = row.get("lon"), row.get("lat")
+    return dict(
+        organization_id=ctx.organization_id,
+        ingest_run_id=run.id,
+        clave=str(row["clave"]),
+        nombre=str(row.get("nombre") or ""),
+        actividad=(str(row["actividad"]) if row.get("actividad") not in (None, "") else None),
+        actividad_desc=(str(row["actividad_desc"]) if row.get("actividad_desc") not in (None, "") else None),
+        estrato=(str(row["estrato"]) if row.get("estrato") not in (None, "") else None),
+        territory_code=str(row["territory_code"]),
+        lat=(float(lat) if lat not in (None, "") else None),
+        lon=(float(lon) if lon not in (None, "") else None),
+        geometry=_point_geometry(lon, lat, db),
+    )
+
+
+def _denue_scope(model, ctx, extra):
+    return [model.organization_id.is_(None) if ctx.organization_id is None
+            else model.organization_id == ctx.organization_id]
+
+
+def _casillas_mapper(row, ctx, run, extra, db=None):
+    lon, lat = row.get("lon"), row.get("lat")
+    return dict(
+        organization_id=None,
+        ingest_run_id=run.id,
+        level=AreaLevel.CASILLA,
+        name=str(row.get("name") or ""),
+        code=(str(row["code"]) if row.get("code") not in (None, "") else None),
+        geometry=_point_geometry(lon, lat, db),
+    )
+
+
+def _casillas_scope(model, ctx, extra):
+    return [model.organization_id.is_(None), model.level == AreaLevel.CASILLA]
+
+
 DATASETS: dict[str, DatasetSpec] = {
     "census": DatasetSpec(
         key="census",
@@ -185,4 +235,25 @@ DATASETS["geometria"] = DatasetSpec(
     row_mapper=_geometria_mapper,
     scope_filter=_geometria_scope,
     reader=_geo_reader,
+)
+
+DATASETS["denue"] = DatasetSpec(
+    key="denue",
+    model=EconomicUnit,
+    columns=[
+        ColumnSpec("clave", required=True),
+        ColumnSpec("territory_code", required=True),
+        ColumnSpec("lat", coerce="number"),
+        ColumnSpec("lon", coerce="number"),
+    ],
+    row_mapper=_denue_mapper,
+    scope_filter=_denue_scope,
+)
+
+DATASETS["casillas"] = DatasetSpec(
+    key="casillas",
+    model=ElectoralArea,
+    columns=[ColumnSpec("code", required=True)],
+    row_mapper=_casillas_mapper,
+    scope_filter=_casillas_scope,
 )
