@@ -12,6 +12,8 @@ from app.ingestion.readers import read_tabular
 from app.ingestion.validation import ColumnSpec
 from app.models.census import CensusMetric
 from app.models.electoral_area import ElectoralArea, AreaLevel
+from app.models.election_result import ElectionResult
+from app.models.socio import SocioMetric
 
 
 @dataclass
@@ -81,6 +83,60 @@ def _geometria_scope(model, ctx, extra):
     return [model.organization_id.is_(None), model.level == AreaLevel(extra["level"])]
 
 
+def _resultados_mapper(row, ctx, run, extra, db=None):
+    if extra.get("anio") in (None, ""):
+        raise ValueError("resultados dataset requires 'anio' in extra")
+    if extra.get("eleccion") in (None, ""):
+        raise ValueError("resultados dataset requires 'eleccion' in extra")
+    return dict(
+        organization_id=ctx.organization_id,
+        ingest_run_id=run.id,
+        anio=int(extra["anio"]),
+        nivel=row["nivel"],
+        territory_code=str(row["clave"]),
+        eleccion=str(extra["eleccion"]),
+        partido=str(row["partido"]),
+        votos=row["votos"],
+    )
+
+
+def _resultados_scope(model, ctx, extra):
+    if extra.get("anio") in (None, "") or extra.get("eleccion") in (None, ""):
+        raise ValueError("resultados --replace requires 'anio' and 'eleccion'")
+    org_clause = (model.organization_id.is_(None) if ctx.organization_id is None
+                  else model.organization_id == ctx.organization_id)
+    clauses = [org_clause, model.anio == int(extra["anio"]),
+               model.eleccion == str(extra["eleccion"])]
+    if extra.get("nivel"):
+        clauses.append(model.nivel == str(extra["nivel"]))
+    return clauses
+
+
+def _socio_mapper(row, ctx, run, extra, db=None):
+    if extra.get("anio") in (None, ""):
+        raise ValueError("socio dataset requires 'anio' in extra")
+    return dict(
+        organization_id=ctx.organization_id,
+        ingest_run_id=run.id,
+        anio=int(extra["anio"]),
+        nivel=row["nivel"],
+        territory_code=str(row["clave"]),
+        indicador=row["indicador"],
+        valor=row["valor"],
+    )
+
+
+def _socio_scope(model, ctx, extra):
+    if extra.get("anio") in (None, ""):
+        raise ValueError("socio --replace requires 'anio'")
+    org_clause = (model.organization_id.is_(None) if ctx.organization_id is None
+                  else model.organization_id == ctx.organization_id)
+    clauses = [org_clause, model.anio == int(extra["anio"])]
+    if extra.get("nivel"):
+        clauses.append(model.nivel == str(extra["nivel"]))
+    return clauses
+
+
 DATASETS: dict[str, DatasetSpec] = {
     "census": DatasetSpec(
         key="census",
@@ -95,6 +151,32 @@ DATASETS: dict[str, DatasetSpec] = {
         scope_filter=_census_scope,
     ),
 }
+
+DATASETS["resultados"] = DatasetSpec(
+    key="resultados",
+    model=ElectionResult,
+    columns=[
+        ColumnSpec("nivel", required=True),
+        ColumnSpec("clave", required=True),
+        ColumnSpec("partido", required=True),
+        ColumnSpec("votos", required=True, coerce="number"),
+    ],
+    row_mapper=_resultados_mapper,
+    scope_filter=_resultados_scope,
+)
+
+DATASETS["socio"] = DatasetSpec(
+    key="socio",
+    model=SocioMetric,
+    columns=[
+        ColumnSpec("nivel", required=True),
+        ColumnSpec("clave", required=True),
+        ColumnSpec("indicador", required=True),
+        ColumnSpec("valor", required=True, coerce="number"),
+    ],
+    row_mapper=_socio_mapper,
+    scope_filter=_socio_scope,
+)
 
 DATASETS["geometria"] = DatasetSpec(
     key="geometria",
