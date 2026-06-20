@@ -24,11 +24,17 @@ branch_labels = None
 depends_on = None
 # ---------------------------------------------------------------------------
 
-# Pre-SP0a AreaLevel values (the 6 original values).
-_OLD_AREA_LEVEL_VALUES = ("country", "region", "state", "municipality", "district", "precinct")
+# Enum labels MUST be the SQLAlchemy member *names* (uppercase) — the app maps
+# enums with the default ``Enum(PyEnum)`` (no values_callable), which stores the
+# member NAME, and the original create_all-built production DB created the types
+# that way too.  Earlier these migrations used the lowercase member *values*,
+# which mismatched the app + create_all schema and crashed prod on upgrade.
+#
+# Pre-SP0a AreaLevel members (the 6 original values).
+_OLD_AREA_LEVEL_VALUES = ("COUNTRY", "REGION", "STATE", "MUNICIPALITY", "DISTRICT", "PRECINCT")
 
-# UserRole values (unchanged across revisions).
-_USER_ROLE_VALUES = ("superadmin", "admin", "analyst", "viewer")
+# UserRole members (unchanged across revisions).
+_USER_ROLE_VALUES = ("SUPERADMIN", "ADMIN", "ANALYST", "VIEWER")
 
 
 def _now_default(is_pg: bool) -> sa.sql.expression.TextClause:
@@ -40,6 +46,20 @@ def upgrade() -> None:
     bind = op.get_bind()
     is_pg = bind.dialect.name == "postgresql"
     now = _now_default(is_pg)
+
+    def _enum_col(values, name):
+        """Enum column type that never auto-creates its PG type in create_table.
+
+        Generic ``sa.Enum(create_type=False)`` does NOT suppress the implicit
+        ``CREATE TYPE`` emitted by ``op.create_table`` on Postgres (an alembic
+        quirk), so the type — already created explicitly with checkfirst below —
+        gets created twice → ``DuplicateObject``.  ``postgresql.ENUM`` honours
+        ``create_type=False``; SQLite falls back to ``sa.Enum`` (VARCHAR).
+        """
+        if is_pg:
+            from sqlalchemy.dialects import postgresql
+            return postgresql.ENUM(*values, name=name, create_type=False)
+        return sa.Enum(*values, name=name)
 
     # ── organizations ─────────────────────────────────────────────────────────
     op.create_table(
@@ -77,9 +97,9 @@ def upgrade() -> None:
         sa.Column("hashed_password", sa.String(255), nullable=False),
         sa.Column(
             "role",
-            sa.Enum(*_USER_ROLE_VALUES, name="user_role", create_type=False),
+            _enum_col(_USER_ROLE_VALUES, "user_role"),
             nullable=False,
-            server_default="viewer",
+            server_default="VIEWER",
         ),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("phone", sa.String(40), nullable=True),
@@ -152,9 +172,9 @@ def upgrade() -> None:
         sa.Column("code", sa.String(120), nullable=True),
         sa.Column(
             "level",
-            sa.Enum(*_OLD_AREA_LEVEL_VALUES, name="area_level", create_type=False),
+            _enum_col(_OLD_AREA_LEVEL_VALUES, "area_level"),
             nullable=False,
-            server_default="district",
+            server_default="DISTRICT",
         ),
         geom_col,
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=now, nullable=False),

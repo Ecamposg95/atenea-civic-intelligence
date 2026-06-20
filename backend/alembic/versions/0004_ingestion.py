@@ -24,8 +24,9 @@ branch_labels = None
 depends_on = None
 # ---------------------------------------------------------------------------
 
-_SOURCE_KIND_VALUES = ("file_csv", "file_excel", "file_shapefile", "file_geojson", "api")
-_INGEST_STATUS_VALUES = ("running", "success", "partial", "failed")
+# Member NAMES (uppercase) — matches the app's default Enum(PyEnum) mapping.
+_SOURCE_KIND_VALUES = ("FILE_CSV", "FILE_EXCEL", "FILE_SHAPEFILE", "FILE_GEOJSON", "API")
+_INGEST_STATUS_VALUES = ("RUNNING", "SUCCESS", "PARTIAL", "FAILED")
 
 
 def _now_default(is_pg: bool) -> sa.sql.expression.TextClause:
@@ -41,6 +42,18 @@ def upgrade() -> None:
     from sqlalchemy import inspect as sa_inspect
     insp = sa_inspect(bind)
     existing_tables = set(insp.get_table_names())
+
+    def _enum_col(values, name):
+        """Enum column type that never auto-creates its PG type in create_table.
+
+        ``op.create_table`` does not honour ``sa.Enum(create_type=False)`` on
+        Postgres, duplicating the explicitly-created type → ``DuplicateObject``.
+        ``postgresql.ENUM`` honours it; SQLite falls back to ``sa.Enum`` (VARCHAR).
+        """
+        if is_pg:
+            from sqlalchemy.dialects import postgresql
+            return postgresql.ENUM(*values, name=name, create_type=False)
+        return sa.Enum(*values, name=name)
 
     def _table_exists(n: str) -> bool:
         return n in existing_tables
@@ -71,7 +84,7 @@ def upgrade() -> None:
             sa.Column("name", sa.String(200), nullable=False),
             sa.Column(
                 "kind",
-                sa.Enum(*_SOURCE_KIND_VALUES, name="source_kind", create_type=False),
+                _enum_col(_SOURCE_KIND_VALUES, "source_kind"),
                 nullable=False,
             ),
             sa.Column("description", sa.Text(), nullable=True),
@@ -115,9 +128,9 @@ def upgrade() -> None:
             sa.Column("file_hash", sa.String(64), nullable=True),
             sa.Column(
                 "status",
-                sa.Enum(*_INGEST_STATUS_VALUES, name="ingest_status", create_type=False),
+                _enum_col(_INGEST_STATUS_VALUES, "ingest_status"),
                 nullable=False,
-                server_default="running",
+                server_default="RUNNING",
             ),
             sa.Column("rows_read", sa.Integer(), nullable=False, server_default="0"),
             sa.Column("rows_inserted", sa.Integer(), nullable=False, server_default="0"),

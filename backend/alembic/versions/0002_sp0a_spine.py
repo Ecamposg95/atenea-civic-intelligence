@@ -30,22 +30,24 @@ branch_labels = None
 depends_on = None
 # ---------------------------------------------------------------------------
 
+# Enum labels are the SQLAlchemy member *names* (uppercase) to match the app's
+# default Enum(PyEnum) mapping and the create_all-built production schema.
 _NEW_AREA_LEVEL_VALUES = (
-    "nation",
-    "estado",
-    "municipio",
-    "distrito_federal",
-    "distrito_local",
-    "seccion",
-    "colonia",
-    "manzana",
-    "casilla",
+    "NATION",
+    "ESTADO",
+    "MUNICIPIO",
+    "DISTRITO_FEDERAL",
+    "DISTRITO_LOCAL",
+    "SECCION",
+    "COLONIA",
+    "MANZANA",
+    "CASILLA",
 )
 
-_USER_ROLE_VALUES = ("superadmin", "admin", "analyst", "viewer")
-_CARGO_AMBITO_VALUES = ("federal", "estatal", "municipal")
-_CAMPAIGN_STATUS_VALUES = ("draft", "active", "closed")
-_LICENSE_TIER_VALUES = ("standard", "pro", "enterprise")
+_USER_ROLE_VALUES = ("SUPERADMIN", "ADMIN", "ANALYST", "VIEWER")
+_CARGO_AMBITO_VALUES = ("FEDERAL", "ESTATAL", "MUNICIPAL")
+_CAMPAIGN_STATUS_VALUES = ("DRAFT", "ACTIVE", "CLOSED")
+_LICENSE_TIER_VALUES = ("STANDARD", "PRO", "ENTERPRISE")
 
 
 def _now_default(is_pg: bool) -> sa.sql.expression.TextClause:
@@ -61,6 +63,22 @@ def upgrade() -> None:
     from sqlalchemy import inspect as sa_inspect
     insp = sa_inspect(bind)
     existing_tables = set(insp.get_table_names())
+
+    def _enum_col(values, name):
+        """Enum column type that NEVER auto-creates its PG type inside create_table.
+
+        The enum types are created explicitly (checkfirst=True) below.  Passing a
+        generic ``sa.Enum(create_type=False)`` to ``op.create_table`` does NOT
+        suppress the implicit ``CREATE TYPE`` on Postgres (an alembic quirk —
+        unlike ``metadata.create_all``), so on a clean baseline schema the type
+        ends up created twice → ``DuplicateObject``.  ``postgresql.ENUM`` honours
+        ``create_type=False`` correctly; on SQLite fall back to ``sa.Enum`` (which
+        renders as VARCHAR — no separate type object exists).
+        """
+        if is_pg:
+            from sqlalchemy.dialects import postgresql
+            return postgresql.ENUM(*values, name=name, create_type=False)
+        return sa.Enum(*values, name=name)
 
     def _table_exists(name: str) -> bool:
         return name in existing_tables
@@ -96,7 +114,7 @@ def upgrade() -> None:
             sa.Column("label", sa.String(120), nullable=False),
             sa.Column(
                 "ambito",
-                sa.Enum(*_CARGO_AMBITO_VALUES, name="cargo_ambito", create_type=False),
+                _enum_col(_CARGO_AMBITO_VALUES, "cargo_ambito"),
                 nullable=False,
             ),
             sa.Column("territory_level", sa.String(40), nullable=False),
@@ -167,15 +185,15 @@ def upgrade() -> None:
             sa.Column("cycle", sa.Integer(), nullable=False),
             sa.Column(
                 "status",
-                sa.Enum(*_CAMPAIGN_STATUS_VALUES, name="campaign_status", create_type=False),
+                _enum_col(_CAMPAIGN_STATUS_VALUES, "campaign_status"),
                 nullable=False,
-                server_default="draft",
+                server_default="DRAFT",
             ),
             sa.Column(
                 "license_tier",
-                sa.Enum(*_LICENSE_TIER_VALUES, name="license_tier", create_type=False),
+                _enum_col(_LICENSE_TIER_VALUES, "license_tier"),
                 nullable=False,
-                server_default="standard",
+                server_default="STANDARD",
             ),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=now, nullable=False),
             sa.Column("updated_at", sa.DateTime(timezone=True), server_default=now, nullable=False),
@@ -251,9 +269,9 @@ def upgrade() -> None:
             # Reuses the user_role PG enum created in 0001 -- must NOT recreate it.
             sa.Column(
                 "role",
-                sa.Enum(*_USER_ROLE_VALUES, name="user_role", create_type=False),
+                _enum_col(_USER_ROLE_VALUES, "user_role"),
                 nullable=False,
-                server_default="viewer",
+                server_default="VIEWER",
             ),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=now, nullable=False),
             sa.Column("updated_at", sa.DateTime(timezone=True), server_default=now, nullable=False),

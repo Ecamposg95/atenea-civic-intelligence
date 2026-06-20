@@ -23,16 +23,18 @@ branch_labels = None
 depends_on = None
 # ---------------------------------------------------------------------------
 
+# Member NAMES (uppercase) — matches the app's Enum(AreaLevel) mapping and the
+# uppercase labels created by 0001/create_all.
 NEW = [
-    "nation",
-    "estado",
-    "municipio",
-    "distrito_federal",
-    "distrito_local",
-    "seccion",
-    "colonia",
-    "manzana",
-    "casilla",
+    "NATION",
+    "ESTADO",
+    "MUNICIPIO",
+    "DISTRITO_FEDERAL",
+    "DISTRITO_LOCAL",
+    "SECCION",
+    "COLONIA",
+    "MANZANA",
+    "CASILLA",
 ]
 
 
