@@ -8,24 +8,6 @@ catch-all route so client-side routing survives deep links and refreshes.
 import os
 from contextlib import asynccontextmanager
 
-# --- TEMP startup-crash diagnostics (prod recovery) ---------------------------
-# The prod container crash-loops during Alembic 0002 with NO Python traceback in
-# the deploy logs, which points at a fatal signal (segfault/abort) rather than an
-# exception.  faulthandler dumps the native+Python stack on a fatal signal, and
-# registering SIGTERM shows where the process is parked if Railway is killing it.
-# Remove once the root cause is found.
-import faulthandler as _faulthandler
-import signal as _signal
-
-_faulthandler.enable()  # covers SIGSEGV/SIGABRT/SIGFPE/SIGBUS/SIGILL
-try:
-    # SIGTERM is NOT covered by enable(); register it so we can see where the
-    # process is parked if Railway terminates it (e.g. healthcheck/hang).
-    _faulthandler.register(_signal.SIGTERM, chain=True)
-except (AttributeError, ValueError, OSError, RuntimeError):
-    pass
-# -----------------------------------------------------------------------------
-
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware

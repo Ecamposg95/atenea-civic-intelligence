@@ -95,28 +95,6 @@ def _migrate() -> None:
     has_organizations = "organizations" in existing_tables
     has_alembic_version = "alembic_version" in existing_tables
 
-    # --- TEMP prod-recovery diagnostics: dump the REAL schema state -----------
-    # The deploy crash-loops at 0002 with no traceback; log exactly what the prod
-    # DB looks like before we touch it so we can see how it differs from a clean
-    # reproduction.  Remove once recovery is confirmed.
-    try:
-        logger.info("DIAG existing_tables (%d): %s", len(existing_tables), sorted(existing_tables))
-        if has_alembic_version:
-            with engine.connect() as _c:
-                _ver = _c.execute(text("SELECT version_num FROM alembic_version")).scalar()
-            logger.info("DIAG current alembic_version=%s", _ver)
-        if "electoral_areas" in existing_tables:
-            _cols = [c["name"] for c in insp.get_columns("electoral_areas")]
-            _idx = [i["name"] for i in insp.get_indexes("electoral_areas")]
-            logger.info("DIAG electoral_areas columns: %s", _cols)
-            logger.info("DIAG electoral_areas indexes: %s", _idx)
-            with engine.connect() as _c:
-                _n = _c.execute(text("SELECT count(*) FROM electoral_areas")).scalar()
-            logger.info("DIAG electoral_areas row count: %s", _n)
-    except Exception:  # noqa: BLE001 — diagnostics must never block startup
-        logger.exception("DIAG schema dump failed")
-    # -------------------------------------------------------------------------
-
     if has_organizations and not has_alembic_version:
         # Pre-Alembic production DB: schema matches baseline 0001.
         # Stamp it so upgrade head applies only the delta revisions.
