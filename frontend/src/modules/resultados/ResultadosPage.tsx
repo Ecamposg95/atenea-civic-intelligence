@@ -16,37 +16,24 @@ import {
   YAxis,
 } from "recharts";
 
+import { getDerived, getResultados } from "@/api/resultados";
+import type { Derived, ElectionRow } from "@/api/resultados";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { PreviewBanner } from "@/components/modules/PreviewBanner";
 import { Card } from "@/components/ui/Card";
 import type { Column } from "@/components/ui/DataTable";
 import { DataTable } from "@/components/ui/DataTable";
+import { DataState } from "@/components/ui/DataState";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { Sparkline } from "@/components/ui/Sparkline";
-import { RadialGauge } from "@/components/charts/RadialGauge";
+import { SkeletonRows } from "@/components/ui/SkeletonCard";
 import { AnalyticsIcon, ShieldIcon, VotersIcon } from "@/components/ui/icons";
 import { CHART_PALETTE, CHART_TOOLTIP_STYLE, PANEL_HEIGHTS } from "@/constants/ui";
-import { ENTITY_RESULTS, HISTORICAL, NATIONAL, PARTY_RESULTS } from "./fixtures";
-import type { EntityResult } from "./fixtures";
+import { useAsync } from "@/hooks/useAsync";
 
-const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
+const pct = (v: number | null) =>
+  v == null ? "—" : `${(v * 100).toFixed(1)}%`;
 const nf = new Intl.NumberFormat("es-MX");
-
-/** Color chip keyed by the leading party/coalition (matches fixture palette). */
-const PARTY_COLOR: Record<string, string> = Object.fromEntries(
-  PARTY_RESULTS.map((p) => [p.party, p.color]),
-);
-
-// Historical coalition line colors sourced from fixture party data so they
-// always stay in sync with the BarChart/PieChart Cell fills above.
-// HISTORICAL keys (coalicionA/B/C) map 1:1 to PARTY_RESULTS[0/1/2].
-const COALITION_COLOR: Record<string, string> = {
-  coalicionA: PARTY_RESULTS[0].color,
-  coalicionB: PARTY_RESULTS[1].color,
-  coalicionC: PARTY_RESULTS[2].color,
-};
 
 type View = "nacional" | "entidad" | "historico";
 
@@ -56,8 +43,82 @@ const VIEW_OPTIONS: { id: View; label: string }[] = [
   { id: "historico", label: "Histórico" },
 ];
 
+// Assign stable colours to party names encountered in real data.
+const PALETTE = [
+  "#22d3ee",
+  "#f5b53d",
+  "#2dd4bf",
+  "#7c8aa5",
+  "#06b6d4",
+  "#f4607a",
+  "#8b9bf4",
+];
+function partyColor(party: string, index: number) {
+  // Hash the string for deterministic colour from the palette.
+  let h = 0;
+  for (let i = 0; i < party.length; i++) h = (h * 31 + party.charCodeAt(i)) & 0xffff;
+  return PALETTE[(h + index) % PALETTE.length];
+}
+
 export function ResultadosPage() {
   const [view, setView] = useState<View>("nacional");
+
+  const rows = useAsync(() => getResultados(), []);
+  const derived = useAsync(() => getDerived(), []);
+
+  const loading = rows.loading || derived.loading;
+  const error = rows.error ?? derived.error;
+  const reload = () => {
+    rows.reload();
+    derived.reload();
+  };
+
+  const isEmpty = !loading && !error && (rows.data ?? []).length === 0;
+
+  // Aggregate party totals from raw rows.
+  const partyTotals = useMemo<{ party: string; votes: number; share: number; color: string }[]>(() => {
+    const data = rows.data ?? [];
+    if (data.length === 0) return [];
+    const map = new Map<string, number>();
+    let total = 0;
+    for (const r of data) {
+      map.set(r.partido, (map.get(r.partido) ?? 0) + r.votos);
+      total += r.votos;
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([party, votes], i) => ({
+        party,
+        votes,
+        share: total > 0 ? votes / total : 0,
+        color: partyColor(party, i),
+      }));
+  }, [rows.data]);
+
+  // Per-entity rollup for the "Entidad" tab.
+  const entityRollup = useMemo(() => {
+    const data = rows.data ?? [];
+    const map = new Map<string, { votes: number; byParty: Map<string, number> }>();
+    for (const r of data) {
+      const key = r.territory_code;
+      if (!map.has(key)) map.set(key, { votes: 0, byParty: new Map() });
+      const e = map.get(key)!;
+      e.votes += r.votos;
+      e.byParty.set(r.partido, (e.byParty.get(r.partido) ?? 0) + r.votos);
+    }
+    return Array.from(map.entries()).map(([code, { votes, byParty }]) => {
+      let winner = "";
+      let winVotes = -1;
+      byParty.forEach((v, p) => {
+        if (v > winVotes) { winner = p; winVotes = v; }
+      });
+      const sorted = Array.from(byParty.values()).sort((a, b) => b - a);
+      const margin = sorted.length >= 2 && votes > 0
+        ? (sorted[0] - sorted[1]) / votes
+        : 0;
+      return { code, votes, winner, margin };
+    }).sort((a, b) => b.votes - a.votes);
+  }, [rows.data]);
 
   return (
     <AppLayout title="Resultados Electorales" crumb="Inteligencia Electoral">
@@ -65,11 +126,9 @@ export function ResultadosPage() {
         eyebrow="Inteligencia Electoral"
         title="Resultados"
         accent="Electorales"
-        subtitle="Cómputo nacional, distribución del voto y desempeño por entidad en una sola vista institucional."
+        subtitle="Cómputo electoral, distribución del voto y métricas de participación derivadas de los datos ingestados."
       />
-      <PreviewBanner />
 
-      {/* Segmented view switch — accessible tablist with keyboard nav */}
       <div className="reveal mb-5">
         <SegmentedControl<View>
           options={VIEW_OPTIONS}
@@ -79,219 +138,204 @@ export function ResultadosPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <MetricCard
-          label="Participación nacional"
-          value={pct(NATIONAL.turnout)}
-          tone="accent"
-          icon={<VotersIcon width={18} height={18} />}
-          trend={NATIONAL.turnoutTrend}
-          delay={0}
-        />
-        <MetricCard
-          label="Casillas computadas"
-          value={pct(NATIONAL.counted)}
-          tone="teal"
-          icon={<ShieldIcon width={18} height={18} />}
-          delay={80}
-        />
-        <MetricCard
-          label="Fuerza líder"
-          value={NATIONAL.leader}
-          tone="accent"
-          icon={<AnalyticsIcon width={18} height={18} />}
-          delay={160}
-        />
-      </div>
+      <DataState
+        loading={loading}
+        error={error}
+        isEmpty={isEmpty}
+        onRetry={reload}
+        emptyMessage="Ingesta pendiente — sin resultados electorales disponibles."
+        skeleton={
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-20 animate-pulse rounded-card bg-panel-hover" />
+              ))}
+            </div>
+            <SkeletonRows rows={6} />
+          </div>
+        }
+      >
+        {/* Summary metric cards from derived endpoint */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <MetricCard
+            label="Participación"
+            value={pct(derived.data?.participacion ?? null)}
+            tone="accent"
+            icon={<VotersIcon width={18} height={18} />}
+            delay={0}
+          />
+          <MetricCard
+            label="Total votos"
+            value={nf.format(derived.data?.total_votos ?? 0)}
+            tone="teal"
+            icon={<ShieldIcon width={18} height={18} />}
+            delay={80}
+          />
+          <MetricCard
+            label="Partido líder"
+            value={derived.data?.ganador ?? (partyTotals[0]?.party ?? "—")}
+            tone="accent"
+            icon={<AnalyticsIcon width={18} height={18} />}
+            delay={160}
+          />
+        </div>
 
-      {view === "nacional" && <NacionalView />}
-      {view === "entidad" && <EntidadView />}
-      {view === "historico" && <HistoricoView />}
+        {view === "nacional" && (
+          <NacionalView partyTotals={partyTotals} derived={derived.data} />
+        )}
+        {view === "entidad" && <EntidadView rows={entityRollup} />}
+        {view === "historico" && <HistoricoView rows={rows.data ?? []} />}
+      </DataState>
     </AppLayout>
   );
 }
 
-function NacionalView() {
+function NacionalView({
+  partyTotals,
+  derived,
+}: {
+  partyTotals: { party: string; votes: number; share: number; color: string }[];
+  derived: Derived | null;
+}) {
+  if (partyTotals.length === 0) return null;
+
   return (
-    <>
-      <div
-        className="reveal mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3"
-        style={{ animationDelay: "80ms" }}
-      >
-        <Card title="Participación nacional" accentDot className="flex items-center justify-center">
-          <div className="flex flex-col items-center gap-2 py-2">
-            <RadialGauge value={NATIONAL.turnout} label="Participación" size={148} />
-            <span className="text-[11px] text-ink-faint">Avance de cómputo (muestra)</span>
-          </div>
-        </Card>
-        <Card title="Casillas computadas" accentDot className="flex items-center justify-center">
-          <div className="flex flex-col items-center gap-2 py-2">
-            <RadialGauge value={NATIONAL.counted} label="Computadas" size={148} />
-            <span className="text-[11px] text-ink-faint">Cobertura de casillas (muestra)</span>
-          </div>
-        </Card>
-        <Card title="Fuerza líder" accentDot className="flex flex-col justify-center">
-          <div className="space-y-2.5 py-1">
-            {PARTY_RESULTS.slice(0, 3).map((p) => (
-              <div key={p.party} className="flex items-center justify-between gap-3">
-                <span className="inline-flex items-center gap-2 text-sm text-ink-muted">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-                  {p.party}
-                </span>
-                <span className="font-mono text-sm tabular-nums text-ink">{pct(p.share)}</span>
-              </div>
-            ))}
+    <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="reveal" style={{ animationDelay: "120ms" }}>
+        <Card
+          title="Distribución del voto"
+          accentDot
+          className="h-full"
+          action={<span className="pill border-line text-ink-muted">Cómputo ingestado</span>}
+        >
+          <div className={PANEL_HEIGHTS.chartMd}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={partyTotals} layout="vertical" margin={{ left: 24 }}>
+                <XAxis
+                  type="number"
+                  tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
+                  stroke="var(--chart-axis)"
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="party"
+                  stroke="var(--chart-axis)"
+                  tick={{ fontSize: 12 }}
+                  width={120}
+                />
+                <Tooltip
+                  cursor={{ fill: "color-mix(in srgb, var(--chart-1) 6%, transparent)" }}
+                  formatter={(v: number) => `${(v * 100).toFixed(1)}%`}
+                  contentStyle={CHART_TOOLTIP_STYLE}
+                />
+                <Bar dataKey="share" radius={[0, 6, 6, 0]}>
+                  {partyTotals.map((p) => (
+                    <Cell key={p.party} fill={p.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </Card>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="reveal" style={{ animationDelay: "120ms" }}>
-          <Card
-            title="Distribución del voto"
-            accentDot
-            className="h-full"
-            action={<span className="pill border-line text-ink-muted">Cómputo nacional</span>}
-          >
-            <div className={PANEL_HEIGHTS.chartMd}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={PARTY_RESULTS} layout="vertical" margin={{ left: 24 }}>
-                  <XAxis type="number" tickFormatter={pct} stroke="var(--chart-axis)" tick={{ fontSize: 12 }} />
-                  <YAxis
-                    type="category"
-                    dataKey="party"
-                    stroke="var(--chart-axis)"
-                    tick={{ fontSize: 12 }}
-                    width={110}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "color-mix(in srgb, var(--chart-1) 6%, transparent)" }}
-                    formatter={(v: number) => pct(v)}
-                    contentStyle={CHART_TOOLTIP_STYLE}
-                  />
-                  <Bar dataKey="share" radius={[0, 6, 6, 0]}>
-                    {PARTY_RESULTS.map((p) => (
-                      <Cell key={p.party} fill={p.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+      <div className="reveal" style={{ animationDelay: "200ms" }}>
+        <Card
+          title="Composición del voto"
+          accentDot
+          className="h-full"
+          action={<span className="pill border-line text-ink-muted">Datos reales</span>}
+        >
+          <div className="h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={partyTotals}
+                  dataKey="share"
+                  nameKey="party"
+                  innerRadius={58}
+                  outerRadius={92}
+                  paddingAngle={2}
+                  stroke="rgb(var(--c-panel))"
+                  strokeWidth={2}
+                >
+                  {partyTotals.map((p) => (
+                    <Cell key={p.party} fill={p.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(v: number, n: string) => [
+                    `${(v * 100).toFixed(1)}%`,
+                    n,
+                  ]}
+                  contentStyle={CHART_TOOLTIP_STYLE}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
 
-            <PartyLegend />
-          </Card>
-        </div>
-
-        <div className="reveal" style={{ animationDelay: "200ms" }}>
-          <Card
-            title="Composición del voto"
-            accentDot
-            className="h-full"
-            action={<span className="pill border-line text-ink-muted">Participación nacional</span>}
-          >
-            <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={PARTY_RESULTS}
-                    dataKey="share"
-                    nameKey="party"
-                    innerRadius={58}
-                    outerRadius={92}
-                    paddingAngle={2}
-                    stroke="rgb(var(--c-panel))"
-                    strokeWidth={2}
-                  >
-                    {PARTY_RESULTS.map((p) => (
-                      <Cell key={p.party} fill={p.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(v: number, n: string) => [pct(v), n]}
-                    contentStyle={CHART_TOOLTIP_STYLE}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Sample participation trend */}
-            <div className="mt-4 flex items-end justify-between gap-4 rounded-lg border border-line bg-bg-sunken px-3 py-3">
-              <div>
-                <span className="eyebrow block">Avance de participación</span>
-                <span className="mt-1 block font-mono text-lg tabular-nums text-accent">
-                  {pct(NATIONAL.turnout)}
+          {derived && (
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
+                <span className="eyebrow block">Margen</span>
+                <span className="mt-1 block font-mono text-lg tabular-nums text-teal">
+                  {pct(derived.margen)}
                 </span>
-                <span className="text-[11px] text-ink-faint">Tendencia de muestra</span>
               </div>
-              <Sparkline data={NATIONAL.turnoutTrend} width={160} height={40} className="w-40" />
+              <div className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
+                <span className="eyebrow block">Abstención</span>
+                <span className="mt-1 block font-mono text-lg tabular-nums text-state-warning">
+                  {pct(derived.abstencion)}
+                </span>
+              </div>
             </div>
-          </Card>
-        </div>
+          )}
+        </Card>
       </div>
-    </>
-  );
-}
-
-function PartyLegend() {
-  return (
-    <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
-      {PARTY_RESULTS.map((p) => (
-        <span key={p.party} className="inline-flex items-center gap-2 text-xs text-ink-muted">
-          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: p.color }} />
-          {p.party}
-          <span className="font-mono text-ink-faint">{pct(p.share)}</span>
-        </span>
-      ))}
     </div>
   );
 }
 
-function EntidadView() {
+function EntidadView({
+  rows,
+}: {
+  rows: { code: string; votes: number; winner: string; margin: number }[];
+}) {
   const [query, setQuery] = useState("");
 
-  const rows = useMemo<EntityResult[]>(() => {
+  const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return ENTITY_RESULTS;
-    return ENTITY_RESULTS.filter((e) => e.entity.toLowerCase().includes(q));
-  }, [query]);
+    if (!q) return rows;
+    return rows.filter((r) => r.code.toLowerCase().includes(q));
+  }, [rows, query]);
 
-  const columns = useMemo<Column<EntityResult>[]>(
+  const columns = useMemo<
+    Column<{ code: string; votes: number; winner: string; margin: number }>[]
+  >(
     () => [
       {
-        key: "entity",
-        header: "Entidad",
-        sortValue: (e) => e.entity,
-        render: (e) => <span className="font-medium text-ink">{e.entity}</span>,
-      },
-      {
-        key: "turnout",
-        header: "Participación",
-        align: "right",
-        sortValue: (e) => e.turnout,
-        render: (e) => (
-          <span className="font-mono tabular-nums text-ink-muted">{pct(e.turnout)}</span>
+        key: "code",
+        header: "Territorio",
+        sortValue: (r) => r.code,
+        render: (r) => (
+          <span className="font-medium text-ink">{r.code}</span>
         ),
       },
       {
         key: "winner",
         header: "Ganador",
-        render: (e) => (
-          <span className="inline-flex items-center gap-2">
-            <span
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: PARTY_COLOR[e.winner] ?? "#7c8aa5" }}
-            />
-            <span className="text-ink">{e.winner}</span>
-          </span>
-        ),
+        render: (r) => <span className="text-ink">{r.winner || "—"}</span>,
       },
       {
         key: "margin",
         header: "Margen",
         align: "right",
-        sortValue: (e) => e.margin,
-        render: (e) => (
-          <span className="font-mono tabular-nums text-ink-muted">{pct(e.margin)}</span>
+        sortValue: (r) => r.margin,
+        render: (r) => (
+          <span className="font-mono tabular-nums text-ink-muted">
+            {pct(r.margin)}
+          </span>
         ),
         hideOnCard: true,
       },
@@ -299,9 +343,11 @@ function EntidadView() {
         key: "votes",
         header: "Votos",
         align: "right",
-        sortValue: (e) => e.votes,
-        render: (e) => (
-          <span className="font-mono tabular-nums text-ink-muted">{nf.format(e.votes)}</span>
+        sortValue: (r) => r.votes,
+        render: (r) => (
+          <span className="font-mono tabular-nums text-ink-muted">
+            {nf.format(r.votes)}
+          </span>
         ),
       },
     ],
@@ -315,154 +361,91 @@ function EntidadView() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filtrar por entidad…"
+          placeholder="Filtrar por territorio…"
           className="field-input max-w-xs focus-ring"
-          aria-label="Filtrar resultados por entidad"
+          aria-label="Filtrar resultados por territorio"
         />
         <span className="pill border-line text-ink-muted">
-          {rows.length} de {ENTITY_RESULTS.length} entidades · muestra
+          {filtered.length} de {rows.length} territorios
         </span>
       </div>
 
-      <DataTable<EntityResult>
+      <DataTable
         columns={columns}
-        rows={rows}
-        rowKey={(e) => e.entity}
+        rows={filtered}
+        rowKey={(r) => r.code}
         pageSize={16}
         defaultSortKey="votes"
         defaultSortDir="desc"
-        emptyMessage={`Sin coincidencias para "${query}".`}
+        emptyMessage={query ? `Sin coincidencias para "${query}".` : "Sin datos."}
       />
     </div>
   );
 }
 
-function HistoricoView() {
-  const turnoutTrend = HISTORICAL.map((c) => ({ period: c.year, value: c.turnout }));
-  const maxTurnout = [...HISTORICAL].sort((a, b) => b.turnout - a.turnout)[0];
-  const minTurnout = [...HISTORICAL].sort((a, b) => a.turnout - b.turnout)[0];
+function HistoricoView({ rows }: { rows: ElectionRow[] }) {
+  // Group by year + election type for a simple trend line.
+  const byYear = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      const key = String(r.anio);
+      map.set(key, (map.get(key) ?? 0) + r.votos);
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([year, votos]) => ({ year, votos }));
+  }, [rows]);
+
+  if (byYear.length === 0) {
+    return (
+      <div className="mt-5 text-sm text-ink-muted">
+        Sin datos históricos disponibles para graficar.
+      </div>
+    );
+  }
 
   return (
-    <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
-      <div className="reveal lg:col-span-2" style={{ animationDelay: "120ms" }}>
-        <Card
-          title="Voto por coalición · ciclos electorales (%)"
-          accentDot
-          className="h-full"
-          action={<span className="pill border-line text-ink-muted">muestra · histórico</span>}
-        >
-          <div className={PANEL_HEIGHTS.chartMd}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={HISTORICAL} margin={{ left: -12, top: 8, right: 8 }}>
-                <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
-                <XAxis
-                  dataKey="year"
-                  stroke="var(--chart-axis)"
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={{ stroke: "var(--chart-grid)" }}
-                />
-                <YAxis
-                  stroke="var(--chart-axis)"
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
-                  domain={[0, 0.5]}
-                />
-                <Tooltip
-                  contentStyle={CHART_TOOLTIP_STYLE}
-                  formatter={(v: number, n: string) => [pct(v), n]}
-                />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line
-                  type="monotone"
-                  dataKey="coalicionA"
-                  name="Coalición A"
-                  stroke={COALITION_COLOR.coalicionA}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="coalicionB"
-                  name="Coalición B"
-                  stroke={COALITION_COLOR.coalicionB}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="coalicionC"
-                  name="Coalición C"
-                  stroke={COALITION_COLOR.coalicionC}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-      </div>
-
-      <div className="reveal" style={{ animationDelay: "200ms" }}>
-        <Card
-          title="Participación histórica"
-          accentDot
-          className="h-full"
-          action={<span className="pill border-line text-ink-muted">muestra</span>}
-        >
-          <div className="h-[180px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={turnoutTrend} margin={{ left: -12, top: 8, right: 8 }}>
-                <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
-                <XAxis
-                  dataKey="period"
-                  stroke="var(--chart-axis)"
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={{ stroke: "var(--chart-grid)" }}
-                />
-                <YAxis
-                  stroke="var(--chart-axis)"
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
-                  domain={[0.3, 0.7]}
-                />
-                <Tooltip
-                  contentStyle={CHART_TOOLTIP_STYLE}
-                  formatter={(v: number) => [pct(v), "Participación"]}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke={CHART_PALETTE[0]}
-                  strokeWidth={2}
-                  dot={{ r: 3, fill: CHART_PALETTE[0] }}
-                  activeDot={{ r: 5, fill: CHART_PALETTE[1] }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            <div className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
-              <span className="eyebrow block">Máxima participación (muestra)</span>
-              <span className="mt-1 block font-mono text-sm tabular-nums text-teal">
-                {maxTurnout ? `${pct(maxTurnout.turnout)} · ${maxTurnout.year}` : "—"}
-              </span>
-            </div>
-            <div className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
-              <span className="eyebrow block">Mínima participación (muestra)</span>
-              <span className="mt-1 block font-mono text-sm tabular-nums text-state-warning">
-                {minTurnout ? `${pct(minTurnout.turnout)} · ${minTurnout.year}` : "—"}
-              </span>
-            </div>
-          </div>
-        </Card>
-      </div>
+    <div className="mt-5">
+      <Card title="Votos por año electoral" accentDot>
+        <div className={PANEL_HEIGHTS.chartMd}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={byYear} margin={{ left: -12, top: 8, right: 8 }}>
+              <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+              <XAxis
+                dataKey="year"
+                stroke="var(--chart-axis)"
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={{ stroke: "var(--chart-grid)" }}
+              />
+              <YAxis
+                stroke="var(--chart-axis)"
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(v: number) =>
+                  new Intl.NumberFormat("es-MX", {
+                    notation: "compact",
+                  }).format(v)
+                }
+              />
+              <Tooltip
+                contentStyle={CHART_TOOLTIP_STYLE}
+                formatter={(v: number) => [nf.format(v), "Votos"]}
+              />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Line
+                type="monotone"
+                dataKey="votos"
+                name="Total votos"
+                stroke={CHART_PALETTE[0]}
+                strokeWidth={2}
+                dot={{ r: 3 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
     </div>
   );
 }

@@ -162,7 +162,7 @@ export const MODULES: ModuleDef[] = [
   { key: "busqueda", path: "/busqueda", label: "Búsqueda global", section: "plataforma", icon: SearchIcon, state: "active", element: Busqueda },
 
   // Inteligencia Electoral
-  { key: "resultados", path: "/resultados", label: "Resultados Electorales", section: "inteligencia", icon: AnalyticsIcon, state: "preview", element: Resultados },
+  { key: "resultados", path: "/resultados", label: "Resultados Electorales", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Resultados },
   { key: "padron", path: "/padron", label: "Padrón / Lista Nominal", section: "inteligencia", icon: VotersIcon, state: "preview", element: Padron },
   {
     key: "candidaturas", path: "/candidaturas", label: "Candidaturas", section: "inteligencia", icon: UserIcon, state: "soon",
@@ -176,12 +176,12 @@ export const MODULES: ModuleDef[] = [
   { key: "ieem", path: "/ieem", label: "Estado de México (IEEM)", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Ieem },
   { key: "worldbank", path: "/indicadores", label: "Indicadores Nacionales", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: WorldBank },
   { key: "economia", path: "/economia", label: "Economía Territorial", section: "inteligencia", icon: DatabaseIcon, state: "preview", element: Economia },
-  { key: "denue", path: "/unidades-economicas", label: "Unidades Económicas", section: "inteligencia", icon: DatabaseIcon, state: "preview", element: Denue },
+  { key: "denue", path: "/unidades-economicas", label: "Unidades Económicas", section: "inteligencia", icon: DatabaseIcon, state: "active", element: Denue },
   { key: "banxico", path: "/banxico", label: "Macro-financiero (Banxico)", section: "inteligencia", icon: AnalyticsIcon, state: "preview", element: Banxico },
 
   // Ciudadanía
   { key: "ai-analyst", path: "/ai-analyst", label: "AI Analyst / Copiloto", section: "ciudadania", icon: AiIcon, state: "preview", element: AiAnalyst },
-  { key: "demografia", path: "/demografia", label: "Demografía & Censo", section: "ciudadania", icon: VotersIcon, state: "preview", element: Demografia },
+  { key: "demografia", path: "/demografia", label: "Demografía & Censo", section: "ciudadania", icon: VotersIcon, state: "active", element: Demografia },
   {
     key: "sentimiento", path: "/sentimiento", label: "Sentimiento Ciudadano", section: "ciudadania", icon: AnalyticsIcon, state: "soon",
     soon: {

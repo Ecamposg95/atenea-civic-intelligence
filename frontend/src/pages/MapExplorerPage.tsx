@@ -24,6 +24,7 @@ const LEVEL_LABEL: Record<string, string> = {
   distrito_federal: "Distrito Federal",
   distrito_local: "Distrito Local",
   seccion: "Sección",
+  casilla: "Casillas",
 };
 
 export function MapExplorerPage() {
@@ -210,6 +211,7 @@ export function MapExplorerPage() {
               <option value="distrito_federal">Distrito Federal</option>
               <option value="distrito_local">Distrito Local</option>
               <option value="seccion">Sección</option>
+              <option value="casilla">Casillas</option>
             </select>
 
             {/* Basemap segmented control */}

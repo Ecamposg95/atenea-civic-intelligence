@@ -1,5 +1,5 @@
 // frontend/src/modules/demografia/DemografiaPage.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -11,30 +11,35 @@ import {
   YAxis,
 } from "recharts";
 
+import { getSocio } from "@/api/socio";
+import type { SocioMetric } from "@/api/socio";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { PreviewBanner } from "@/components/modules/PreviewBanner";
 import { Card } from "@/components/ui/Card";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { DataState } from "@/components/ui/DataState";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import { Donut, type DonutDatum } from "@/components/charts/Donut";
 import { RadialGauge } from "@/components/charts/RadialGauge";
 import { DatabaseIcon, LayersIcon, UserIcon, VotersIcon } from "@/components/ui/icons";
 import { CHART_TOOLTIP_STYLE, PANEL_HEIGHTS } from "@/constants/ui";
-import { getDemografia } from "./client";
+import { useAsync } from "@/hooks/useAsync";
+// Census fixtures — kept (these are independent INEGI census data, not /socio)
 import type { DemografiaData, EntityDemografia } from "./fixtures";
+import { DEMOGRAFIA_DATA } from "./fixtures";
 
 const nf = new Intl.NumberFormat("es-MX");
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 const compact = new Intl.NumberFormat("es-MX", { notation: "compact", maximumFractionDigits: 1 });
 
-type DemoTab = "poblacion" | "escolaridad";
+type DemoTab = "poblacion" | "escolaridad" | "socio";
 
 const DEMO_TABS: { id: DemoTab; label: string }[] = [
   { id: "poblacion", label: "Población" },
   { id: "escolaridad", label: "Escolaridad y vivienda" },
+  { id: "socio", label: "Indicadores Socio" },
 ];
 
 // DataTable column definitions — memoized at module level (static fixtures, no closure deps).
@@ -75,18 +80,14 @@ const ENTITY_COLUMNS: Column<EntityDemografia>[] = [
   },
 ];
 
-export function DemografiaPage() {
-  const [data, setData] = useState<DemografiaData | null>(null);
+// Use census fixtures for the demographic/census tabs (INEGI Censo not connected yet).
+const CENSUS_DATA: DemografiaData = DEMOGRAFIA_DATA;
 
-  useEffect(() => {
-    let active = true;
-    void getDemografia().then((d) => {
-      if (active) setData(d);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+export function DemografiaPage() {
+  const [tab, setTab] = useState<DemoTab>("poblacion");
+
+  // Real /socio API call
+  const socio = useAsync(() => getSocio(), []);
 
   return (
     <AppLayout title="Demografía & Censo" crumb="Contexto socioeconómico">
@@ -94,65 +95,43 @@ export function DemografiaPage() {
         eyebrow="Contexto socioeconómico"
         title="Demografía"
         accent="& Censo"
-        subtitle="Composición poblacional, escolaridad y vivienda por entidad como contexto para la planeación cívica y territorial."
-        actions={<span className="pill border-line text-ink-muted">Fuente futura · INEGI</span>}
+        subtitle="Composición poblacional, escolaridad y vivienda como contexto para la planeación cívica y territorial. Indicadores socioeconómicos en tiempo real desde la plataforma."
+        actions={<span className="pill border-line text-ink-muted">INEGI Censo · datos de muestra</span>}
       />
-      <PreviewBanner note="Datos de muestra · INEGI no está conectada (requiere token). Las cifras son ilustrativas." />
 
-      {data ? <DemografiaBody data={data} /> : <LoadingState />}
-    </AppLayout>
-  );
-}
-
-// P-2: SkeletonCard replaces inline animate-pulse divs.
-function LoadingState() {
-  return (
-    <div className="reveal grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <SkeletonCard key={i} className="h-28" />
-      ))}
-    </div>
-  );
-}
-
-function DemografiaBody({ data }: { data: DemografiaData }) {
-  const { summary, entities } = data;
-  const [tab, setTab] = useState<DemoTab>("poblacion");
-
-  return (
-    <>
+      {/* Overview metric cards (census fixtures — always shown) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Población total"
-          value={nf.format(summary.poblacion)}
+          value={nf.format(CENSUS_DATA.summary.poblacion)}
           tone="accent"
           icon={<VotersIcon width={18} height={18} />}
           delay={0}
         />
         <MetricCard
           label="Escolaridad promedio"
-          value={`${summary.escolaridad.toFixed(1)} años`}
+          value={`${CENSUS_DATA.summary.escolaridad.toFixed(1)} años`}
           tone="teal"
           icon={<DatabaseIcon width={18} height={18} />}
           delay={80}
         />
         <MetricCard
           label="Viviendas habitadas"
-          value={nf.format(summary.viviendas)}
+          value={nf.format(CENSUS_DATA.summary.viviendas)}
           tone="accent"
           icon={<LayersIcon width={18} height={18} />}
           delay={160}
         />
         <MetricCard
           label="Edad mediana"
-          value={`${summary.edadMediana} años`}
+          value={`${CENSUS_DATA.summary.edadMediana} años`}
           tone="teal"
           icon={<UserIcon width={18} height={18} />}
           delay={240}
         />
       </div>
 
-      {/* P-3: SegmentedControl replaces hand-rolled tab bar */}
+      {/* Tab selector */}
       <div className="reveal mt-5">
         <SegmentedControl<DemoTab>
           options={DEMO_TABS}
@@ -162,11 +141,13 @@ function DemografiaBody({ data }: { data: DemografiaData }) {
         />
       </div>
 
-      {tab === "poblacion" ? <PoblacionTab data={data} /> : <EscolaridadTab data={data} />}
+      {tab === "poblacion" && <PoblacionTab data={CENSUS_DATA} />}
+      {tab === "escolaridad" && <EscolaridadTab data={CENSUS_DATA} />}
+      {tab === "socio" && <SocioTab socio={socio} />}
 
-      {/* P-4: EntityTable → DataTable */}
-      <EntityTable entities={entities} />
-    </>
+      {/* Entity table — census fixtures */}
+      <EntityTable entities={CENSUS_DATA.entities} />
+    </AppLayout>
   );
 }
 
@@ -176,11 +157,9 @@ function PoblacionTab({ data }: { data: DemografiaData }) {
   const sexDonut: DonutDatum[] = sexSplit.map((s) => ({
     name: s.sex,
     value: Number((s.share * 100).toFixed(1)),
-    // P-5: semantic per-datum colors — preserve (sex-split fixture colors).
     color: s.color,
   }));
 
-  // Diverging pyramid: men to the left (negative), women to the right.
   const pyramid = useMemo(
     () => ageSex.map((b) => ({ band: b.band, hombres: -b.hombres, mujeres: b.mujeres })),
     [ageSex],
@@ -199,7 +178,6 @@ function PoblacionTab({ data }: { data: DemografiaData }) {
           className="h-full"
           action={
             <div className="flex items-center gap-3 text-xs text-ink-muted">
-              {/* P-5: semantic colors for sex split — preserved from fixtures. */}
               <span className="inline-flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#22d3ee" }} />
                 Hombres
@@ -211,7 +189,6 @@ function PoblacionTab({ data }: { data: DemografiaData }) {
             </div>
           }
         >
-          {/* P-6: PANEL_HEIGHTS.chartMd instead of hardcoded height */}
           <div className={PANEL_HEIGHTS.chartMd}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={pyramid} layout="vertical" stackOffset="sign" margin={{ left: -8 }}>
@@ -234,13 +211,11 @@ function PoblacionTab({ data }: { data: DemografiaData }) {
                   axisLine={false}
                   width={48}
                 />
-                {/* P-5: CHART_TOOLTIP_STYLE replaces local TOOLTIP_STYLE */}
                 <Tooltip
                   cursor={{ fill: "color-mix(in srgb, var(--chart-1) 6%, transparent)" }}
                   contentStyle={CHART_TOOLTIP_STYLE}
                   formatter={(v: number, n: string) => [`${Math.abs(v).toFixed(1)}%`, n]}
                 />
-                {/* P-5: semantic bar colors for sex — preserve (cyan=hombres, teal=mujeres) */}
                 <Bar dataKey="hombres" stackId="p" fill="#22d3ee" radius={[2, 0, 0, 2]} />
                 <Bar dataKey="mujeres" stackId="p" fill="#2dd4bf" radius={[0, 2, 2, 0]} />
               </BarChart>
@@ -261,7 +236,6 @@ function PoblacionTab({ data }: { data: DemografiaData }) {
             {sexSplit.map((s) => (
               <div key={s.sex} className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5">
                 <span className="inline-flex items-center gap-2 text-xs text-ink-muted">
-                  {/* P-5: per-datum fixture color — preserve */}
                   <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
                   {s.sex}
                 </span>
@@ -293,7 +267,6 @@ function EscolaridadTab({ data }: { data: DemografiaData }) {
           className="h-full"
           action={<span className="pill border-line text-ink-muted">muestra</span>}
         >
-          {/* P-6: PANEL_HEIGHTS.chartMd instead of hardcoded height */}
           <div className={PANEL_HEIGHTS.chartMd}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={schooling} margin={{ left: -16, top: 8 }}>
@@ -313,14 +286,12 @@ function EscolaridadTab({ data }: { data: DemografiaData }) {
                   axisLine={false}
                   tickFormatter={(v: number) => `${v}%`}
                 />
-                {/* P-5: CHART_TOOLTIP_STYLE replaces local TOOLTIP_STYLE */}
                 <Tooltip
                   cursor={{ fill: "color-mix(in srgb, var(--chart-1) 6%, transparent)" }}
                   contentStyle={CHART_TOOLTIP_STYLE}
                   formatter={(v: number) => [`${v}%`, "Población"]}
                 />
                 <Bar dataKey="share" radius={[4, 4, 0, 0]}>
-                  {/* P-5: per-level semantic colors from fixtures — preserve */}
                   {schooling.map((s) => (
                     <Cell key={s.level} fill={s.color ?? "var(--chart-1)"} />
                   ))}
@@ -380,7 +351,95 @@ function EscolaridadTab({ data }: { data: DemografiaData }) {
   );
 }
 
-// P-4: DataTable replaces hand-rolled EntityTable (handles sort/paginate; no double-card).
+// Socio tab — wired to real /socio API
+function SocioTab({ socio }: { socio: ReturnType<typeof useAsync<SocioMetric[]>> }) {
+  const { loading, error, data, reload } = socio;
+  const isEmpty = !loading && !error && (data ?? []).length === 0;
+
+  const SOCIO_COLUMNS: Column<SocioMetric>[] = useMemo(
+    () => [
+      {
+        key: "territory_code",
+        header: "Territorio",
+        render: (m) => <span className="font-mono text-xs text-ink">{m.territory_code}</span>,
+        sortValue: (m) => m.territory_code,
+      },
+      {
+        key: "indicador",
+        header: "Indicador",
+        render: (m) => m.indicador,
+        sortValue: (m) => m.indicador,
+      },
+      {
+        key: "valor",
+        header: "Valor",
+        align: "right",
+        sortValue: (m) => m.valor ?? -Infinity,
+        render: (m) => (
+          <span className="font-mono tabular-nums text-teal">
+            {m.valor != null ? m.valor.toLocaleString("es-MX") : "—"}
+          </span>
+        ),
+      },
+      {
+        key: "anio",
+        header: "Año",
+        align: "right",
+        sortValue: (m) => m.anio ?? 0,
+        render: (m) => (
+          <span className="font-mono tabular-nums text-ink-muted">{m.anio ?? "—"}</span>
+        ),
+        hideOnCard: true,
+      },
+      {
+        key: "fuente",
+        header: "Fuente",
+        render: (m) => (
+          <span className="text-ink-faint">{m.fuente ?? "—"}</span>
+        ),
+        hideOnCard: true,
+      },
+    ],
+    [],
+  );
+
+  return (
+    <div className="reveal mt-5" style={{ animationDelay: "120ms" }}>
+      <DataState
+        loading={loading}
+        error={error}
+        isEmpty={isEmpty}
+        onRetry={reload}
+        emptyMessage="Ingesta pendiente — sin indicadores socioeconómicos disponibles."
+        skeleton={
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={i} className="h-16" />
+            ))}
+          </div>
+        }
+      >
+        <Card title="Indicadores socioeconómicos" accentDot>
+          <div className="mb-2">
+            <span className="pill border-line text-ink-muted">
+              {(data ?? []).length} registros · datos reales
+            </span>
+          </div>
+          <DataTable<SocioMetric>
+            columns={SOCIO_COLUMNS}
+            rows={data ?? []}
+            rowKey={(m) => `${m.territory_code}:${m.indicador}:${m.anio}`}
+            defaultSortKey="territory_code"
+            defaultSortDir="asc"
+            emptyMessage="Sin indicadores."
+            pageSize={20}
+          />
+        </Card>
+      </DataState>
+    </div>
+  );
+}
+
 function EntityTable({ entities }: { entities: EntityDemografia[] }) {
   const [query, setQuery] = useState("");
 
@@ -392,7 +451,6 @@ function EntityTable({ entities }: { entities: EntityDemografia[] }) {
 
   return (
     <div className="reveal mt-5" style={{ animationDelay: "280ms" }}>
-      {/* Plain element above DataTable — no wrapping Card (DataTable renders its own .card-premium). */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-ink">
           Población por entidad
