@@ -1,13 +1,13 @@
 import { apiClient } from "./client";
 
 export interface DenueUnit {
-  id: string;
+  clave: string;
   nombre: string;
   actividad: string | null;
-  municipio: string | null;
-  estado: string | null;
+  estrato: string | null;
+  territory_code: string;
   lat: number | null;
-  lng: number | null;
+  lon: number | null;
 }
 
 /** GeoJSON FeatureCollection as returned by /denue/geojson */

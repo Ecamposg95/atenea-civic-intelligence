@@ -35,19 +35,19 @@ const UNIT_COLUMNS: Column<DenueUnit>[] = [
     align: "left",
   },
   {
-    key: "municipio",
-    header: "Municipio",
-    render: (u) => u.municipio ?? "—",
-    sortValue: (u) => u.municipio ?? "",
+    key: "territory_code",
+    header: "Clave territorio",
+    render: (u) => u.territory_code,
+    sortValue: (u) => u.territory_code,
     align: "left",
   },
   {
-    key: "estado",
-    header: "Estado",
+    key: "estrato",
+    header: "Estrato",
     render: (u) => (
-      <span className="text-ink-faint">{u.estado ?? "—"}</span>
+      <span className="text-ink-faint">{u.estrato ?? "—"}</span>
     ),
-    sortValue: (u) => u.estado ?? "",
+    sortValue: (u) => u.estrato ?? "",
     align: "left",
     hideOnCard: true,
   },
@@ -55,9 +55,9 @@ const UNIT_COLUMNS: Column<DenueUnit>[] = [
     key: "coords",
     header: "Coordenadas",
     render: (u) =>
-      u.lat != null && u.lng != null ? (
+      u.lat != null && u.lon != null ? (
         <span className="font-mono text-xs tabular-nums text-ink-faint">
-          {u.lat.toFixed(4)}, {u.lng.toFixed(4)}
+          {u.lat.toFixed(4)}, {u.lon.toFixed(4)}
         </span>
       ) : (
         <span className="text-ink-faint">—</span>
@@ -77,11 +77,11 @@ export function DenuePage() {
   const summary = useMemo(() => {
     const rows = data ?? [];
     const actividadSet = new Set(rows.map((u) => u.actividad ?? "Sin clasificar"));
-    const municipioSet = new Set(rows.map((u) => u.municipio ?? "Desconocido"));
+    const territorioSet = new Set(rows.map((u) => u.territory_code));
     return {
       total: rows.length,
       actividades: actividadSet.size,
-      municipios: municipioSet.size,
+      municipios: territorioSet.size,
     };
   }, [data]);
 
@@ -105,7 +105,7 @@ export function DenuePage() {
         eyebrow="Inteligencia Económica"
         title="Unidades"
         accent="Económicas"
-        subtitle="Tejido económico por actividad y municipio derivado de las unidades ingestadas vía DENUE."
+        subtitle="Tejido económico por actividad y territorio derivado de las unidades ingestadas vía DENUE."
         actions={<span className="pill border-line text-ink-muted">INEGI DENUE</span>}
       />
 
@@ -187,7 +187,7 @@ function UnitsTable({ units }: { units: DenueUnit[] }) {
       (u) =>
         u.nombre.toLowerCase().includes(q) ||
         (u.actividad ?? "").toLowerCase().includes(q) ||
-        (u.municipio ?? "").toLowerCase().includes(q),
+        u.territory_code.toLowerCase().includes(q),
     );
   }, [units, query]);
 
@@ -204,7 +204,7 @@ function UnitsTable({ units }: { units: DenueUnit[] }) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filtrar por nombre, actividad o municipio…"
+            placeholder="Filtrar por nombre, actividad o clave de territorio…"
             aria-label="Filtrar unidades económicas"
             className="field-input focus-ring max-w-sm"
           />
@@ -217,7 +217,7 @@ function UnitsTable({ units }: { units: DenueUnit[] }) {
       <DataTable<DenueUnit>
         columns={UNIT_COLUMNS}
         rows={rows}
-        rowKey={(u) => u.id}
+        rowKey={(u) => u.clave}
         defaultSortKey="nombre"
         defaultSortDir="asc"
         emptyMessage={query ? `Sin coincidencias para "${query}".` : "Sin registros."}
