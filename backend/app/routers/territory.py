@@ -1,12 +1,18 @@
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy import or_, select
 
-from app.dependencies import DbSession, Tenant
+from app.dependencies import DbSession, Tenant, require_roles
 from app.models.electoral_area import ElectoralArea
+from app.models.user import UserRole
 
-router = APIRouter(prefix="/territory", tags=["territory"])
+# Intelligence read: admin/coordinador/lider/analyst/viewer; superadmin auto-passes.
+_INTEL_READ = Depends(require_roles(
+    UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER, UserRole.ANALYST, UserRole.VIEWER,
+))
+
+router = APIRouter(prefix="/territory", tags=["territory"], dependencies=[_INTEL_READ])
 
 
 @router.get("/children")

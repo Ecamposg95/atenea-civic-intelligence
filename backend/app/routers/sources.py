@@ -7,9 +7,10 @@ tenant-filtered; ingestion into tenant tables happens via the CLI / services.
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.dependencies import Tenant
+from app.dependencies import Tenant, require_roles
+from app.models.user import UserRole
 from app.integrations.ine import candidaturas, cartografia, ckan, padron
 from app.integrations.ine.base import IneSourceError
 from app.integrations.ine.config import SOURCES
@@ -19,7 +20,10 @@ from app.schemas.sources import (
     SourceInfo,
 )
 
-router = APIRouter(prefix="/sources", tags=["sources"])
+# Sources: admin-and-analyst only (ingest governance; not for general viewers).
+_SOURCES_ROLES = Depends(require_roles(UserRole.ADMIN, UserRole.ANALYST))
+
+router = APIRouter(prefix="/sources", tags=["sources"], dependencies=[_SOURCES_ROLES])
 
 
 def _guard(exc: IneSourceError) -> HTTPException:

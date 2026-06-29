@@ -7,14 +7,20 @@ standard error envelope so the frontend can show a graceful retry.
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.dependencies import Tenant
+from app.dependencies import Tenant, require_roles
+from app.models.user import UserRole
 from app.integrations.intel import ieem, worldbank
 from app.integrations.intel.cache import TTLCache
 from app.integrations.ine.base import IneSourceError
 
-router = APIRouter(prefix="/intel", tags=["intel"])
+# Intelligence read: admin/coordinador/lider/analyst/viewer; superadmin auto-passes.
+_INTEL_READ = Depends(require_roles(
+    UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER, UserRole.ANALYST, UserRole.VIEWER,
+))
+
+router = APIRouter(prefix="/intel", tags=["intel"], dependencies=[_INTEL_READ])
 
 CACHE = TTLCache(ttl_seconds=900.0)
 

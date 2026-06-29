@@ -2,13 +2,19 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
-from app.dependencies import DbSession, Tenant
+from app.dependencies import DbSession, Tenant, require_roles
+from app.models.user import UserRole
 from app.integrations.ine import cartografia
 from app.services import map_service
 
-router = APIRouter(prefix="/maps", tags=["maps"])
+# Intelligence read: admin/coordinador/lider/analyst/viewer; superadmin auto-passes.
+_INTEL_READ = Depends(require_roles(
+    UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER, UserRole.ANALYST, UserRole.VIEWER,
+))
+
+router = APIRouter(prefix="/maps", tags=["maps"], dependencies=[_INTEL_READ])
 
 
 @router.get("/layers", summary="List available map layers")
