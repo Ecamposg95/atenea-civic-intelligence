@@ -21,8 +21,8 @@ class Registro(UUIDMixin, TenantMixin, CampaignMixin, AuditMixin, Base):
         UniqueConstraint("campaign_id", "client_uuid", name="uq_registros_campaign_client_uuid"),
     )
 
-    activista_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=False
+    activista_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
     )
     nombre_completo: Mapped[str] = mapped_column(String(255), nullable=False)
     seccion: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)

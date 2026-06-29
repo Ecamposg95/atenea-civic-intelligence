@@ -59,7 +59,7 @@ class RegistroRead(BaseModel):
     id: str
     organization_id: str
     campaign_id: str
-    activista_id: str
+    activista_id: Optional[str]
     nombre_completo: str
     seccion: Optional[str]
     direccion: Optional[str]
