@@ -123,7 +123,7 @@ def _configure_cors(app: FastAPI) -> None:
     )
 
 
-_SENSITIVE_FIELDS = frozenset({"clave_elector", "clave_elector_enc", "password", "current_password", "new_password", "telefono"})
+_SENSITIVE_FIELDS = frozenset({"clave_elector", "clave_elector_enc", "password", "current_password", "new_password", "telefono", "nombre_completo", "direccion", "colonia"})
 _REDACTED = "***"
 
 

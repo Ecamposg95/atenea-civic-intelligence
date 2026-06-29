@@ -98,6 +98,36 @@ def test_registro_read_never_exposes_plain_clave():
     assert "clave_masked" in fields, "RegistroRead must expose clave_masked"
 
 
+def test_pii_text_fields_422_does_not_echo_submitted_value():
+    """AC-7.5 ext: a 422 for an over-long colonia MUST NOT echo the submitted PII string."""
+    client = _make_client()
+    headers = auth_headers(client, "activista1@alpha.gov")
+    headers["X-Campaign-Id"] = ALPHA_CAMPAIGN_ID
+
+    # colonia has max_length=255; submit a 300-char string — clearly identifiable
+    _LONG_COLONIA = "C" * 300
+
+    resp = client.post(
+        "/api/registros",
+        json={
+            "nombre_completo": "Test Usuario",
+            "consentimiento": True,
+            "clave_elector": "ABCDEFGHIJ123456AB",  # valid format
+            "colonia": _LONG_COLONIA,
+        },
+        headers=headers,
+    )
+
+    assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text}"
+    body_text = resp.text
+    assert _LONG_COLONIA not in body_text, (
+        f"PII colonia value leaked in 422 body (first 80 chars): {body_text[:80]}"
+    )
+    data = resp.json()
+    assert "error" in data
+    assert data["error"]["status"] == 422
+
+
 def test_admin_registro_read_never_exposes_plain_clave():
     """AC-7.1: AdminRegistroRead schema must not have a clave_elector field."""
     from app.schemas.admin import AdminRegistroRead
