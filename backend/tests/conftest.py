@@ -152,7 +152,7 @@ def seed_data():
         beta_camp = Campaign(id=BETA_CAMPAIGN_ID, name="Beta 2027", cycle=2027, organization_id=org_b.id)
         db.add(beta_camp)
         db.flush()
-        for email in ("lider@alpha.gov", "activista1@alpha.gov", "activista2@alpha.gov"):
+        for email in ("lider@alpha.gov", "activista1@alpha.gov", "activista2@alpha.gov", "viewer@alpha.gov"):
             u = db.execute(select(User).where(User.email == email)).scalar_one()
             db.add(CampaignMembership(user_id=u.id, campaign_id=camp.id, role=u.role))
         beta_act = db.execute(select(User).where(User.email == "activista_beta@beta.gov")).scalar_one()

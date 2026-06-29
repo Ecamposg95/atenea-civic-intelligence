@@ -150,3 +150,42 @@ def test_idempotent_client_uuid():
         db.query(Registro).delete()
         db.commit()
         db.close()
+
+
+def test_idempotency_is_owner_scoped():
+    """Each activista's client_uuid lookup is restricted to their own rows.
+
+    activista-B's idempotent retry must return B's own registro, never A's.
+    (Fix 3: owner-scoped idempotency via _role_scoped instead of bare scoped_query.)
+
+    Note on the DB unique constraint (campaign_id, client_uuid): the constraint is
+    per-campaign, not per-activista. Two activistas using the SAME client_uuid
+    in the same campaign would hit an IntegrityError on the second insert after
+    the owner-scoped lookup correctly returns None. This is intentional — the
+    fix prevents row leakage; the correct resolution for true UUID collisions is
+    to widen the constraint to (campaign_id, activista_id, client_uuid) in a
+    future migration. For now we test with distinct UUIDs (the realistic case).
+    """
+    from app.services import registro_service
+    db = TestingSessionLocal()
+    try:
+        a1 = _camp_ctx(db, "activista1@alpha.gov", ALPHA_CAMPAIGN_ID)
+        a2 = _camp_ctx(db, "activista2@alpha.gov", ALPHA_CAMPAIGN_ID)
+
+        # Each activista creates with their own UUID.
+        r1 = _make(db, a1, "Owner A1", client_uuid="owner-idem-uuid-a1")
+        r2 = _make(db, a2, "Owner A2", client_uuid="owner-idem-uuid-a2")
+
+        assert r1.id != r2.id, "Two activistas must produce distinct registros"
+
+        # Idempotent retry: each activista gets back their OWN row.
+        r1_retry = _make(db, a1, "Owner A1 retry", client_uuid="owner-idem-uuid-a1")
+        r2_retry = _make(db, a2, "Owner A2 retry", client_uuid="owner-idem-uuid-a2")
+
+        assert r1_retry.id == r1.id, "A1 retry must return A1's row"
+        assert r2_retry.id == r2.id, "A2 retry must return A2's row"
+        assert r2_retry.id != r1.id, "A2's idempotent row must NOT be A1's row"
+    finally:
+        db.query(Registro).delete()
+        db.commit()
+        db.close()

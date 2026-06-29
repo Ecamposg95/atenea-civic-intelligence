@@ -1,11 +1,11 @@
 """Activist capture router: /registros + /perfil."""
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 
-from app.dependencies import CampaignCtx, DbSession, Tenant
-from app.models.user import User
+from app.dependencies import CampaignCtx, DbSession, Tenant, require_roles
+from app.models.user import User, UserRole
 from app.schemas.registro import (
     PerfilRead, RegistroCreate, RegistroList, RegistroRead, RegistroUpdate,
 )
@@ -13,9 +13,14 @@ from app.services import registro_service
 
 router = APIRouter(tags=["registros"])
 
+# Role gate: only activistas, líderes, and admins may read or write registros.
+# Superadmins auto-pass (see require_roles). This runs *alongside* CampaignCtx
+# on each capture endpoint (the same pattern used by the ingest router).
+CapturaCtx = Annotated[object, Depends(require_roles(UserRole.ACTIVISTA, UserRole.LIDER, UserRole.ADMIN))]
+
 
 @router.post("/registros", response_model=RegistroRead, status_code=201)
-def create(data: RegistroCreate, db: DbSession, ctx: CampaignCtx) -> RegistroRead:
+def create(data: RegistroCreate, db: DbSession, ctx: CampaignCtx, _perm: CapturaCtx) -> RegistroRead:
     if ctx.is_superadmin and not ctx.organization_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Select a base first")
     try:
@@ -27,7 +32,7 @@ def create(data: RegistroCreate, db: DbSession, ctx: CampaignCtx) -> RegistroRea
 
 @router.get("/registros/mios", response_model=RegistroList)
 def list_mine(
-    db: DbSession, ctx: CampaignCtx,
+    db: DbSession, ctx: CampaignCtx, _perm: CapturaCtx,
     q: Annotated[Optional[str], Query()] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -38,7 +43,7 @@ def list_mine(
 
 
 @router.get("/registros/{registro_id}", response_model=RegistroRead)
-def get_one(registro_id: str, db: DbSession, ctx: CampaignCtx) -> RegistroRead:
+def get_one(registro_id: str, db: DbSession, ctx: CampaignCtx, _perm: CapturaCtx) -> RegistroRead:
     reg = registro_service.get_registro(db, ctx, registro_id)
     if reg is None:
         raise HTTPException(status_code=404, detail="Registro not found")
@@ -46,7 +51,7 @@ def get_one(registro_id: str, db: DbSession, ctx: CampaignCtx) -> RegistroRead:
 
 
 @router.put("/registros/{registro_id}", response_model=RegistroRead)
-def update(registro_id: str, data: RegistroUpdate, db: DbSession, ctx: CampaignCtx) -> RegistroRead:
+def update(registro_id: str, data: RegistroUpdate, db: DbSession, ctx: CampaignCtx, _perm: CapturaCtx) -> RegistroRead:
     try:
         reg = registro_service.update_registro(db, ctx, registro_id, data)
     except registro_service.ConsentRequired:
@@ -57,7 +62,7 @@ def update(registro_id: str, data: RegistroUpdate, db: DbSession, ctx: CampaignC
 
 
 @router.delete("/registros/{registro_id}", status_code=204)
-def delete(registro_id: str, db: DbSession, ctx: CampaignCtx) -> None:
+def delete(registro_id: str, db: DbSession, ctx: CampaignCtx, _perm: CapturaCtx) -> None:
     if not registro_service.delete_registro(db, ctx, registro_id):
         raise HTTPException(status_code=404, detail="Registro not found")
 

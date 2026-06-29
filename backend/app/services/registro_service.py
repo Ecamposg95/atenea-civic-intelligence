@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import false, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core import crypto
@@ -32,17 +32,24 @@ def _role_scoped(ctx: CampaignContext):
     if ctx.role == UserRole.LIDER:
         sub = select(User.id).where(User.lider_id == ctx.user.id)
         return stmt.where(or_(Registro.activista_id.in_(sub), Registro.activista_id == ctx.user.id))
-    return stmt  # ADMIN: full campaign scope
+    if ctx.role == UserRole.ADMIN:
+        return stmt  # full campaign scope
+    # Any role not explicitly allowed (VIEWER, ANALYST, etc.) gets an empty result
+    # as defense-in-depth. The router's CapturaCtx guard blocks them first.
+    return stmt.where(false())
 
 
 def create_registro(db: Session, ctx: CampaignContext, data: RegistroCreate) -> Registro:
     if not data.consentimiento:
         raise ConsentRequired()
 
-    # Idempotency: reuse an existing row with the same (campaign, client_uuid).
+    # Idempotency: reuse an existing row with the same (campaign, client_uuid, owner).
+    # Deliberately routed through _role_scoped so that an ACTIVISTA's lookup is
+    # restricted to their own rows — activista-B's client_uuid must never match
+    # activista-A's registro (Fix 3: owner-scoped idempotency).
     if data.client_uuid:
         existing = db.execute(
-            scoped_query(Registro, ctx).where(Registro.client_uuid == data.client_uuid)
+            _role_scoped(ctx).where(Registro.client_uuid == data.client_uuid)
         ).scalar_one_or_none()
         if existing is not None:
             return existing

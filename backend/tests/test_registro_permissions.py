@@ -1,5 +1,5 @@
 """API-level permission + lifecycle tests for /registros."""
-from tests.conftest import auth_headers, ALPHA_CAMPAIGN_ID, BETA_CAMPAIGN_ID
+from tests.conftest import ALPHA_CAMPAIGN_ID, BETA_CAMPAIGN_ID, auth_headers
 
 
 def _hdr(client, email, campaign_id):
@@ -53,3 +53,22 @@ def test_perfil_returns_lider_name(client):
     resp = client.get("/api/perfil", headers=h)
     assert resp.status_code == 200, resp.text
     assert resp.json()["lider_nombre"] == "Alpha Líder"
+
+
+def test_viewer_cannot_read_or_write_registros(client):
+    """A campaign-member with VIEWER role must get 403 on all /registros endpoints.
+
+    viewer@alpha.gov is seeded with UserRole.VIEWER and has an Alpha campaign
+    membership (added in conftest so the 403 comes from RBAC, not membership check).
+    """
+    h = _hdr(client, "viewer@alpha.gov", ALPHA_CAMPAIGN_ID)
+
+    # GET /registros/mios → 403
+    assert client.get("/api/registros/mios", headers=h).status_code == 403
+
+    # POST /registros → 403 (must be blocked before any PII is processed)
+    assert client.post(
+        "/api/registros",
+        json={"nombre_completo": "Blocked Viewer", "consentimiento": True},
+        headers=h,
+    ).status_code == 403
