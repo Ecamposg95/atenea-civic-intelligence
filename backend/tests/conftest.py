@@ -27,9 +27,11 @@ from app.models.census import CensusMetric
 from app.models.electoral_area import ElectoralArea
 from app.models.ingestion import DataSource, IngestRun
 from app.models.organization import Organization
+from app.models.registro import Registro
 from app.models.user import User, UserRole
 
 ALPHA_CAMPAIGN_ID = "11111111-1111-1111-1111-111111111111"
+BETA_CAMPAIGN_ID = "22222222-2222-2222-2222-222222222222"
 
 engine = create_engine(
     "sqlite://",
@@ -59,6 +61,7 @@ Base.metadata.create_all(
         DataSource.__table__,
         IngestRun.__table__,
         CensusMetric.__table__,
+        Registro.__table__,
     ],
 )
 
@@ -111,6 +114,27 @@ def seed_data():
                 ),
             ]
         )
+        lider = User(
+            email="lider@alpha.gov", full_name="Alpha Líder",
+            hashed_password=hash_password(PASSWORD), role=UserRole.LIDER,
+            organization_id=org_a.id, seccion="0001",
+        )
+        db.add(lider)
+        db.flush()
+        db.add_all([
+            User(email="activista1@alpha.gov", full_name="Alpha Activista 1",
+                 hashed_password=hash_password(PASSWORD), role=UserRole.ACTIVISTA,
+                 organization_id=org_a.id, lider_id=lider.id, phone="5550000001", seccion="0001"),
+            User(email="activista2@alpha.gov", full_name="Alpha Activista 2",
+                 hashed_password=hash_password(PASSWORD), role=UserRole.ACTIVISTA,
+                 organization_id=org_a.id, lider_id=lider.id, seccion="0002"),
+            User(email="super@atlas.gov", full_name="Platform Superadmin",
+                 hashed_password=hash_password(PASSWORD), role=UserRole.SUPERADMIN,
+                 organization_id=None),
+            User(email="activista_beta@beta.gov", full_name="Beta Activista",
+                 hashed_password=hash_password(PASSWORD), role=UserRole.ACTIVISTA,
+                 organization_id=org_b.id, seccion="9001"),
+        ])
         db.commit()
 
         # Seed an Alpha campaign with admin membership so campaign tests have data.
@@ -125,6 +149,14 @@ def seed_data():
         db.flush()
         db.add(CampaignMembership(user_id=alpha_admin.id, campaign_id=camp.id, role=UserRole.ADMIN))
         db.add(Cargo(key="gubernatura", label="Gubernatura", ambito=Ambito.ESTATAL, territory_level="estado"))
+        beta_camp = Campaign(id=BETA_CAMPAIGN_ID, name="Beta 2027", cycle=2027, organization_id=org_b.id)
+        db.add(beta_camp)
+        db.flush()
+        for email in ("lider@alpha.gov", "activista1@alpha.gov", "activista2@alpha.gov"):
+            u = db.execute(select(User).where(User.email == email)).scalar_one()
+            db.add(CampaignMembership(user_id=u.id, campaign_id=camp.id, role=u.role))
+        beta_act = db.execute(select(User).where(User.email == "activista_beta@beta.gov")).scalar_one()
+        db.add(CampaignMembership(user_id=beta_act.id, campaign_id=beta_camp.id, role=beta_act.role))
         db.commit()
     finally:
         db.close()

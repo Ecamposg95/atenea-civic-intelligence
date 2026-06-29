@@ -19,7 +19,10 @@ def test_users_list_is_tenant_scoped(client: TestClient) -> None:
 
     emails = {u["email"] for u in body["items"]}
     # Only Alpha users are visible; the Beta admin is never leaked.
-    assert emails == {"admin@alpha.gov", "viewer@alpha.gov"}
+    assert emails == {
+        "admin@alpha.gov", "viewer@alpha.gov",
+        "lider@alpha.gov", "activista1@alpha.gov", "activista2@alpha.gov",
+    }
     assert "admin@beta.gov" not in emails
     # Every returned record is scoped to the caller's organization.
     assert all(u["organization_id"] == my_org for u in body["items"])
@@ -31,7 +34,7 @@ def test_cross_tenant_users_are_isolated(client: TestClient) -> None:
     resp = client.get("/api/users", headers=headers)
     assert resp.status_code == 200
     emails = {u["email"] for u in resp.json()["items"]}
-    assert emails == {"admin@beta.gov"}
+    assert emails == {"admin@beta.gov", "activista_beta@beta.gov"}
     assert "admin@alpha.gov" not in emails
 
 
@@ -44,7 +47,7 @@ def test_pagination_response_shape(client: TestClient) -> None:
     assert set(body.keys()) >= {"items", "total", "limit", "offset"}
     assert body["limit"] == 1
     assert body["offset"] == 0
-    assert body["total"] == 2  # two Alpha users
+    assert body["total"] == 5  # five Alpha users (admin, viewer, lider, activista1, activista2)
     assert len(body["items"]) == 1  # limited to one
 
 
