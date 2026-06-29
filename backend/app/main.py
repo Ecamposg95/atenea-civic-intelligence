@@ -15,10 +15,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
+from app.core.rate_limiting import limiter
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.routers import (
     admin,
     analytics,
@@ -64,6 +67,19 @@ async def lifespan(app: FastAPI):
     yield
 
 
+async def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Return the standard error envelope for 429 responses."""
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={
+            "error": {
+                "message": f"Too many requests: {exc.detail}",
+                "status": status.HTTP_429_TOO_MANY_REQUESTS,
+            }
+        },
+    )
+
+
 def create_app() -> FastAPI:
     """Application factory."""
     app = FastAPI(
@@ -76,7 +92,20 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # --- Rate limiting (slowapi) --------------------------------------------
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    # --- CORS ---------------------------------------------------------------
     _configure_cors(app)
+
+    # --- Security headers ---------------------------------------------------
+    # Starlette builds the middleware stack in reverse-add order, so
+    # SecurityHeadersMiddleware is INNER to CORSMiddleware.  On the response
+    # path it runs BEFORE CORS, appending security headers to every response
+    # (including CORS preflight 200/204s) while leaving CORS headers untouched.
+    app.add_middleware(SecurityHeadersMiddleware)
+
     _configure_error_handlers(app)
     _register_routers(app)
     _mount_spa(app)  # must come AFTER routers (registers a catch-all)

@@ -2,6 +2,8 @@
 
 from fastapi import APIRouter, HTTPException, Request, status
 
+from app.core.config import settings
+from app.core.rate_limiting import limiter
 from app.dependencies import CurrentUser, DbSession
 from app.schemas.auth import LoginRequest, Token
 from app.schemas.user import UserRead
@@ -12,7 +14,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=Token, summary="Authenticate and issue token")
-def login(payload: LoginRequest, db: DbSession, request: Request) -> Token:
+@limiter.limit(settings.LOGIN_RATE_LIMIT)
+async def login(payload: LoginRequest, db: DbSession, request: Request) -> Token:
     """Authenticate a user and return a JWT (with org + role claims)."""
     user = auth_service.authenticate_user(db, payload.identifier, payload.password)
     if user is None:

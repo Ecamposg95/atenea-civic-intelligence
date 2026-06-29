@@ -13,6 +13,11 @@ from cryptography.fernet import Fernet
 # Geometry) and geoalchemy2's RecoverGeometryColumn hook never fires on SQLite.
 os.environ.setdefault("DATABASE_URL", "sqlite://")
 os.environ.setdefault("FERNET_KEY", Fernet.generate_key().decode())
+# Disable login rate limiting in tests.  The key function in
+# app/core/rate_limiting.py reads this env var at *request* time and returns a
+# unique UUID key when it is falsy, so no two requests share a bucket.
+# The focused 429 test overrides this to "true" via monkeypatch.setenv.
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 
 import pytest
 from fastapi.testclient import TestClient

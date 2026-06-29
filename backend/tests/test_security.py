@@ -1,4 +1,7 @@
-"""Tests for SPA-4 compliance/hardening configuration settings."""
+"""Tests for SPA-4 compliance/hardening configuration settings.
+
+AC-9.2: login rate-limit (slowapi) + security-headers middleware + CORS review.
+"""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -102,6 +105,76 @@ def test_admin_registro_read_never_exposes_plain_clave():
     assert "clave_elector" not in fields
     assert "clave_elector_enc" not in fields
     assert "clave_masked" in fields
+
+
+# ---------------------------------------------------------------------------
+# AC-9.2 — Security headers
+# ---------------------------------------------------------------------------
+
+def test_security_headers_present_on_api_response(client: TestClient):
+    """Standard browser-security headers must be set on API responses."""
+    resp = client.get("/api/health")
+    assert resp.headers.get("X-Content-Type-Options") == "nosniff", resp.headers
+    assert resp.headers.get("X-Frame-Options") == "DENY", resp.headers
+    assert resp.headers.get("Referrer-Policy") == "no-referrer", resp.headers
+    assert "Content-Security-Policy" in resp.headers, resp.headers
+
+
+def test_security_headers_absent_when_disabled(monkeypatch):
+    """When SECURITY_HEADERS_ENABLED=False the middleware must be a no-op."""
+    monkeypatch.setattr(settings, "SECURITY_HEADERS_ENABLED", False)
+    c = TestClient(app, raise_server_exceptions=False)
+    resp = c.get("/api/health")
+    assert "X-Content-Type-Options" not in resp.headers, (
+        "Security header present even though SECURITY_HEADERS_ENABLED=False"
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-9.2 — Login rate-limit (slowapi)
+# ---------------------------------------------------------------------------
+
+def test_rate_limit_login_returns_429(monkeypatch):
+    """Hammering POST /api/auth/login beyond the configured limit yields 429.
+
+    Approach
+    --------
+    * ``RATE_LIMIT_ENABLED`` is set to ``"false"`` in ``conftest.py`` (before
+      any app import) so existing tests never hit the limit — each request gets
+      a unique UUID bucket key.
+    * This test overrides the env var to ``"true"`` via ``monkeypatch.setenv``
+      so the key function returns the real client IP (``"testclient"`` under
+      TestClient).
+    * ``limiter.reset()`` wipes all in-memory counters so this test starts
+      from zero regardless of previous activity.
+    * With ``LOGIN_RATE_LIMIT="5/minute"``, the 6th request from the same IP
+      must receive a 429 with the standard error envelope.
+    """
+    from app.core.rate_limiting import limiter
+
+    # Enable rate limiting for this test (overrides conftest.py default).
+    monkeypatch.setenv("RATE_LIMIT_ENABLED", "true")
+
+    # Reset all in-memory counters so we always start from 0.
+    limiter.reset()
+
+    c = TestClient(app, raise_server_exceptions=False)
+    payload = {"identifier": "admin@alpha.gov", "password": "bad-password-for-rate-test"}
+
+    statuses: list[int] = []
+    for _ in range(6):
+        resp = c.post("/api/auth/login", json=payload)
+        statuses.append(resp.status_code)
+        if resp.status_code == 429:
+            # Verify the 429 has the standard error envelope.
+            data = resp.json()
+            assert "error" in data, f"429 body missing 'error' key: {data}"
+            assert data["error"]["status"] == 429, data
+            break
+
+    assert 429 in statuses, (
+        f"Expected at least one 429 after 6 login attempts but got: {statuses}"
+    )
 
 
 def test_decrypt_clave_only_at_permitted_callsites():
