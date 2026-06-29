@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
+import sqlalchemy as sa
 from sqlalchemy import false, func, or_, select
 from sqlalchemy.orm import Session
 
@@ -30,16 +31,26 @@ def _role_scoped(ctx: CampaignContext):
     stmt = scoped_query(Registro, ctx)
     if ctx.is_superadmin:
         return stmt
-    if ctx.role == UserRole.ACTIVISTA:
-        return stmt.where(Registro.activista_id == ctx.user.id)
-    if ctx.role == UserRole.LIDER:
+    role = ctx.role
+    if role == UserRole.ADMIN:
+        return stmt
+    if role == UserRole.COORDINADOR:
+        # líderes cuyo coordinador soy yo → sus activistas (+ los líderes mismos)
+        lideres = select(User.id).where(User.coordinador_id == ctx.user.id)
+        activistas = select(User.id).where(User.lider_id.in_(lideres))
+        return stmt.where(or_(
+            Registro.activista_id.in_(activistas),
+            Registro.activista_id.in_(lideres),
+        ))
+    if role == UserRole.LIDER:
         sub = select(User.id).where(User.lider_id == ctx.user.id)
-        return stmt.where(or_(Registro.activista_id.in_(sub), Registro.activista_id == ctx.user.id))
-    if ctx.role == UserRole.ADMIN:
-        return stmt  # full campaign scope
-    # Any role not explicitly allowed (VIEWER, ANALYST, etc.) gets an empty result
-    # as defense-in-depth. The router's CapturaCtx guard blocks them first.
-    return stmt.where(false())
+        return stmt.where(or_(Registro.activista_id.in_(sub),
+                              Registro.activista_id == ctx.user.id))
+    if role in (UserRole.ACTIVISTA, UserRole.CAPTURISTA):
+        return stmt.where(Registro.activista_id == ctx.user.id)
+    # ANALYST / VIEWER / CONSULTA / cualquier otro: sin registros granulares.
+    # Defense-in-depth: the router's CapturaCtx guard blocks them first.
+    return stmt.where(sa.false())
 
 
 def create_registro(db: Session, ctx: CampaignContext, data: RegistroCreate) -> Registro:

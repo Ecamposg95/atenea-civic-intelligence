@@ -148,6 +148,22 @@ def seed_data():
                  hashed_password=hash_password(PASSWORD), role=UserRole.ACTIVISTA,
                  organization_id=org_b.id, seccion="9001"),
         ])
+        # Add COORDINADOR; wire the existing LIDER under this coordinator.
+        coord = User(email="coord@alpha.gov", full_name="Alpha Coordinador",
+                     hashed_password=hash_password(PASSWORD), role=UserRole.COORDINADOR,
+                     organization_id=org_a.id)
+        db.add(coord)
+        db.flush()
+        lider_u = db.execute(select(User).where(User.email == "lider@alpha.gov")).scalar_one()
+        lider_u.coordinador_id = coord.id
+        db.add_all([
+            User(email="capturista@alpha.gov", full_name="Alpha Capturista",
+                 hashed_password=hash_password(PASSWORD), role=UserRole.CAPTURISTA,
+                 organization_id=org_a.id),
+            User(email="consulta@alpha.gov", full_name="Alpha Consulta",
+                 hashed_password=hash_password(PASSWORD), role=UserRole.CONSULTA,
+                 organization_id=org_a.id),
+        ])
         db.commit()
 
         # Seed an Alpha campaign with admin membership so campaign tests have data.
@@ -165,7 +181,11 @@ def seed_data():
         beta_camp = Campaign(id=BETA_CAMPAIGN_ID, name="Beta 2027", cycle=2027, organization_id=org_b.id)
         db.add(beta_camp)
         db.flush()
-        for email in ("lider@alpha.gov", "activista1@alpha.gov", "activista2@alpha.gov", "viewer@alpha.gov"):
+        for email in (
+            "lider@alpha.gov", "activista1@alpha.gov", "activista2@alpha.gov",
+            "viewer@alpha.gov", "coord@alpha.gov", "capturista@alpha.gov",
+            "consulta@alpha.gov",
+        ):
             u = db.execute(select(User).where(User.email == email)).scalar_one()
             db.add(CampaignMembership(user_id=u.id, campaign_id=camp.id, role=u.role))
         beta_act = db.execute(select(User).where(User.email == "activista_beta@beta.gov")).scalar_one()
