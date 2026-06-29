@@ -20,6 +20,15 @@ export interface DrainResult {
 let draining = false;
 
 /**
+ * True when the error originated from a network/transport failure rather than
+ * an HTTP response. The client.ts interceptor leaves `status` undefined on
+ * network failures (no response received at all).
+ */
+export function isNetworkError(e: unknown): boolean {
+  return (e as Error & { status?: number }).status === undefined;
+}
+
+/**
  * Non-recoverable client errors: 4xx except 408 (Request Timeout) and
  * 429 (Too Many Requests), which are transient and worth retrying.
  */

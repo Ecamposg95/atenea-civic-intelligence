@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { DataState } from "@/components/ui/DataState";
 import { AlertIcon, ShieldIcon } from "@/components/ui/icons";
 import { useAsync } from "@/hooks/useAsync";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import {
   createRegistro,
   deleteRegistro,
@@ -13,6 +14,10 @@ import {
   listMisRegistros,
   type Registro,
 } from "@/api/registros";
+import { enqueue } from "@/offline/queue";
+import { isNetworkError } from "@/offline/sync";
+import { usePendingSyncStore } from "@/store/pendingSyncStore";
+import { PendingSyncIndicator } from "@/components/captura/PendingSyncIndicator";
 
 /* ------------------------------------------------------------------ types */
 
@@ -44,16 +49,40 @@ export function CapturaPage() {
   const [hasCampaign] = useState(() =>
     Boolean(localStorage.getItem("agora-campaign")),
   );
+  const campaignId = localStorage.getItem("agora-campaign") ?? "";
+
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [privOpen, setPrivOpen] = useState(false);
+
+  const isOnline = useOnlineStatus();
+  const { refresh: refreshPending, triggerSync } = usePendingSyncStore();
 
   const perfilState = useAsync(getPerfil, []);
   const registrosState = useAsync(listMisRegistros, []);
 
   const { reload: reloadRegistros } = registrosState;
+
+  // Hydrate pending count from IndexedDB on mount; drain if online.
+  useEffect(() => {
+    void refreshPending();
+    if (navigator.onLine) {
+      void triggerSync().then(() => reloadRegistros());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-sync when coming back online.
+  const prevOnlineRef = useRef(isOnline);
+  useEffect(() => {
+    if (isOnline && !prevOnlineRef.current) {
+      void triggerSync().then(() => reloadRegistros());
+    }
+    prevOnlineRef.current = isOnline;
+  }, [isOnline, triggerSync, reloadRegistros]);
 
   const claveLen = form.clave_elector.replace(/\s/g, "").length;
   const claveWarn = claveLen > 0 && claveLen !== 18;
@@ -67,20 +96,43 @@ export function CapturaPage() {
     if (!canSave) return;
     setSubmitting(true);
     setSubmitError(null);
+    setSaveMessage(null);
+
+    const payload = {
+      nombre_completo: form.nombre_completo.trim(),
+      consentimiento: form.consentimiento,
+      ...(form.seccion.trim() && { seccion: form.seccion.trim() }),
+      ...(form.direccion.trim() && { direccion: form.direccion.trim() }),
+      ...(form.colonia.trim() && { colonia: form.colonia.trim() }),
+      ...(form.telefono.trim() && { telefono: form.telefono.trim() }),
+      ...(form.area.trim() && { area: form.area.trim() }),
+      ...(form.clave_elector.trim() && {
+        clave_elector: form.clave_elector.trim(),
+      }),
+      client_uuid: crypto.randomUUID(),
+    };
+
     try {
-      await createRegistro({
-        nombre_completo: form.nombre_completo.trim(),
-        consentimiento: form.consentimiento,
-        ...(form.seccion.trim() && { seccion: form.seccion.trim() }),
-        ...(form.direccion.trim() && { direccion: form.direccion.trim() }),
-        ...(form.colonia.trim() && { colonia: form.colonia.trim() }),
-        ...(form.telefono.trim() && { telefono: form.telefono.trim() }),
-        ...(form.area.trim() && { area: form.area.trim() }),
-        ...(form.clave_elector.trim() && {
-          clave_elector: form.clave_elector.trim(),
-        }),
-      });
+      if (navigator.onLine) {
+        try {
+          await createRegistro(payload);
+          setSaveMessage("Guardado");
+        } catch (e) {
+          if (isNetworkError(e)) {
+            await enqueue(payload, campaignId);
+            setSaveMessage("Guardado sin conexión — se sincronizará");
+          } else {
+            throw e;
+          }
+        }
+      } else {
+        await enqueue(payload, campaignId);
+        setSaveMessage("Guardado sin conexión — se sincronizará");
+      }
+
       setForm(EMPTY_FORM);
+      await refreshPending();
+      if (navigator.onLine) void triggerSync();
       reloadRegistros();
     } catch (err) {
       setSubmitError(
@@ -89,7 +141,7 @@ export function CapturaPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [form, canSave, reloadRegistros]);
+  }, [form, canSave, reloadRegistros, campaignId, refreshPending, triggerSync]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -141,13 +193,16 @@ export function CapturaPage() {
         accent="Activistas"
         subtitle="Registra personas captadas en campo con consentimiento y datos verificados."
         actions={
-          <div className="metric-chip flex h-14 w-16 flex-col items-center justify-center gap-0.5 text-accent">
-            <span className="font-display text-xl font-bold leading-none tabular-nums">
-              {registros.length}
-            </span>
-            <span className="text-[9px] uppercase tracking-widest text-ink-faint">
-              registros
-            </span>
+          <div className="flex items-center gap-2">
+            <PendingSyncIndicator />
+            <div className="metric-chip flex h-14 w-16 flex-col items-center justify-center gap-0.5 text-accent">
+              <span className="font-display text-xl font-bold leading-none tabular-nums">
+                {registros.length}
+              </span>
+              <span className="text-[9px] uppercase tracking-widest text-ink-faint">
+                registros
+              </span>
+            </div>
           </div>
         }
       />
@@ -402,6 +457,12 @@ export function CapturaPage() {
             </div>
           )}
 
+          {saveMessage && (
+            <div className="mt-3 rounded-lg border border-state-success/40 bg-state-success/10 px-3 py-2 text-xs text-state-success">
+              {saveMessage}
+            </div>
+          )}
+
           <button
             type="button"
             disabled={!canSave}
@@ -514,4 +575,3 @@ function PersonRow({ registro, index, onDelete }: PersonRowProps) {
     </div>
   );
 }
-
