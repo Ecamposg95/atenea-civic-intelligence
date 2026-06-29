@@ -1,6 +1,6 @@
 import type { RegistroCreate } from "@/api/registros";
 
-export type SyncStatus = "queued" | "syncing" | "synced" | "error";
+export type SyncStatus = "queued" | "syncing" | "synced" | "error" | "failed";
 
 export interface QueuedRegistro {
   client_uuid: string;

@@ -47,11 +47,15 @@ function isPermanentClientError(status: number | undefined): boolean {
  * a duplicate on the next drain — the server returns the existing record.
  *
  * Retry vs permanent:
- *   - Network errors (status === undefined) and 5xx / 408 / 429 → mark error,
+ *   - Network errors (status === undefined) and 5xx / 408 / 429 → mark "error",
  *     keep attempts++ so the UI can show retries. Will be retried next drain.
- *   - 4xx non-transient (401, 403, 422, …) → also mark error, attempts++.
- *     The `isPermanentClientError` helper can be used by the UI to surface a
- *     "won't auto-retry" warning without the sync engine looping forever.
+ *   - 4xx non-transient (401, 403, 422, …) → mark "failed" (terminal). The row
+ *     is excluded from future drains and from countPending(); surfaced via
+ *     countFailed() so the user can act on it.
+ *
+ * Crash recovery (Fix 1):
+ *   Any row left in "syncing" state from a previous crashed drain is reconciled
+ *   back to "queued" before the drain begins, so it is not silently skipped.
  */
 export async function drainQueue(deps?: DrainDeps): Promise<DrainResult> {
   if (draining) return { synced: 0, failed: 0 };
@@ -62,6 +66,15 @@ export async function drainQueue(deps?: DrainDeps): Promise<DrainResult> {
   let failed = 0;
 
   try {
+    // Fix 1: Reconcile stranded "syncing" rows back to "queued" so they are
+    // not silently skipped if the app crashed mid-drain previously.
+    const allRows = await listQueue();
+    for (const row of allRows) {
+      if (row.status === "syncing") {
+        await markStatus(row.client_uuid, "queued");
+      }
+    }
+
     const rows = await listQueue();
     const pending = rows.filter(
       (r) => r.status === "queued" || r.status === "error",
@@ -77,12 +90,19 @@ export async function drainQueue(deps?: DrainDeps): Promise<DrainResult> {
       } catch (e) {
         const err = e as Error & { status?: number };
         const msg = err.message ?? "Unknown error";
-        // Mark as error in all failure cases. isPermanentClientError is exposed
-        // for callers/UI to distinguish "retry later" from "needs human action".
-        await markStatus(row.client_uuid, "error", {
-          last_error: msg,
-          attempts: row.attempts + 1,
-        });
+        if (isPermanentClientError(err.status)) {
+          // Fix 2: Terminal failure — permanent 4xx (e.g. 422 invalid payload).
+          // Do NOT increment attempts; do NOT auto-retry. Surfaced via countFailed().
+          await markStatus(row.client_uuid, "failed", {
+            last_error: msg,
+          });
+        } else {
+          // Network errors, 5xx, 408, 429 → retryable "error"
+          await markStatus(row.client_uuid, "error", {
+            last_error: msg,
+            attempts: row.attempts + 1,
+          });
+        }
         failed++;
       }
     }

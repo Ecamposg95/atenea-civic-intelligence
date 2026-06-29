@@ -106,8 +106,8 @@ export function CapturaPage() {
       ...(form.colonia.trim() && { colonia: form.colonia.trim() }),
       ...(form.telefono.trim() && { telefono: form.telefono.trim() }),
       ...(form.area.trim() && { area: form.area.trim() }),
-      ...(form.clave_elector.trim() && {
-        clave_elector: form.clave_elector.trim(),
+      ...(form.clave_elector.replace(/\s+/g, "") && {
+        clave_elector: form.clave_elector.replace(/\s+/g, ""),
       }),
       client_uuid: crypto.randomUUID(),
     };

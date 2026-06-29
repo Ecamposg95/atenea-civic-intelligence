@@ -48,3 +48,8 @@ export async function countPending(): Promise<number> {
   const all = await listQueue();
   return all.filter((r) => r.status === "queued" || r.status === "error").length;
 }
+
+export async function countFailed(): Promise<number> {
+  const all = await listQueue();
+  return all.filter((r) => r.status === "failed").length;
+}
