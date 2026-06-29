@@ -2,10 +2,43 @@ import { fileURLToPath, URL } from "node:url";
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { VitePWA } from "vite-plugin-pwa";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: "autoUpdate",
+      injectRegister: "auto",
+      includeAssets: ["favicon.svg"],
+      manifest: {
+        name: "Ágora — Captura de Activistas",
+        short_name: "Ágora",
+        description: "Captura de activistas en campo, también sin conexión.",
+        theme_color: "#0b1220",
+        background_color: "#0b1220",
+        display: "standalone",
+        start_url: "/",
+        icons: [
+          { src: "/pwa-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/pwa-512.png", sizes: "512x512", type: "image/png" },
+          {
+            src: "/pwa-maskable-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,svg,woff2}"],
+        navigateFallback: "/index.html",
+        // Do not cache /api/* — offline capture goes through IndexedDB queue.
+        navigateFallbackDenylist: [/^\/api\//],
+      },
+    }),
+  ],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
