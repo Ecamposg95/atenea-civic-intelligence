@@ -47,6 +47,7 @@ export function CapturaPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [privOpen, setPrivOpen] = useState(false);
 
   const perfilState = useAsync(getPerfil, []);
@@ -94,11 +95,12 @@ export function CapturaPage() {
     async (id: string) => {
       if (!window.confirm("¿Eliminar este registro? Esta acción no se puede deshacer."))
         return;
+      setDeleteError(null);
       try {
         await deleteRegistro(id);
         reloadRegistros();
       } catch {
-        /* ignore */
+        setDeleteError("No se pudo eliminar el registro. Intenta de nuevo.");
       }
     },
     [reloadRegistros],
@@ -362,7 +364,7 @@ export function CapturaPage() {
                 onChange={(e) =>
                   setForm((p) => ({
                     ...p,
-                    clave_elector: e.target.value.toUpperCase(),
+                    clave_elector: e.target.value.toUpperCase().replace(/\s/g, ""),
                   }))
                 }
               />
@@ -424,6 +426,11 @@ export function CapturaPage() {
       </div>
 
       {/* --- Lista de registros --- */}
+      {deleteError && (
+        <div className="mb-3 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-xs text-state-critical">
+          {deleteError}
+        </div>
+      )}
       <Card
         title="Personas registradas"
         accentDot

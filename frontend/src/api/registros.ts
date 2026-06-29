@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import type { UserRole } from "@/types/auth";
 
 export interface Registro {
   id: string;
@@ -35,7 +36,7 @@ export interface RegistroCreate {
 export interface Perfil {
   id: string;
   full_name: string;
-  role: string;
+  role: UserRole;
   seccion: string | null;
   lider_id: string | null;
   lider_nombre: string | null;
