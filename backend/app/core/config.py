@@ -49,6 +49,15 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:5173"]
     )
 
+    # --- Compliance / Retention ---------------------------------------------
+    RETENTION_ENABLED: bool = Field(default=False)
+    RETENTION_DAYS_AFTER_ELECTION: int = Field(default=180)
+    RETENTION_PURGE_SOFT_DELETED_DAYS: int = Field(default=30)
+
+    # --- Hardening ----------------------------------------------------------
+    LOGIN_RATE_LIMIT: str = Field(default="5/minute")
+    SECURITY_HEADERS_ENABLED: bool = Field(default=True)
+
     # --- SPA ----------------------------------------------------------------
     FRONTEND_DIST: str = Field(default="../frontend/dist")
 
