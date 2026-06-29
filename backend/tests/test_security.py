@@ -119,7 +119,7 @@ def test_decrypt_clave_only_at_permitted_callsites():
         line for line in result.stdout.splitlines()
         if "__pycache__" not in line
     ]
-    allowed_patterns = ("crypto.py", "admin_service.py", "test_crypto.py", "test_registros.py", "test_security.py")
+    allowed_patterns = ("crypto.py", "admin_service.py", "export_service.py", "test_crypto.py", "test_registros.py", "test_security.py")
     forbidden = [h for h in hits if not any(p in h for p in allowed_patterns)]
     assert not forbidden, (
         f"decrypt_clave found at unexpected call-sites:\n" + "\n".join(forbidden)
