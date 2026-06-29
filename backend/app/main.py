@@ -8,6 +8,8 @@ catch-all route so client-side routing survives deep links and refreshes.
 import os
 from contextlib import asynccontextmanager
 
+from typing import Any
+
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -90,6 +92,31 @@ def _configure_cors(app: FastAPI) -> None:
     )
 
 
+_SENSITIVE_FIELDS = frozenset({"clave_elector", "clave_elector_enc", "password", "current_password", "new_password", "telefono"})
+_REDACTED = "***"
+
+
+def _redact_validation_errors(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Strip submitted PII values from Pydantic validation error dicts.
+
+    Pydantic v2 includes an ``input`` key with the submitted value and may also
+    include the offending value inside ``url`` or ``ctx``.  For any error whose
+    location (``loc``) contains a sensitive field name we replace ``input`` with
+    the redaction sentinel.  The ``loc``, ``msg``, and ``type`` keys are kept
+    intact so callers can still act on the error.
+
+    AC-7.5: clave_elector, password, telefono must never appear in 422 bodies.
+    """
+    redacted = []
+    for err in errors:
+        loc: tuple = err.get("loc", ())
+        # Check whether any element of the location tuple is a sensitive field.
+        if any(str(part) in _SENSITIVE_FIELDS for part in loc):
+            err = {k: (v if k not in ("input", "ctx", "url") else _REDACTED) for k, v in err.items()}
+        redacted.append(err)
+    return redacted
+
+
 def _configure_error_handlers(app: FastAPI) -> None:
     """Uniform JSON error envelope (Golden Rule #8)."""
 
@@ -108,7 +135,7 @@ def _configure_error_handlers(app: FastAPI) -> None:
                 "error": {
                     "message": "Validation error",
                     "status": status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    "details": exc.errors(),
+                    "details": _redact_validation_errors(exc.errors()),
                 }
             },
         )
