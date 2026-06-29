@@ -35,6 +35,7 @@ interface CampaignState {
   activeId: string | null;
   campaigns: Campaign[];
   setActive: (id: string) => void;
+  clearActive: () => void;
   setCampaigns: (list: Campaign[]) => void;
 }
 
@@ -44,6 +45,10 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   setActive: (id) => {
     persistId(id);
     set({ activeId: id });
+  },
+  clearActive: () => {
+    persistId(null);
+    set({ activeId: null });
   },
   setCampaigns: (list) => {
     const current = get().activeId;

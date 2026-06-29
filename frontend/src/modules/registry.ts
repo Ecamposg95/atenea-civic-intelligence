@@ -155,6 +155,21 @@ const Historial = lazy(() =>
 const Captura = lazy(() =>
   import("@/modules/captura/CapturaPage").then((m) => ({ default: m.CapturaPage })),
 );
+const AdminDashboard = lazy(() =>
+  import("@/modules/admin/AdminDashboardPage").then((m) => ({
+    default: m.AdminDashboardPage,
+  })),
+);
+const AdminRegistros = lazy(() =>
+  import("@/modules/admin/AdminRegistrosPage").then((m) => ({
+    default: m.AdminRegistrosPage,
+  })),
+);
+const AdminEstructura = lazy(() =>
+  import("@/modules/admin/AdminEstructuraPage").then((m) => ({
+    default: m.AdminEstructuraPage,
+  })),
+);
 
 export const MODULES: ModuleDef[] = [
   // Plataforma (active)
@@ -216,6 +231,11 @@ export const MODULES: ModuleDef[] = [
   { key: "indice", path: "/indice", label: "Índice Cívico-Territorial", section: "gobernanza", icon: AnalyticsIcon, state: "preview", element: Indice },
   { key: "historial", path: "/historial", label: "Historial de ingestas", section: "gobernanza", icon: DatabaseIcon, state: "active", element: Historial, roles: ["superadmin", "admin"] },
   { key: "reportes", path: "/reportes", label: "Reportes Ejecutivos", section: "gobernanza", icon: DatabaseIcon, state: "active", element: Reportes, roles: ["superadmin", "admin"] },
+
+  // Gobernanza — Admin console (role-gated, active)
+  { key: "admin-dashboard", path: "/admin", label: "Consola Activistas", section: "gobernanza", icon: AnalyticsIcon, state: "active", element: AdminDashboard, roles: ["admin", "lider", "superadmin"] },
+  { key: "admin-registros", path: "/admin/registros", label: "Registros (Admin)", section: "gobernanza", icon: VotersIcon, state: "active", element: AdminRegistros, roles: ["admin", "lider", "superadmin"] },
+  { key: "admin-estructura", path: "/admin/estructura", label: "Estructura", section: "administracion", icon: UserIcon, state: "active", element: AdminEstructura, roles: ["admin", "superadmin"] },
 
   // Administración (role-gated, active)
   { key: "users", path: "/users", label: "Usuarios", section: "administracion", icon: UserIcon, state: "active", element: Users, roles: ["superadmin", "admin"] },
