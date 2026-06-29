@@ -14,12 +14,15 @@ from app.models.registro import Registro
 from app.models.user import User, UserRole
 from app.schemas.registro import RegistroCreate, RegistroUpdate
 from app.services.audit_service import record_audit
-
-AVISO_VERSION = "v1"
+from app.services import privacy_service
 
 
 class ConsentRequired(Exception):
     """Raised when a registro is created/updated without consentimiento=True."""
+
+
+# Re-export so callers can catch this from registro_service directly.
+NoActiveNotice = privacy_service.NoActiveNotice
 
 
 def _role_scoped(ctx: CampaignContext):
@@ -52,7 +55,11 @@ def create_registro(db: Session, ctx: CampaignContext, data: RegistroCreate) -> 
             _role_scoped(ctx).where(Registro.client_uuid == data.client_uuid)
         ).scalar_one_or_none()
         if existing is not None:
+            # Idempotent path: return the existing row without creating a duplicate acceptance.
             return existing
+
+    # Resolve the active privacy notice — raises NoActiveNotice if none found.
+    notice = privacy_service.get_active_notice(db, ctx)
 
     clave_enc = crypto.encrypt_clave(data.clave_elector) if data.clave_elector else None
     clave_masked = crypto.mask_clave(data.clave_elector) if data.clave_elector else None
@@ -71,7 +78,7 @@ def create_registro(db: Session, ctx: CampaignContext, data: RegistroCreate) -> 
         clave_masked=clave_masked,
         consentimiento=True,
         consentimiento_at=datetime.now(timezone.utc),
-        aviso_version=AVISO_VERSION,
+        aviso_version=notice.version,
         client_uuid=data.client_uuid,
         lat=data.lat,
         lng=data.lng,
@@ -87,6 +94,7 @@ def create_registro(db: Session, ctx: CampaignContext, data: RegistroCreate) -> 
         entity_type="registro",
         entity_id=reg.id,
     )
+    privacy_service.record_acceptance(db, ctx, reg, notice)
     db.commit()
     db.refresh(reg)
     return reg
