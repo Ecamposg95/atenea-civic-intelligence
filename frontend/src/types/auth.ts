@@ -1,4 +1,4 @@
-export type UserRole = "superadmin" | "admin" | "analyst" | "viewer";
+export type UserRole = "superadmin" | "admin" | "analyst" | "viewer" | "lider" | "activista";
 
 export interface User {
   id: string;
@@ -12,7 +12,7 @@ export interface User {
 }
 
 export interface LoginRequest {
-  email: string;
+  identifier: string;
   password: string;
 }
 

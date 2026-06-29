@@ -26,12 +26,12 @@ const CAPABILITIES = [
 export function LoginPage() {
   const navigate = useNavigate();
   const { login, loading, error } = useAuthStore();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const ok = await login(email, password);
+    const ok = await login(identifier, password);
     if (ok) navigate("/");
   };
 
@@ -159,16 +159,16 @@ export function LoginPage() {
 
               <form className="mt-7 space-y-4" onSubmit={handleSubmit}>
                 <div>
-                  <label htmlFor="email" className="field-label">
-                    Email
+                  <label htmlFor="identifier" className="field-label">
+                    Teléfono o correo
                   </label>
                   <input
-                    id="email"
-                    type="email"
+                    id="identifier"
+                    type="text"
                     className="field-input"
-                    placeholder="analyst@institution.gov"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Teléfono o correo electrónico"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
                     required
                   />
                 </div>

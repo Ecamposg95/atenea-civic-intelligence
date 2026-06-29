@@ -152,6 +152,9 @@ const Busqueda = lazy(() =>
 const Historial = lazy(() =>
   import("@/modules/historial/HistorialPage").then((m) => ({ default: m.HistorialPage })),
 );
+const Captura = lazy(() =>
+  import("@/modules/captura/CapturaPage").then((m) => ({ default: m.CapturaPage })),
+);
 
 export const MODULES: ModuleDef[] = [
   // Plataforma (active)
@@ -180,6 +183,7 @@ export const MODULES: ModuleDef[] = [
   { key: "banxico", path: "/banxico", label: "Macro-financiero (Banxico)", section: "inteligencia", icon: AnalyticsIcon, state: "preview", element: Banxico },
 
   // Ciudadanía
+  { key: "captura", path: "/captura", label: "Captura de Activistas", section: "ciudadania", icon: VotersIcon, state: "active", element: Captura, roles: ["activista", "lider", "admin", "superadmin"] },
   { key: "ai-analyst", path: "/ai-analyst", label: "AI Analyst / Copiloto", section: "ciudadania", icon: AiIcon, state: "preview", element: AiAnalyst },
   { key: "demografia", path: "/demografia", label: "Demografía & Censo", section: "ciudadania", icon: VotersIcon, state: "preview", element: Demografia },
   {
