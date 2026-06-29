@@ -126,8 +126,9 @@ def get_campaign_context(
         ).scalar_one_or_none()
         if member is None:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this campaign")
+    organization_id = campaign.organization_id if ctx.is_superadmin else ctx.organization_id
     return CampaignContext(
-        user=ctx.user, organization_id=ctx.organization_id, role=ctx.role, campaign_id=x_campaign_id
+        user=ctx.user, organization_id=organization_id, role=ctx.role, campaign_id=x_campaign_id
     )
 
 

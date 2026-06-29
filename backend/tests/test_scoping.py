@@ -26,3 +26,23 @@ def test_scoped_query_reference_model_allows_global_or_tenant():
     # nullable-tenant reference model: filter present, no campaign_id (model has none)
     assert "organization_id" in sql
     assert "campaign_id" not in sql
+
+
+def test_scoped_query_superadmin_no_base_skips_filters():
+    sql = str(scoped_query(Contest, _Ctx(None, None, is_super=True)))
+    # The bypass must not add org/campaign conditions to the WHERE clause.
+    # Extract WHERE portion only (SQLAlchemy uses \nFROM\nWHERE formatting).
+    where_part = sql.split("WHERE", 1)[-1] if "WHERE" in sql else ""
+    assert "organization_id" not in where_part
+    assert "campaign_id" not in where_part
+
+
+def test_scoped_query_superadmin_with_base_filters():
+    # Superadmin scoped into a base (org adopted) → normal filtering.
+    sql = str(scoped_query(Contest, _Ctx("org1", "camp1", is_super=True)))
+    assert "organization_id" in sql and "campaign_id" in sql
+
+
+def test_scoped_query_normal_user_unchanged():
+    sql = str(scoped_query(Contest, _Ctx("org1", "camp1", is_super=False)))
+    assert "organization_id" in sql and "campaign_id" in sql
