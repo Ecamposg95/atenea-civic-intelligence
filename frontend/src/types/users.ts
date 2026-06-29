@@ -17,6 +17,8 @@ export interface UserCreatePayload {
   role: UserRole;
   phone?: string | null;
   password?: string | null;
+  lider_id?: string | null;
+  seccion?: string | null;
 }
 
 export interface UserUpdatePayload {
@@ -24,6 +26,8 @@ export interface UserUpdatePayload {
   role?: UserRole;
   phone?: string | null;
   is_active?: boolean;
+  lider_id?: string | null;
+  seccion?: string | null;
 }
 
 export interface UserCreatedResponse {

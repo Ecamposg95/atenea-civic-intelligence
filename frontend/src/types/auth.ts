@@ -9,6 +9,8 @@ export interface User {
   is_active: boolean;
   phone?: string | null;
   must_change_password?: boolean;
+  lider_id?: string | null;
+  seccion?: string | null;
 }
 
 export interface LoginRequest {
