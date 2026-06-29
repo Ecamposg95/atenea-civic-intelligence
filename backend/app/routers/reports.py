@@ -10,9 +10,13 @@ from app.services import report_service
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
-# admin + lider may access reports; activista/viewer excluded.
+# Wide read access: admin, coordinador, lider, analyst, viewer, consulta.
+# ACTIVISTA and CAPTURISTA are intentionally excluded from aggregated reports.
 # Superadmin always passes (handled inside require_roles).
-ReportsCtx = Annotated[object, Depends(require_roles(UserRole.ADMIN, UserRole.LIDER))]
+ReportsCtx = Annotated[object, Depends(require_roles(
+    UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER,
+    UserRole.ANALYST, UserRole.VIEWER, UserRole.CONSULTA,
+))]
 
 
 @router.get("/secciones", response_model=SeccionReport)

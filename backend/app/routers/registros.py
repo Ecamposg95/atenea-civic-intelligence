@@ -13,10 +13,11 @@ from app.services import registro_service
 
 router = APIRouter(tags=["registros"])
 
-# Role gate: only activistas, líderes, and admins may read or write registros.
+# Role gate: activistas, capturistas, líderes, and admins may read or write registros.
+# COORDINADOR is intentionally excluded from capture — they use the console.
 # Superadmins auto-pass (see require_roles). This runs *alongside* CampaignCtx
 # on each capture endpoint (the same pattern used by the ingest router).
-CapturaCtx = Annotated[object, Depends(require_roles(UserRole.ACTIVISTA, UserRole.LIDER, UserRole.ADMIN))]
+CapturaCtx = Annotated[object, Depends(require_roles(UserRole.ACTIVISTA, UserRole.CAPTURISTA, UserRole.LIDER, UserRole.ADMIN))]
 
 
 @router.post("/registros", response_model=RegistroRead, status_code=201)

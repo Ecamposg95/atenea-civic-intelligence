@@ -20,8 +20,8 @@ from app.services import export_service
 
 router = APIRouter(tags=["export"])
 
-# ADMIN + LIDER may download exports (scoping is enforced in the service layer).
-ExportCtx = Annotated[object, Depends(require_roles(UserRole.ADMIN, UserRole.LIDER))]
+# ADMIN + COORDINADOR + LIDER may download exports (scoping enforced in service layer).
+ExportCtx = Annotated[object, Depends(require_roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER))]
 
 
 @router.get("/registros/export")

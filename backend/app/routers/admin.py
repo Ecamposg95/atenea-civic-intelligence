@@ -20,8 +20,8 @@ from app.utils.pagination import PaginationParams
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-# Console read access: admin + lider (lider is role-scoped to their estructura).
-ConsoleCtx = Annotated[object, Depends(require_roles(UserRole.ADMIN, UserRole.LIDER))]
+# Console read access: admin + coordinador + lider (each scoped by service layer).
+ConsoleCtx = Annotated[object, Depends(require_roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER))]
 # Reveal + auditoria: admin only (lider/activista excluded; superadmin auto-passes).
 AdminOnly = Annotated[object, Depends(require_roles(UserRole.ADMIN))]
 

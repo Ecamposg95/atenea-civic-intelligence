@@ -208,9 +208,15 @@ def test_api_secciones_activista_403(client):
     assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
 
 
-def test_api_secciones_viewer_403(client):
-    """VIEWER cannot access the reports endpoint — must get 403."""
+def test_api_secciones_viewer_200(client):
+    """VIEWER is now allowed on reports (RBAC v2 matrix) — must get 200."""
     resp = client.get("/api/reports/secciones", headers=_hdr(client, "viewer@alpha.gov", ALPHA_CAMPAIGN_ID))
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+
+
+def test_api_secciones_capturista_403(client):
+    """CAPTURISTA is excluded from reports — must get 403."""
+    resp = client.get("/api/reports/secciones", headers=_hdr(client, "capturista@alpha.gov", ALPHA_CAMPAIGN_ID))
     assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
 
 
