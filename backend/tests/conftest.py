@@ -23,6 +23,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.security import hash_password
 from app.database import Base, get_db
 from app.main import app
+from app.models.arco import ArcoRequest
 from app.models.audit_log import AuditLog
 from app.models.campaign import Campaign, CampaignMembership, Contest
 from app.models.catalog import Ambito, Cargo, Coalition, CoalitionParty, Party
@@ -54,6 +55,7 @@ Base.metadata.create_all(
         Organization.__table__,
         User.__table__,
         AuditLog.__table__,
+        ArcoRequest.__table__,
         ElectoralArea.__table__,
         Cargo.__table__,
         Party.__table__,
