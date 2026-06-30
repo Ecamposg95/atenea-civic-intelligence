@@ -157,24 +157,43 @@ def _seed() -> None:
 
 
 def _seed_demo_activists() -> None:
-    """Idempotently seed lucy (LIDER) + one activista + demo campaign + memberships.
+    """Idempotently seed a 4-level hierarchy for demo/local use.
+
+    Structure (COORDINADOR → LIDER → ACTIVISTA + CAPTURISTA):
+      lucy        = COORDINADOR  (no lider_id, no coordinador_id)
+      lider       = LIDER        (coordinador_id = lucy.id)
+      activista   = ACTIVISTA    (lider_id = lider.id)
+      capturista  = CAPTURISTA   (no hierarchy FKs)
 
     Env-gated: skipped entirely when SEED_LUCY_PASSWORD or SEED_ACTIVISTA_PASSWORD
     is absent so no secrets are accidentally committed.  All steps are idempotent;
     re-running produces no duplicates and no errors.
 
+    Transition logic: if lucy already exists as LIDER (legacy), her role is
+    promoted to COORDINADOR and lider_id/coordinador_id are cleared.  If the
+    activista already points to lucy (old wiring), she is re-wired to the new
+    LIDER.
+
     Required env vars:
-      SEED_LUCY_EMAIL          (default: lucy@demo.agora.mx)
-      SEED_LUCY_PASSWORD       (required; no default — absent → skip)
-      SEED_ACTIVISTA_EMAIL     (default: activista@demo.agora.mx)
-      SEED_ACTIVISTA_PASSWORD  (required; no default — absent → skip)
-      SEED_ORG_SLUG            (default: atlas — must match the org seeded by _seed)
-      SEED_DEMO_CAMPAIGN_NAME  (default: Campaña Demo 2027)
+      SEED_LUCY_EMAIL            (default: lucy@demo.agora.mx)
+      SEED_LUCY_PASSWORD         (required; no default — absent → skip)
+      SEED_LIDER_EMAIL           (default: lider@demo.agora.mx)
+      SEED_LIDER_PASSWORD        (default: SEED_ACTIVISTA_PASSWORD)
+      SEED_ACTIVISTA_EMAIL       (default: activista@demo.agora.mx)
+      SEED_ACTIVISTA_PASSWORD    (required; no default — absent → skip)
+      SEED_CAPTURISTA_EMAIL      (default: capturista@demo.agora.mx)
+      SEED_CAPTURISTA_PASSWORD   (optional — absent → capturista skipped)
+      SEED_ORG_SLUG              (default: atlas — must match the org seeded by _seed)
+      SEED_DEMO_CAMPAIGN_NAME    (default: Campaña Demo 2027)
     """
     lucy_email = os.getenv("SEED_LUCY_EMAIL", "lucy@demo.agora.mx")
     lucy_password = os.getenv("SEED_LUCY_PASSWORD")
+    lider_email = os.getenv("SEED_LIDER_EMAIL", "lider@demo.agora.mx")
     activista_email = os.getenv("SEED_ACTIVISTA_EMAIL", "activista@demo.agora.mx")
     activista_password = os.getenv("SEED_ACTIVISTA_PASSWORD")
+    lider_password = os.getenv("SEED_LIDER_PASSWORD") or activista_password
+    capturista_email = os.getenv("SEED_CAPTURISTA_EMAIL", "capturista@demo.agora.mx")
+    capturista_password = os.getenv("SEED_CAPTURISTA_PASSWORD")
     org_slug = os.getenv("SEED_ORG_SLUG", "atlas")
     campaign_name = os.getenv("SEED_DEMO_CAMPAIGN_NAME", "Campaña Demo 2027")
 
@@ -213,15 +232,15 @@ def _seed_demo_activists() -> None:
             db.flush()
             logger.info("Seeded demo campaign '%s'", campaign_name)
 
-        # -- lucy (LIDER) ---------------------------------------------------
+        # -- lucy (COORDINADOR) --------------------------------------------
         lucy = db.execute(
             select(User).where(User.email == lucy_email)
         ).scalar_one_or_none()
         if lucy is None:
             lucy = User(
                 email=lucy_email,
-                full_name="Lucy — Dirigente de Activismo",
-                role=UserRole.LIDER,
+                full_name="Lucy — Coordinadora de Activismo",
+                role=UserRole.COORDINADOR,
                 organization_id=org.id,
                 hashed_password=hash_password(lucy_password),
                 is_active=True,
@@ -229,9 +248,44 @@ def _seed_demo_activists() -> None:
             )
             db.add(lucy)
             db.flush()
-            logger.info("Seeded demo LIDER '%s'", lucy_email)
+            logger.info("Seeded demo COORDINADOR '%s'", lucy_email)
+        else:
+            # Promote to COORDINADOR if still at legacy LIDER role.
+            if lucy.role != UserRole.COORDINADOR:
+                lucy.role = UserRole.COORDINADOR
+                logger.info(
+                    "Promoted existing '%s' from %s → COORDINADOR",
+                    lucy_email, lucy.role.value,
+                )
+            # A coordinador has no upward FK.
+            lucy.lider_id = None
+            lucy.coordinador_id = None
+            db.flush()
 
-        # -- activista (ACTIVISTA) ------------------------------------------
+        # -- demo lider (LIDER under lucy) ---------------------------------
+        lider = db.execute(
+            select(User).where(User.email == lider_email)
+        ).scalar_one_or_none()
+        if lider is None:
+            lider = User(
+                email=lider_email,
+                full_name="Líder Demo",
+                role=UserRole.LIDER,
+                organization_id=org.id,
+                coordinador_id=lucy.id,
+                hashed_password=hash_password(lider_password),
+                is_active=True,
+                must_change_password=False,
+            )
+            db.add(lider)
+            db.flush()
+            logger.info("Seeded demo LIDER '%s'", lider_email)
+        else:
+            if lider.coordinador_id != lucy.id:
+                lider.coordinador_id = lucy.id
+                db.flush()
+
+        # -- activista (ACTIVISTA under the lider) -------------------------
         activista = db.execute(
             select(User).where(User.email == activista_email)
         ).scalar_one_or_none()
@@ -241,7 +295,7 @@ def _seed_demo_activists() -> None:
                 full_name="Activista Demo",
                 role=UserRole.ACTIVISTA,
                 organization_id=org.id,
-                lider_id=lucy.id,
+                lider_id=lider.id,
                 hashed_password=hash_password(activista_password),
                 is_active=True,
                 must_change_password=False,
@@ -250,9 +304,46 @@ def _seed_demo_activists() -> None:
             db.add(activista)
             db.flush()
             logger.info("Seeded demo ACTIVISTA '%s'", activista_email)
+        else:
+            # Re-wire if still pointing at lucy (old structure).
+            if activista.lider_id != lider.id:
+                activista.lider_id = lider.id
+                db.flush()
+
+        # -- capturista (CAPTURISTA, no hierarchy FKs) ---------------------
+        capturista = None
+        if capturista_password:
+            capturista = db.execute(
+                select(User).where(User.email == capturista_email)
+            ).scalar_one_or_none()
+            if capturista is None:
+                capturista = User(
+                    email=capturista_email,
+                    full_name="Capturista Demo",
+                    role=UserRole.CAPTURISTA,
+                    organization_id=org.id,
+                    hashed_password=hash_password(capturista_password),
+                    is_active=True,
+                    must_change_password=False,
+                )
+                db.add(capturista)
+                db.flush()
+                logger.info("Seeded demo CAPTURISTA '%s'", capturista_email)
+        else:
+            logger.info(
+                "SEED_CAPTURISTA_PASSWORD not set — skipping capturista seed."
+            )
 
         # -- campaign memberships (idempotent by unique constraint) ---------
-        for user, mem_role in ((lucy, UserRole.LIDER), (activista, UserRole.ACTIVISTA)):
+        seed_members = [
+            (lucy, UserRole.COORDINADOR),
+            (lider, UserRole.LIDER),
+            (activista, UserRole.ACTIVISTA),
+        ]
+        if capturista is not None:
+            seed_members.append((capturista, UserRole.CAPTURISTA))
+
+        for user, mem_role in seed_members:
             existing_mem = db.execute(
                 select(CampaignMembership).where(
                     CampaignMembership.user_id == user.id,
