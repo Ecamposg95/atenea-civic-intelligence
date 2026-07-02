@@ -116,9 +116,12 @@ def create_registro(db: Session, ctx: CampaignContext, data: RegistroCreate) -> 
 
 
 def list_registros(
-    db: Session, ctx: CampaignContext, q: Optional[str], limit: int, offset: int
+    db: Session, ctx: CampaignContext, q: Optional[str],
+    limit: int, offset: int, scope: str = "team",
 ) -> tuple[list[Registro], int]:
     stmt = _role_scoped(ctx)
+    if scope == "mine":
+        stmt = stmt.where(Registro.activista_id == ctx.user.id)
     if q:
         like = f"%{q}%"
         stmt = stmt.where(
@@ -132,7 +135,19 @@ def list_registros(
         .scalars()
         .all()
     )
-    return list(rows), total
+    rows = list(rows)
+    # Resolve capturer names in one query (no N+1). activista_nombre is a
+    # transient attribute read by RegistroRead (from_attributes); never mapped.
+    ids = {r.activista_id for r in rows if r.activista_id}
+    names: dict[str, str] = {}
+    if ids:
+        for uid, fname in db.execute(
+            select(User.id, User.full_name).where(User.id.in_(ids))
+        ).all():
+            names[uid] = fname
+    for r in rows:
+        r.activista_nombre = names.get(r.activista_id)
+    return rows, total
 
 
 def get_registro(

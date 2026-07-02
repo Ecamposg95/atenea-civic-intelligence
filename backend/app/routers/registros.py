@@ -1,5 +1,5 @@
 """Activist capture router: /registros + /perfil."""
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -13,15 +13,19 @@ from app.services import registro_service
 
 router = APIRouter(tags=["registros"])
 
-# Role gate: activistas, capturistas, líderes, and admins may read or write registros.
-# COORDINADOR is intentionally excluded from capture — they use the console.
-# Superadmins auto-pass (see require_roles). This runs *alongside* CampaignCtx
-# on each capture endpoint (the same pattern used by the ingest router).
-CapturaCtx = Annotated[object, Depends(require_roles(UserRole.ACTIVISTA, UserRole.CAPTURISTA, UserRole.LIDER, UserRole.ADMIN))]
+# Escritura: activistas, capturistas, líderes, admins (COORDINADOR se excluye a
+# propósito — usa la consola, no captura). Superadmins auto-pasan.
+CapturaWriteCtx = Annotated[object, Depends(require_roles(
+    UserRole.ACTIVISTA, UserRole.CAPTURISTA, UserRole.LIDER, UserRole.ADMIN))]
+# Lectura: lo mismo + COORDINADOR (ve a su estructura; el scoping real lo impone
+# _role_scoped en el service).
+CapturaReadCtx = Annotated[object, Depends(require_roles(
+    UserRole.ACTIVISTA, UserRole.CAPTURISTA, UserRole.LIDER,
+    UserRole.COORDINADOR, UserRole.ADMIN))]
 
 
 @router.post("/registros", response_model=RegistroRead, status_code=201)
-def create(data: RegistroCreate, db: DbSession, ctx: CampaignCtx, _perm: CapturaCtx) -> RegistroRead:
+def create(data: RegistroCreate, db: DbSession, ctx: CampaignCtx, _perm: CapturaWriteCtx) -> RegistroRead:
     if ctx.is_superadmin and not ctx.organization_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Select a base first")
     try:
@@ -33,18 +37,19 @@ def create(data: RegistroCreate, db: DbSession, ctx: CampaignCtx, _perm: Captura
 
 @router.get("/registros/mios", response_model=RegistroList)
 def list_mine(
-    db: DbSession, ctx: CampaignCtx, _perm: CapturaCtx,
+    db: DbSession, ctx: CampaignCtx, _perm: CapturaReadCtx,
     q: Annotated[Optional[str], Query()] = None,
+    scope: Annotated[Literal["mine", "team"], Query()] = "team",
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> RegistroList:
-    rows, total = registro_service.list_registros(db, ctx, q, limit, offset)
+    rows, total = registro_service.list_registros(db, ctx, q, limit, offset, scope)
     return RegistroList(items=[RegistroRead.model_validate(r) for r in rows],
                         total=total, limit=limit, offset=offset)
 
 
 @router.get("/registros/{registro_id}", response_model=RegistroRead)
-def get_one(registro_id: str, db: DbSession, ctx: CampaignCtx, _perm: CapturaCtx) -> RegistroRead:
+def get_one(registro_id: str, db: DbSession, ctx: CampaignCtx, _perm: CapturaReadCtx) -> RegistroRead:
     reg = registro_service.get_registro(db, ctx, registro_id)
     if reg is None:
         raise HTTPException(status_code=404, detail="Registro not found")
@@ -52,7 +57,7 @@ def get_one(registro_id: str, db: DbSession, ctx: CampaignCtx, _perm: CapturaCtx
 
 
 @router.put("/registros/{registro_id}", response_model=RegistroRead)
-def update(registro_id: str, data: RegistroUpdate, db: DbSession, ctx: CampaignCtx, _perm: CapturaCtx) -> RegistroRead:
+def update(registro_id: str, data: RegistroUpdate, db: DbSession, ctx: CampaignCtx, _perm: CapturaWriteCtx) -> RegistroRead:
     try:
         reg = registro_service.update_registro(db, ctx, registro_id, data)
     except registro_service.ConsentRequired:
@@ -63,7 +68,7 @@ def update(registro_id: str, data: RegistroUpdate, db: DbSession, ctx: CampaignC
 
 
 @router.delete("/registros/{registro_id}", status_code=204)
-def delete(registro_id: str, db: DbSession, ctx: CampaignCtx, _perm: CapturaCtx) -> None:
+def delete(registro_id: str, db: DbSession, ctx: CampaignCtx, _perm: CapturaWriteCtx) -> None:
     if not registro_service.delete_registro(db, ctx, registro_id):
         raise HTTPException(status_code=404, detail="Registro not found")
 
