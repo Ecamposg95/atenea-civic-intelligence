@@ -63,12 +63,21 @@ export function CapturaPage() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [privOpen, setPrivOpen] = useState(false);
+  const [scope, setScope] = useState<"mine" | "team">("team");
 
   const isOnline = useOnlineStatus();
   const { refresh: refreshPending, triggerSync } = usePendingSyncStore();
 
   const perfilState = useAsync(getPerfil, []);
-  const registrosState = useAsync(() => listMisRegistros("team"), []);
+  const teamRoles = ["LIDER", "COORDINADOR", "ADMIN", "SUPERADMIN"];
+  const hasTeam = Boolean(
+    perfilState.data && teamRoles.includes(perfilState.data.role),
+  );
+  const effectiveScope = hasTeam ? scope : "mine";
+  const registrosState = useAsync(
+    () => listMisRegistros(effectiveScope),
+    [effectiveScope],
+  );
 
   const { reload: reloadRegistros } = registrosState;
 
@@ -560,9 +569,29 @@ export function CapturaPage() {
         title="Personas registradas"
         accentDot
         action={
-          <span className="pill border-line text-ink-muted">
-            {registros.length} total
-          </span>
+          <div className="flex items-center gap-2">
+            {hasTeam && (
+              <div className="flex rounded-lg border border-line p-0.5 text-xs">
+                {(["mine", "team"] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setScope(s)}
+                    className={`rounded-md px-2.5 py-1 font-semibold transition-colors ${
+                      scope === s
+                        ? "bg-accent/10 text-accent"
+                        : "text-ink-muted hover:text-ink"
+                    }`}
+                  >
+                    {s === "mine" ? "Míos" : "Todo el equipo"}
+                  </button>
+                ))}
+              </div>
+            )}
+            <span className="pill border-line text-ink-muted">
+              {registros.length} total
+            </span>
+          </div>
         }
       >
         <DataState
@@ -582,6 +611,7 @@ export function CapturaPage() {
                 key={r.id}
                 registro={r}
                 index={i}
+                showActivista={hasTeam}
                 onDelete={handleDelete}
               />
             ))}
@@ -597,10 +627,11 @@ export function CapturaPage() {
 interface PersonRowProps {
   registro: Registro;
   index: number;
+  showActivista: boolean;
   onDelete: (id: string) => Promise<void>;
 }
 
-function PersonRow({ registro, index, onDelete }: PersonRowProps) {
+function PersonRow({ registro, index, showActivista, onDelete }: PersonRowProps) {
   return (
     <div className="flex gap-3 py-3 first:pt-0">
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/10 font-display text-xs font-bold text-accent">
@@ -609,6 +640,11 @@ function PersonRow({ registro, index, onDelete }: PersonRowProps) {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-ink">{registro.nombre_completo}</p>
         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-ink-faint">
+          {showActivista && registro.activista_nombre && (
+            <span className="font-semibold text-accent">
+              {registro.activista_nombre}
+            </span>
+          )}
           {registro.seccion && <span>Secc. {registro.seccion}</span>}
           {registro.telefono && <span>{registro.telefono}</span>}
           {registro.colonia && <span>{registro.colonia}</span>}
