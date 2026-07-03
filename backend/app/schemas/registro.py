@@ -119,3 +119,4 @@ class PerfilRead(BaseModel):
     lider_id: Optional[str]
     lider_nombre: Optional[str]
     organization_id: Optional[str]
+    area: Optional[dict] = None   # {"id","nombre","nivel"} | None

@@ -79,8 +79,13 @@ def perfil(db: DbSession, ctx: Tenant) -> PerfilRead:
     if ctx.user.lider_id:
         lider = db.execute(select(User).where(User.id == ctx.user.lider_id)).scalar_one_or_none()
         lider_nombre = lider.full_name if lider else None
+    area = None
+    if ctx.user.area_id and ctx.user.area:
+        area = {"id": ctx.user.area.id, "nombre": ctx.user.area.name,
+                "nivel": ctx.user.area.level.value}
     return PerfilRead(
         id=ctx.user.id, full_name=ctx.user.full_name, role=ctx.user.role,
         seccion=ctx.user.seccion, lider_id=ctx.user.lider_id,
         lider_nombre=lider_nombre, organization_id=ctx.organization_id,
+        area=area,
     )

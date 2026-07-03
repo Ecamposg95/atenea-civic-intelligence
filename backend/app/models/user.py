@@ -81,5 +81,13 @@ class User(UUIDMixin, AuditMixin, Base):
         "ElectoralArea", lazy="joined", foreign_keys=[area_id]
     )
 
+    @property
+    def area_nombre(self) -> Optional[str]:
+        return self.area.name if self.area else None
+
+    @property
+    def area_nivel(self) -> Optional[str]:
+        return self.area.level.value if self.area else None
+
     def __repr__(self) -> str:  # pragma: no cover
         return f"<User id={self.id} email={self.email!r} role={self.role}>"

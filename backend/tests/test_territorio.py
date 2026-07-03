@@ -72,3 +72,51 @@ def test_scope_secciones_empty_without_area():
         assert territory_service.scope_secciones(db, user) == set()
     finally:
         db.close()
+
+
+from tests.conftest import auth_headers, ALPHA_CAMPAIGN_ID
+
+
+def _superhdr(client):
+    return auth_headers(client, "super@atlas.gov")
+
+
+def test_only_superadmin_assigns_territory(client):
+    from app.models.user import User
+    muni_id = _seed_muni_with_secciones()
+    coord_id = _user_id(client, "coord@alpha.gov")
+
+    # admin (not superadmin) → 403
+    r = client.put(f"/api/users/{coord_id}/territorio",
+                   json={"area_id": muni_id}, headers=auth_headers(client, "admin@alpha.gov"))
+    assert r.status_code == 403, r.text
+
+    # superadmin → 200 and area shows on the user
+    r = client.put(f"/api/users/{coord_id}/territorio",
+                   json={"area_id": muni_id}, headers=_superhdr(client))
+    assert r.status_code == 200, r.text
+    assert r.json()["area_nombre"] == "San Mateo Atenco"
+
+    # nonexistent area → 404
+    r = client.put(f"/api/users/{coord_id}/territorio",
+                   json={"area_id": "does-not-exist"}, headers=_superhdr(client))
+    assert r.status_code == 404
+
+
+def test_territory_search_and_perfil(client):
+    _seed_muni_with_secciones()
+    r = client.get("/api/territory/search", params={"q": "San Mateo"},
+                   headers=auth_headers(client, "admin@alpha.gov"))
+    assert r.status_code == 200
+    assert any(a["name"] == "San Mateo Atenco" for a in r.json())
+
+
+def _user_id(client, email):
+    from sqlalchemy import select
+    from app.models.user import User
+    from tests.conftest import TestingSessionLocal
+    db = TestingSessionLocal()
+    try:
+        return db.execute(select(User.id).where(User.email == email)).scalar_one()
+    finally:
+        db.close()

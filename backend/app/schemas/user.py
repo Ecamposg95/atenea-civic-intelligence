@@ -55,8 +55,15 @@ class UserRead(UserBase):
     lider_id: str | None
     coordinador_id: str | None
     seccion: str | None
+    area_id: str | None = None
+    area_nombre: str | None = None
+    area_nivel: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class TerritorioAssign(BaseModel):
+    area_id: str | None = None
 
 
 class UserCreated(BaseModel):

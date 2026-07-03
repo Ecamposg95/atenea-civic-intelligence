@@ -7,15 +7,18 @@ authenticated user (even when a forced change is pending).
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import select
 
 from app.dependencies import CurrentUser, DbSession, TenantContext, require_roles
+from app.models.electoral_area import ElectoralArea
 from app.models.user import UserRole
 from app.schemas.pagination import Page
 from app.schemas.user import (
     ChangePasswordRequest,
     PasswordResetResult,
     SelfUpdate,
+    TerritorioAssign,
     UserCreate,
     UserCreated,
     UserRead,
@@ -34,6 +37,10 @@ CreatorCtx = Annotated[
     TenantContext,
     Depends(require_roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER)),
 ]
+
+# Territory assignment: only superadmin (require_roles() with zero roles → only
+# superadmin auto-passes; see app/dependencies.py:require_roles).
+SuperadminCtx = Annotated[TenantContext, Depends(require_roles())]
 
 
 @router.post(
@@ -147,3 +154,20 @@ def deactivate_user(user_id: str, db: DbSession, ctx: ManagerCtx) -> UserRead:
 def reset_password(user_id: str, db: DbSession, ctx: ManagerCtx) -> PasswordResetResult:
     user, temp_password = users_service.admin_reset_password(db, ctx, user_id)
     return PasswordResetResult(user_id=user.id, temporary_password=temp_password)
+
+
+@router.put("/{user_id}/territorio", response_model=UserRead, summary="Assign territory (superadmin)")
+def assign_territory(
+    user_id: str, payload: TerritorioAssign, db: DbSession, ctx: SuperadminCtx
+) -> UserRead:
+    user = users_service.get_user(db, ctx, user_id)
+    if payload.area_id is not None:
+        area = db.execute(
+            select(ElectoralArea).where(ElectoralArea.id == payload.area_id)
+        ).scalar_one_or_none()
+        if area is None:
+            raise HTTPException(status_code=404, detail="Área no encontrada")
+    user.area_id = payload.area_id
+    db.commit()
+    db.refresh(user)
+    return UserRead.model_validate(user)
