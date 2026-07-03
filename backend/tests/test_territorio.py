@@ -24,3 +24,51 @@ def test_seccion_electoral_table_is_created():
         assert row.anio == 2024 and row.prioridad == "COMPETITIVA"
     finally:
         db.close()
+
+
+from sqlalchemy import select
+from tests.conftest import TestingSessionLocal
+from app.models.electoral_area import ElectoralArea, AreaLevel
+from app.services import territory_service
+
+
+def _seed_muni_with_secciones():
+    db = TestingSessionLocal()
+    try:
+        muni = ElectoralArea(name="San Mateo Atenco", code="15076",
+                             level=AreaLevel.MUNICIPIO, organization_id=None)
+        db.add(muni); db.flush()
+        s1 = ElectoralArea(name="Sección 4121", code="4121", level=AreaLevel.SECCION,
+                           organization_id=None, municipio_id=muni.id, parent_id=muni.id)
+        s2 = ElectoralArea(name="Sección 4122", code="4122", level=AreaLevel.SECCION,
+                           organization_id=None, municipio_id=muni.id, parent_id=muni.id)
+        db.add_all([s1, s2]); db.commit()
+        return muni.id
+    finally:
+        db.close()
+
+
+def test_scope_secciones_for_municipio():
+    from app.models.user import User
+    muni_id = _seed_muni_with_secciones()
+    db = TestingSessionLocal()
+    try:
+        user = db.execute(select(User).where(User.email == "coord@alpha.gov")).scalar_one()
+        user.area_id = muni_id
+        db.commit()
+        secs = territory_service.scope_secciones(db, user)
+        assert secs == {"4121", "4122"}
+    finally:
+        db.close()
+
+
+def test_scope_secciones_empty_without_area():
+    from app.models.user import User
+    db = TestingSessionLocal()
+    try:
+        user = db.execute(select(User).where(User.email == "lider@alpha.gov")).scalar_one()
+        user.area_id = None
+        db.commit()
+        assert territory_service.scope_secciones(db, user) == set()
+    finally:
+        db.close()
