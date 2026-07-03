@@ -59,12 +59,21 @@ def test_consulta_forbidden_on_admin_and_capture(client):
 # ---------------------------------------------------------------------------
 
 # Representative GET endpoints, one per router being gated.
-_INTEL_ENDPOINTS = [
+# Territory/operational intel: COORDINADOR keeps these — they back the modules a
+# campaign/territory operator owns (Command Center dashboard, Map Explorer,
+# Territorios). analytics/overview in particular feeds the dashboard she keeps.
+_INTEL_TERRITORY_ENDPOINTS = [
     "/api/analytics/overview",
     "/api/maps/areas",
     "/api/territory/children",
+]
+# Reference-dataset proxy (IEEM / World Bank): national/state datasets, not
+# campaign data. A COORDINADOR is a field operator, not an intelligence viewer,
+# so these are denied to her (kept for analyst/viewer/lider/admin).
+_INTEL_REFERENCE_ENDPOINTS = [
     "/api/intel/ieem/datasets",
 ]
+_INTEL_ENDPOINTS = _INTEL_TERRITORY_ENDPOINTS + _INTEL_REFERENCE_ENDPOINTS
 
 _BLOCKED_ON_INTEL = [
     "activista1@alpha.gov",   # ACTIVISTA
@@ -74,11 +83,7 @@ _BLOCKED_ON_INTEL = [
 
 
 def test_intelligence_blocks_activista_capturista_consulta(client):
-    """Activista / capturista / consulta must receive 403 on intelligence endpoints.
-
-    RED: these return 200 before gating (routers are open to any authed user).
-    GREEN: return 403 after require_roles guard is added to each router.
-    """
+    """Activista / capturista / consulta must receive 403 on all intelligence endpoints."""
     for ep in _INTEL_ENDPOINTS:
         for email in _BLOCKED_ON_INTEL:
             code = client.get(ep, headers=_ih(client, email)).status_code
@@ -86,11 +91,23 @@ def test_intelligence_blocks_activista_capturista_consulta(client):
 
 
 def test_intelligence_allows_viewer_and_above(client):
-    """Viewer (and admin/lider/coordinador) must reach intelligence endpoints."""
+    """Viewer / lider / admin must reach every intelligence endpoint."""
     for ep in _INTEL_ENDPOINTS:
-        for email in ("viewer@alpha.gov", "admin@alpha.gov", "lider@alpha.gov", "coord@alpha.gov"):
+        for email in ("viewer@alpha.gov", "admin@alpha.gov", "lider@alpha.gov"):
             code = client.get(ep, headers=_ih(client, email)).status_code
             assert code not in (401, 403), f"{ep} [{email}] expected access, got {code}"
+
+
+def test_coordinador_reaches_territory_intel_but_not_reference(client):
+    """COORDINADOR is a campaign/territory operator, not an intelligence viewer:
+    she keeps dashboard/maps/territorios data but is denied the reference-dataset
+    proxy (IEEM / World Bank)."""
+    for ep in _INTEL_TERRITORY_ENDPOINTS:
+        code = client.get(ep, headers=_ih(client, "coord@alpha.gov")).status_code
+        assert code not in (401, 403), f"{ep} [coord] expected access, got {code}"
+    for ep in _INTEL_REFERENCE_ENDPOINTS:
+        code = client.get(ep, headers=_ih(client, "coord@alpha.gov")).status_code
+        assert code == 403, f"{ep} [coord] expected 403, got {code}"
 
 
 def test_sources_blocks_viewer_capturista_consulta_activista(client):

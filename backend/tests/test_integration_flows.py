@@ -612,7 +612,9 @@ class TestRbacMatrixFlow:
     # -- COORDINADOR -----------------------------------------------------------
 
     def test_coordinador_console_and_intel_access(self, client):
-        """COORDINADOR reads admin console + intelligence; blocked from capture/reveal."""
+        """COORDINADOR reads admin console + territory analytics; blocked from
+        capture/reveal AND from the reference-dataset intel proxy (she is a
+        campaign/territory operator, not an intelligence viewer)."""
         h = _hdr(client, "coord@alpha.gov")
         ih = auth_headers(client, "coord@alpha.gov")
 
@@ -633,8 +635,9 @@ class TestRbacMatrixFlow:
             headers=h,
         ).status_code == 403
 
-        # Intelligence: 200
-        assert client.get("/api/intel/ieem/datasets", headers=ih).status_code == 200
+        # Reference-dataset proxy (IEEM / World Bank): 403 — not campaign data.
+        assert client.get("/api/intel/ieem/datasets", headers=ih).status_code == 403
+        # Territory analytics (feeds her Command Center dashboard): 200.
         assert client.get("/api/analytics/overview", headers=ih).status_code == 200
 
         # Reports: 200

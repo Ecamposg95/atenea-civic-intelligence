@@ -15,9 +15,12 @@ from app.integrations.intel import ieem, worldbank
 from app.integrations.intel.cache import TTLCache
 from app.integrations.ine.base import IneSourceError
 
-# Intelligence read: admin/coordinador/lider/analyst/viewer; superadmin auto-passes.
+# Reference-dataset proxy (IEEM / World Bank): national/state data, not campaign
+# data. Intentionally excludes COORDINADOR — a coordinador is a campaign/territory
+# operator, not an intelligence viewer. Kept for admin/lider/analyst/viewer;
+# superadmin auto-passes.
 _INTEL_READ = Depends(require_roles(
-    UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER, UserRole.ANALYST, UserRole.VIEWER,
+    UserRole.ADMIN, UserRole.LIDER, UserRole.ANALYST, UserRole.VIEWER,
 ))
 
 router = APIRouter(prefix="/intel", tags=["intel"], dependencies=[_INTEL_READ])

@@ -51,8 +51,16 @@ const ALL: UserRole[] = [
   "superadmin", "admin", "coordinador", "lider",
   "activista", "capturista", "analyst", "viewer", "consulta",
 ];
-const INTEL: UserRole[] = ["superadmin", "admin", "coordinador", "lider", "analyst", "viewer"];
-const CONSOLE: UserRole[] = ["superadmin", "admin", "coordinador", "lider"];
+// Broad intelligence library (reference datasets, analytics, search). A
+// COORDINADOR is a campaign/territory operator, NOT an intelligence viewer, so
+// she is intentionally excluded here.
+const INTEL: UserRole[] = ["superadmin", "admin", "lider", "analyst", "viewer"];
+// Territory/operational intel a coordinador DOES keep (Map Explorer, Territorios).
+const INTEL_TERRITORY: UserRole[] = ["superadmin", "admin", "coordinador", "lider", "analyst", "viewer"];
+// Generic console tier (e.g. Participación) — coordinador excluded.
+const CONSOLE: UserRole[] = ["superadmin", "admin", "lider"];
+// Activist console a coordinador owns (dashboard, registros).
+const CONSOLE_COORD: UserRole[] = ["superadmin", "admin", "coordinador", "lider"];
 const ADMINY: UserRole[] = ["superadmin", "admin"];
 const REPORTS: UserRole[] = ["superadmin", "admin", "coordinador", "lider", "analyst", "viewer", "consulta"];
 
@@ -184,7 +192,7 @@ const AdminEstructura = lazy(() =>
 export const MODULES: ModuleDef[] = [
   // Plataforma (active)
   { key: "dashboard", path: "/", label: "Command Center", section: "plataforma", icon: DashboardIcon, state: "active", element: Dashboard, end: true, roles: ALL },
-  { key: "maps", path: "/maps", label: "Map Explorer", section: "plataforma", icon: MapIcon, state: "active", element: MapExplorer, roles: INTEL },
+  { key: "maps", path: "/maps", label: "Map Explorer", section: "plataforma", icon: MapIcon, state: "active", element: MapExplorer, roles: INTEL_TERRITORY },
   { key: "analytics", path: "/analytics", label: "Activity Analytics", section: "plataforma", icon: AnalyticsIcon, state: "active", element: Analytics, roles: INTEL },
   { key: "sources", path: "/sources", label: "Fuentes de datos", section: "plataforma", icon: DatabaseIcon, state: "active", element: Sources, roles: ["superadmin", "admin", "analyst"] },
   { key: "busqueda", path: "/busqueda", label: "Búsqueda global", section: "plataforma", icon: SearchIcon, state: "active", element: Busqueda, roles: INTEL },
@@ -200,7 +208,7 @@ export const MODULES: ModuleDef[] = [
       dataSource: "Candidaturas MX (apielectoral.mx) — ya integrada en el backend.",
     },
   },
-  { key: "territorios", path: "/territorios", label: "Territorios & Secciones", section: "inteligencia", icon: LayersIcon, state: "active", element: Territorios, roles: INTEL },
+  { key: "territorios", path: "/territorios", label: "Territorios & Secciones", section: "inteligencia", icon: LayersIcon, state: "active", element: Territorios, roles: INTEL_TERRITORY },
   { key: "ieem", path: "/ieem", label: "Estado de México (IEEM)", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Ieem, roles: INTEL },
   { key: "worldbank", path: "/indicadores", label: "Indicadores Nacionales", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: WorldBank, roles: INTEL },
   { key: "economia", path: "/economia", label: "Economía Territorial", section: "inteligencia", icon: DatabaseIcon, state: "preview", element: Economia, roles: INTEL },
@@ -243,8 +251,8 @@ export const MODULES: ModuleDef[] = [
   { key: "reportes", path: "/reportes", label: "Reportes Ejecutivos", section: "gobernanza", icon: DatabaseIcon, state: "active", element: Reportes, roles: REPORTS },
 
   // Gobernanza — Admin console (role-gated, active)
-  { key: "admin-dashboard", path: "/admin", label: "Consola Activistas", section: "gobernanza", icon: AnalyticsIcon, state: "active", element: AdminDashboard, roles: CONSOLE },
-  { key: "admin-registros", path: "/admin/registros", label: "Registros (Admin)", section: "gobernanza", icon: VotersIcon, state: "active", element: AdminRegistros, roles: CONSOLE },
+  { key: "admin-dashboard", path: "/admin", label: "Consola Activistas", section: "gobernanza", icon: AnalyticsIcon, state: "active", element: AdminDashboard, roles: CONSOLE_COORD },
+  { key: "admin-registros", path: "/admin/registros", label: "Registros (Admin)", section: "gobernanza", icon: VotersIcon, state: "active", element: AdminRegistros, roles: CONSOLE_COORD },
   { key: "admin-estructura", path: "/admin/estructura", label: "Estructura", section: "administracion", icon: UserIcon, state: "active", element: AdminEstructura, roles: ["superadmin", "admin", "coordinador"] },
 
   // Administración (role-gated, active)
