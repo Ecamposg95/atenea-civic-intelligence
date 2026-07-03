@@ -18,6 +18,15 @@ def _validate_clave(v: Optional[str]) -> Optional[str]:
     return cleaned
 
 
+def _validate_sexo(v: Optional[str]) -> Optional[str]:
+    if v is None or v == "":
+        return None
+    cleaned = v.strip().upper()
+    if cleaned not in ("M", "F"):
+        raise ValueError("sexo must be 'M' or 'F'")
+    return cleaned
+
+
 class RegistroCreate(BaseModel):
     nombre_completo: str = Field(min_length=2, max_length=255)
     seccion: Optional[str] = Field(default=None, max_length=20)
@@ -25,6 +34,10 @@ class RegistroCreate(BaseModel):
     colonia: Optional[str] = Field(default=None, max_length=255)
     telefono: Optional[str] = Field(default=None, max_length=40)
     area: Optional[str] = Field(default=None, max_length=120)
+    sexo: Optional[str] = Field(default=None)
+    edad: Optional[int] = Field(default=None, ge=0, le=120)
+    estructura: Optional[str] = Field(default=None, max_length=120)
+    observacion: Optional[str] = Field(default=None, max_length=1000)
     clave_elector: Optional[str] = Field(default=None)
     consentimiento: bool
     client_uuid: Optional[str] = Field(default=None, max_length=64)
@@ -36,6 +49,11 @@ class RegistroCreate(BaseModel):
     def _clave(cls, v):
         return _validate_clave(v)
 
+    @field_validator("sexo")
+    @classmethod
+    def _sexo(cls, v):
+        return _validate_sexo(v)
+
 
 class RegistroUpdate(BaseModel):
     nombre_completo: Optional[str] = Field(default=None, min_length=2, max_length=255)
@@ -44,6 +62,10 @@ class RegistroUpdate(BaseModel):
     colonia: Optional[str] = Field(default=None, max_length=255)
     telefono: Optional[str] = Field(default=None, max_length=40)
     area: Optional[str] = Field(default=None, max_length=120)
+    sexo: Optional[str] = Field(default=None)
+    edad: Optional[int] = Field(default=None, ge=0, le=120)
+    estructura: Optional[str] = Field(default=None, max_length=120)
+    observacion: Optional[str] = Field(default=None, max_length=1000)
     clave_elector: Optional[str] = Field(default=None)
     consentimiento: Optional[bool] = None
 
@@ -51,6 +73,11 @@ class RegistroUpdate(BaseModel):
     @classmethod
     def _clave(cls, v):
         return _validate_clave(v)
+
+    @field_validator("sexo")
+    @classmethod
+    def _sexo(cls, v):
+        return _validate_sexo(v)
 
 
 class RegistroRead(BaseModel):
@@ -66,6 +93,11 @@ class RegistroRead(BaseModel):
     colonia: Optional[str]
     telefono: Optional[str]
     area: Optional[str]
+    sexo: Optional[str]
+    edad: Optional[int]
+    estructura: Optional[str]
+    observacion: Optional[str]
+    activista_nombre: Optional[str] = None
     clave_masked: Optional[str]
     consentimiento: bool
     consentimiento_at: Optional[datetime]

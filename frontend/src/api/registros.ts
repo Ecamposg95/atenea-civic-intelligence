@@ -9,6 +9,11 @@ export interface Registro {
   colonia: string | null;
   telefono: string | null;
   area: string | null;
+  sexo: string | null;
+  edad: number | null;
+  estructura: string | null;
+  observacion: string | null;
+  activista_nombre: string | null;
   clave_masked: string | null;
   consentimiento: boolean;
   created_at: string;
@@ -28,6 +33,10 @@ export interface RegistroCreate {
   colonia?: string;
   telefono?: string;
   area?: string;
+  sexo?: string;
+  edad?: number;
+  estructura?: string;
+  observacion?: string;
   clave_elector?: string;
   consentimiento: boolean;
   client_uuid?: string;
@@ -48,9 +57,12 @@ export async function getPerfil(): Promise<Perfil> {
   return data;
 }
 
-export async function listMisRegistros(q?: string): Promise<RegistroList> {
+export async function listMisRegistros(
+  scope: "mine" | "team" = "team",
+  q?: string,
+): Promise<RegistroList> {
   const { data } = await apiClient.get<RegistroList>("/registros/mios", {
-    params: q ? { q } : {},
+    params: { scope, ...(q ? { q } : {}) },
   });
   return data;
 }

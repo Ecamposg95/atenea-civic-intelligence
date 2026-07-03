@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
-    Boolean, DateTime, Float, ForeignKey, Index, LargeBinary, String, UniqueConstraint,
+    Boolean, DateTime, Float, ForeignKey, Index, Integer, LargeBinary, String, UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,6 +33,10 @@ class Registro(UUIDMixin, TenantMixin, CampaignMixin, AuditMixin, Base):
     colonia: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     telefono: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
     area: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    sexo: Mapped[Optional[str]] = mapped_column(String(1), nullable=True)          # "M" | "F"
+    edad: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    estructura: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    observacion: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
 
     clave_elector_enc: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
     clave_masked: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)

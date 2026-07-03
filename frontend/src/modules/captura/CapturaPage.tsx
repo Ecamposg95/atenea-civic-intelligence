@@ -27,7 +27,10 @@ interface FormState {
   direccion: string;
   colonia: string;
   telefono: string;
-  area: string;
+  sexo: string;      // "" | "M" | "F"
+  edad: string;      // string en el input, se castea al enviar
+  estructura: string;
+  observacion: string;
   clave_elector: string;
   consentimiento: boolean;
 }
@@ -38,7 +41,10 @@ const EMPTY_FORM: FormState = {
   direccion: "",
   colonia: "",
   telefono: "",
-  area: "",
+  sexo: "",
+  edad: "",
+  estructura: "",
+  observacion: "",
   clave_elector: "",
   consentimiento: false,
 };
@@ -57,12 +63,21 @@ export function CapturaPage() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [privOpen, setPrivOpen] = useState(false);
+  const [scope, setScope] = useState<"mine" | "team">("team");
 
   const isOnline = useOnlineStatus();
   const { refresh: refreshPending, triggerSync } = usePendingSyncStore();
 
   const perfilState = useAsync(getPerfil, []);
-  const registrosState = useAsync(listMisRegistros, []);
+  const teamRoles = ["LIDER", "COORDINADOR", "ADMIN", "SUPERADMIN"];
+  const hasTeam = Boolean(
+    perfilState.data && teamRoles.includes(perfilState.data.role),
+  );
+  const effectiveScope = hasTeam ? scope : "mine";
+  const registrosState = useAsync(
+    () => listMisRegistros(effectiveScope),
+    [effectiveScope],
+  );
 
   const { reload: reloadRegistros } = registrosState;
 
@@ -86,10 +101,12 @@ export function CapturaPage() {
 
   const claveLen = form.clave_elector.replace(/\s/g, "").length;
   const claveWarn = claveLen > 0 && claveLen !== 18;
+  const edadWarn = form.edad.trim() !== "" && Number(form.edad) > 120;
   const canSave =
     form.nombre_completo.trim().length > 1 &&
     form.consentimiento &&
     !claveWarn &&
+    !edadWarn &&
     !submitting;
 
   const handleSubmit = useCallback(async () => {
@@ -105,7 +122,10 @@ export function CapturaPage() {
       ...(form.direccion.trim() && { direccion: form.direccion.trim() }),
       ...(form.colonia.trim() && { colonia: form.colonia.trim() }),
       ...(form.telefono.trim() && { telefono: form.telefono.trim() }),
-      ...(form.area.trim() && { area: form.area.trim() }),
+      ...(form.sexo && { sexo: form.sexo }),
+      ...(form.edad.trim() && { edad: Number(form.edad) }),
+      ...(form.estructura.trim() && { estructura: form.estructura.trim() }),
+      ...(form.observacion.trim() && { observacion: form.observacion.trim() }),
       ...(form.clave_elector.replace(/\s+/g, "") && {
         clave_elector: form.clave_elector.replace(/\s+/g, ""),
       }),
@@ -318,6 +338,82 @@ export function CapturaPage() {
               />
             </div>
 
+            {/* Sexo */}
+            <div>
+              <span className="field-label">Sexo</span>
+              <div className="mt-1 flex gap-2">
+                {(["M", "F"] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() =>
+                      setForm((p) => ({ ...p, sexo: p.sexo === s ? "" : s }))
+                    }
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+                      form.sexo === s
+                        ? "border-accent bg-accent/10 text-accent"
+                        : "border-line text-ink-muted hover:border-accent/40"
+                    }`}
+                  >
+                    {s === "M" ? "Masculino" : "Femenino"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Clave de elector */}
+            <div className="sm:col-span-2">
+              <label htmlFor="cap-clave" className="field-label">
+                Clave de elector
+              </label>
+              <input
+                id="cap-clave"
+                type="text"
+                className={`field-input ${claveWarn ? "border-state-warning focus:border-state-warning focus:ring-state-warning/30" : ""}`}
+                placeholder="18 caracteres (mayúsculas)"
+                value={form.clave_elector}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    clave_elector: e.target.value.toUpperCase().replace(/\s/g, ""),
+                  }))
+                }
+              />
+              {claveWarn ? (
+                <p className="mt-1 text-xs text-state-warning">
+                  Lleva 18 caracteres ({claveLen} capturados)
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-ink-faint">
+                  Opcional · como aparece en la credencial
+                </p>
+              )}
+            </div>
+
+            {/* Edad */}
+            <div>
+              <label htmlFor="cap-edad" className="field-label">Edad</label>
+              <input
+                id="cap-edad"
+                type="text"
+                inputMode="numeric"
+                className={`field-input ${edadWarn ? "border-state-warning focus:border-state-warning focus:ring-state-warning/30" : ""}`}
+                placeholder="Años"
+                value={form.edad}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    edad: e.target.value.replace(/\D/g, "").slice(0, 3),
+                  }))
+                }
+              />
+              {edadWarn && (
+                <p className="mt-1 text-xs text-state-warning">
+                  Edad máxima 120
+                </p>
+              )}
+            </div>
+
             {/* Sección */}
             <div>
               <label htmlFor="cap-seccion" className="field-label">
@@ -332,24 +428,6 @@ export function CapturaPage() {
                 value={form.seccion}
                 onChange={(e) =>
                   setForm((p) => ({ ...p, seccion: e.target.value }))
-                }
-              />
-            </div>
-
-            {/* Teléfono */}
-            <div>
-              <label htmlFor="cap-telefono" className="field-label">
-                Teléfono
-              </label>
-              <input
-                id="cap-telefono"
-                type="text"
-                inputMode="tel"
-                className="field-input"
-                placeholder="10 dígitos"
-                value={form.telefono}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, telefono: e.target.value }))
                 }
               />
             </div>
@@ -388,50 +466,52 @@ export function CapturaPage() {
               />
             </div>
 
-            {/* Área / Programa */}
+            {/* Teléfono */}
             <div>
-              <label htmlFor="cap-area" className="field-label">
-                Área / Programa
+              <label htmlFor="cap-telefono" className="field-label">
+                Teléfono
               </label>
               <input
-                id="cap-area"
+                id="cap-telefono"
                 type="text"
+                inputMode="tel"
                 className="field-input"
-                placeholder="Ej. Salud, Educación"
-                value={form.area}
+                placeholder="10 dígitos"
+                value={form.telefono}
                 onChange={(e) =>
-                  setForm((p) => ({ ...p, area: e.target.value }))
+                  setForm((p) => ({ ...p, telefono: e.target.value }))
                 }
               />
             </div>
 
-            {/* Clave de elector */}
-            <div className="sm:col-span-2">
-              <label htmlFor="cap-clave" className="field-label">
-                Clave de elector
-              </label>
+            {/* Estructura */}
+            <div>
+              <label htmlFor="cap-estructura" className="field-label">Estructura</label>
               <input
-                id="cap-clave"
+                id="cap-estructura"
                 type="text"
-                className={`field-input ${claveWarn ? "border-state-warning focus:border-state-warning focus:ring-state-warning/30" : ""}`}
-                placeholder="18 caracteres (mayúsculas)"
-                value={form.clave_elector}
+                className="field-input"
+                placeholder="Red o estructura"
+                value={form.estructura}
                 onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    clave_elector: e.target.value.toUpperCase().replace(/\s/g, ""),
-                  }))
+                  setForm((p) => ({ ...p, estructura: e.target.value }))
                 }
               />
-              {claveWarn ? (
-                <p className="mt-1 text-xs text-state-warning">
-                  Lleva 18 caracteres ({claveLen} capturados)
-                </p>
-              ) : (
-                <p className="mt-1 text-xs text-ink-faint">
-                  Opcional · como aparece en la credencial
-                </p>
-              )}
+            </div>
+
+            {/* Observación */}
+            <div className="sm:col-span-2">
+              <label htmlFor="cap-observacion" className="field-label">Observación</label>
+              <textarea
+                id="cap-observacion"
+                rows={2}
+                className="field-input resize-y"
+                placeholder="Notas u observaciones"
+                value={form.observacion}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, observacion: e.target.value }))
+                }
+              />
             </div>
           </div>
 
@@ -496,9 +576,29 @@ export function CapturaPage() {
         title="Personas registradas"
         accentDot
         action={
-          <span className="pill border-line text-ink-muted">
-            {registros.length} total
-          </span>
+          <div className="flex items-center gap-2">
+            {hasTeam && (
+              <div className="flex rounded-lg border border-line p-0.5 text-xs">
+                {(["mine", "team"] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setScope(s)}
+                    className={`rounded-md px-2.5 py-1 font-semibold transition-colors ${
+                      scope === s
+                        ? "bg-accent/10 text-accent"
+                        : "text-ink-muted hover:text-ink"
+                    }`}
+                  >
+                    {s === "mine" ? "Míos" : "Todo el equipo"}
+                  </button>
+                ))}
+              </div>
+            )}
+            <span className="pill border-line text-ink-muted">
+              {registros.length} total
+            </span>
+          </div>
         }
       >
         <DataState
@@ -518,6 +618,7 @@ export function CapturaPage() {
                 key={r.id}
                 registro={r}
                 index={i}
+                showActivista={hasTeam}
                 onDelete={handleDelete}
               />
             ))}
@@ -533,10 +634,11 @@ export function CapturaPage() {
 interface PersonRowProps {
   registro: Registro;
   index: number;
+  showActivista: boolean;
   onDelete: (id: string) => Promise<void>;
 }
 
-function PersonRow({ registro, index, onDelete }: PersonRowProps) {
+function PersonRow({ registro, index, showActivista, onDelete }: PersonRowProps) {
   return (
     <div className="flex gap-3 py-3 first:pt-0">
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/10 font-display text-xs font-bold text-accent">
@@ -545,10 +647,19 @@ function PersonRow({ registro, index, onDelete }: PersonRowProps) {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-ink">{registro.nombre_completo}</p>
         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-ink-faint">
+          {showActivista && registro.activista_nombre && (
+            <span className="font-semibold text-accent">
+              {registro.activista_nombre}
+            </span>
+          )}
           {registro.seccion && <span>Secc. {registro.seccion}</span>}
+          {registro.sexo && <span>{registro.sexo === "M" ? "M" : "F"}</span>}
+          {registro.edad != null && <span>{registro.edad} años</span>}
           {registro.telefono && <span>{registro.telefono}</span>}
           {registro.colonia && <span>{registro.colonia}</span>}
-          {registro.area && <span>{registro.area}</span>}
+          {(registro.estructura ?? registro.area) && (
+            <span>{registro.estructura ?? registro.area}</span>
+          )}
           {registro.clave_masked && <span>{registro.clave_masked}</span>}
         </div>
       </div>
