@@ -188,6 +188,9 @@ const AdminEstructura = lazy(() =>
     default: m.AdminEstructuraPage,
   })),
 );
+const Promovidos = lazy(() =>
+  import("@/modules/promovidos/PromovidosPage").then((m) => ({ default: m.PromovidosPage })),
+);
 
 export const MODULES: ModuleDef[] = [
   // Plataforma (active)
@@ -217,6 +220,7 @@ export const MODULES: ModuleDef[] = [
 
   // Ciudadanía
   { key: "captura", path: "/captura", label: "Captura de Activistas", section: "ciudadania", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "admin", "lider", "activista", "capturista"] },
+  { key: "promovidos", path: "/promovidos", label: "Promovidos", section: "ciudadania", icon: VotersIcon, state: "active", element: Promovidos, roles: ["superadmin", "admin", "coordinador", "lider"] },
   { key: "ai-analyst", path: "/ai-analyst", label: "AI Analyst / Copiloto", section: "ciudadania", icon: AiIcon, state: "preview", element: AiAnalyst, roles: ["superadmin", "admin", "coordinador", "analyst"] },
   { key: "demografia", path: "/demografia", label: "Demografía & Censo", section: "ciudadania", icon: VotersIcon, state: "preview", element: Demografia, roles: INTEL },
   {
