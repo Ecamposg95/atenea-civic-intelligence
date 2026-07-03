@@ -37,6 +37,7 @@ class Registro(UUIDMixin, TenantMixin, CampaignMixin, AuditMixin, Base):
     edad: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     estructura: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     observacion: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    promotor: Mapped[Optional[str]] = mapped_column(String(160), nullable=True)
 
     clave_elector_enc: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
     clave_masked: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)

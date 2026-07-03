@@ -16,6 +16,7 @@ from app.database import Base
 from app.models.base import AuditMixin, UUIDMixin
 
 if TYPE_CHECKING:
+    from app.models.electoral_area import ElectoralArea
     from app.models.organization import Organization
 
 
@@ -66,10 +67,19 @@ class User(UUIDMixin, AuditMixin, Base):
         String(36), ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
     )
     seccion: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    # Territorial assignment: which electoral area (any level) this user is
+    # scoped to for territory-based dashboards/filters (SP-territorio).
+    area_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("electoral_areas.id", ondelete="SET NULL"),
+        index=True, nullable=True,
+    )
     # Forces a password change on next login (temp-password onboarding flow).
     must_change_password: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     organization: Mapped[Optional["Organization"]] = relationship(back_populates="users")
+    area: Mapped[Optional["ElectoralArea"]] = relationship(
+        "ElectoralArea", lazy="joined", foreign_keys=[area_id]
+    )
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<User id={self.id} email={self.email!r} role={self.role}>"
