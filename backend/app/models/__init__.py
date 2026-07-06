@@ -5,6 +5,7 @@ for Alembic autogeneration and ``create_all``.
 """
 
 from app.models.arco import ArcoRequest  # noqa: F401
+from app.models.atencion import Caso, CasoEvento, FormDefinition, FormResponse  # noqa: F401
 from app.models.audit_log import AuditLog
 from app.models.campaign import Campaign, CampaignMembership, Contest  # noqa: F401
 from app.models.catalog import Cargo, Coalition, CoalitionParty, Party  # noqa: F401
@@ -24,12 +25,16 @@ __all__ = [
     "Campaign",
     "CampaignMembership",
     "Cargo",
+    "Caso",
+    "CasoEvento",
     "CensusMetric",
     "Coalition",
     "CoalitionParty",
     "Contest",
     "DataSource",
     "ElectoralArea",
+    "FormDefinition",
+    "FormResponse",
     "IngestRun",
     "Militante",
     "Organization",
