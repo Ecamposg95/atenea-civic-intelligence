@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     FERNET_KEY: str = Field(default="")
 
+    # --- Object Storage (S3-compatible) ------------------------------------
+    BUCKET_ENDPOINT: str = Field(default="")
+    BUCKET_ACCESS_KEY_ID: str = Field(default="")
+    BUCKET_SECRET_ACCESS_KEY: str = Field(default="")
+    BUCKET_NAME: str = Field(default="")
+    BUCKET_REGION: str = Field(default="us-east-1")
+
     # --- CORS ---------------------------------------------------------------
     # NoDecode: take the raw env value (comma-separated string) instead of
     # letting pydantic-settings JSON-decode it; the validator below splits it.

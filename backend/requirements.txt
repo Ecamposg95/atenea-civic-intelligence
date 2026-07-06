@@ -34,3 +34,6 @@ pytest==8.3.4
 openpyxl==3.1.5
 pyshp==2.3.1
 pyproj==3.7.0
+
+# --- Object Storage (S3-compatible) ---
+boto3==1.35.99
