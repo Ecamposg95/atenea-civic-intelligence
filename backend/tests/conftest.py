@@ -33,7 +33,7 @@ from app.models.audit_log import AuditLog
 from app.models.campaign import Campaign, CampaignMembership, Contest
 from app.models.catalog import Ambito, Cargo, Coalition, CoalitionParty, Party
 from app.models.census import CensusMetric
-from app.models.electoral_area import ElectoralArea
+from app.models.electoral_area import AreaLevel, ElectoralArea
 from app.models.ingestion import DataSource, IngestRun
 from app.models.organization import Organization
 from app.models.privacy import PrivacyAcceptance, PrivacyNotice
@@ -242,3 +242,80 @@ def auth_headers(client: TestClient, email: str, password: str = PASSWORD) -> di
     resp = client.post("/api/auth/login", json={"email": email, "password": password})
     assert resp.status_code == 200, resp.text
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+
+# ── Militante service fixtures (SPA militantes) ───────────────────────────────
+# CampaignContext builders for the seeded Alpha users, plus a per-test DB session
+# that cleans up militante rows so count-based assertions stay isolated.
+from app.dependencies import CampaignContext  # noqa: E402
+
+
+def _militante_ctx(db, email: str) -> CampaignContext:
+    """Build a CampaignContext for a seeded Alpha user against the Alpha campaign."""
+    user = db.execute(select(User).where(User.email == email)).scalar_one()
+    return CampaignContext(
+        user=user,
+        organization_id=user.organization_id,
+        role=user.role,
+        campaign_id=ALPHA_CAMPAIGN_ID,
+    )
+
+
+@pytest.fixture
+def db_session():
+    """A TestingSessionLocal session that purges militante rows on teardown.
+
+    Militantes and their privacy-acceptance rows are deleted after each test so
+    folio counters and total-count assertions do not leak between tests.
+    """
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.rollback()
+        db.query(Militante).delete()
+        db.query(PrivacyAcceptance).delete()
+        db.commit()
+        db.close()
+
+
+@pytest.fixture
+def activista_ctx(db_session) -> CampaignContext:
+    """Seeded ACTIVISTA (activista1@alpha.gov), líder→coordinador wired in seed."""
+    return _militante_ctx(db_session, "activista1@alpha.gov")
+
+
+@pytest.fixture
+def otro_activista_ctx(db_session) -> CampaignContext:
+    """A DIFFERENT ACTIVISTA (activista2@alpha.gov) in the same campaign."""
+    return _militante_ctx(db_session, "activista2@alpha.gov")
+
+
+@pytest.fixture
+def coordinador_ctx(db_session) -> CampaignContext:
+    """Seeded COORDINADOR (coord@alpha.gov) with territory covering sección 4127.
+
+    The coordinator owns activista1/activista2 through the seeded hierarchy
+    (activista.lider_id -> lider.coordinador_id == coord.id) so role scoping
+    resolves; assigning a SECCION-level area with code "4127" makes the territory
+    gate (list/panorama) admit the militantes captured with seccion="4127".
+    """
+    coord = db_session.execute(
+        select(User).where(User.email == "coord@alpha.gov")
+    ).scalar_one()
+    area = db_session.execute(
+        select(ElectoralArea).where(
+            ElectoralArea.code == "4127", ElectoralArea.level == AreaLevel.SECCION
+        )
+    ).scalar_one_or_none()
+    if area is None:
+        area = ElectoralArea(
+            name="Sección 4127", code="4127", level=AreaLevel.SECCION,
+            organization_id=coord.organization_id,
+        )
+        db_session.add(area)
+        db_session.flush()
+    if coord.area_id != area.id:
+        coord.area_id = area.id
+    db_session.commit()
+    return _militante_ctx(db_session, "coord@alpha.gov")
