@@ -237,7 +237,7 @@ export const MODULES: ModuleDef[] = [
   { key: "captura", path: "/captura", label: "Captura de Activistas", section: "ciudadania", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "admin", "lider", "activista", "capturista"] },
   { key: "promovidos", path: "/promovidos", label: "Promovidos", section: "ciudadania", icon: VotersIcon, state: "active", element: Promovidos, roles: ["superadmin", "admin", "coordinador", "lider"] },
   { key: "militantes-captura", path: "/militantes/captura", label: "Afiliar militante", section: "ciudadania", icon: VotersIcon, state: "active", element: CapturaMilitante, roles: CONSOLE_CAPTURA },
-  { key: "militantes", path: "/militantes", label: "Panorama afiliación", section: "ciudadania", icon: VotersIcon, state: "active", element: PanoramaMilitantes, roles: CONSOLE_COORD, end: true },
+  { key: "militantes", path: "/militantes", label: "Panorama afiliación", section: "ciudadania", icon: VotersIcon, state: "active", element: PanoramaMilitantes, roles: ["superadmin", "admin", "coordinador"], end: true },
   { key: "militantes-lista", path: "/militantes/lista", label: "Padrón de militantes", section: "ciudadania", icon: VotersIcon, state: "active", element: MilitantesList, roles: CONSOLE_COORD },
   { key: "ai-analyst", path: "/ai-analyst", label: "AI Analyst / Copiloto", section: "ciudadania", icon: AiIcon, state: "preview", element: AiAnalyst, roles: ["superadmin", "admin", "coordinador", "analyst"] },
   { key: "demografia", path: "/demografia", label: "Demografía & Censo", section: "ciudadania", icon: VotersIcon, state: "preview", element: Demografia, roles: INTEL },

@@ -6,6 +6,7 @@ from typing import Optional
 
 import sqlalchemy as sa
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import crypto
@@ -54,15 +55,54 @@ def _flag_duplicate(db: Session, ctx: CampaignContext, m: Militante) -> bool:
     return db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one() > 0
 
 
+_FOLIO_MAX_RETRIES = 5
+
+
 def _next_folio(db: Session, ctx: CampaignContext) -> str:
+    """Next folio = MAX existing numeric suffix + 1 for this campaign+prefix.
+
+    Deliberately queries by campaign_id WITHOUT the soft-delete filter (i.e. not
+    via scoped_query): the unique constraint uq_militantes_campaign_folio covers
+    soft-deleted rows too, so a deleted folio must NOT be reused. Basing the next
+    suffix on MAX (not count) also means deletes never lower the counter.
+    """
     year = date.today().year
     prefix = f"SMA-{year}-"
-    count = db.execute(
-        select(func.count()).select_from(
-            scoped_query(Militante, ctx).where(Militante.folio.like(f"{prefix}%")).subquery()
+    folios = db.execute(
+        select(Militante.folio).where(
+            Militante.campaign_id == ctx.campaign_id,
+            Militante.folio.like(f"{prefix}%"),
         )
-    ).scalar_one()
-    return f"{prefix}{count + 1:05d}"
+    ).scalars().all()
+    max_n = 0
+    for folio in folios:
+        suffix = folio[len(prefix):]
+        if suffix.isdigit():
+            max_n = max(max_n, int(suffix))
+    return f"{prefix}{max_n + 1:05d}"
+
+
+def _flush_with_folio_retry(db: Session, ctx: CampaignContext, m: Militante) -> None:
+    """Flush the new militante, retrying on folio unique-constraint collisions.
+
+    Concurrent captures can compute the same next folio and collide on
+    uq_militantes_campaign_folio. On that IntegrityError we roll back to a
+    savepoint, recompute the folio from the current MAX, and retry (bounded).
+    Other IntegrityErrors (e.g. client_uuid) are re-raised immediately.
+    """
+    for attempt in range(_FOLIO_MAX_RETRIES):
+        m.folio = _next_folio(db, ctx)
+        savepoint = db.begin_nested()
+        try:
+            db.flush()
+            savepoint.commit()
+            return
+        except IntegrityError as exc:
+            savepoint.rollback()
+            if "uq_militantes_campaign_folio" not in str(exc.orig):
+                raise
+            if attempt == _FOLIO_MAX_RETRIES - 1:
+                raise
 
 
 def create_militante(db: Session, ctx: CampaignContext, data: MilitanteCreate) -> Militante:
@@ -103,7 +143,7 @@ def create_militante(db: Session, ctx: CampaignContext, data: MilitanteCreate) -
         es_activista=data.es_activista,
         estructura=data.estructura,
         promotor=data.promotor,
-        folio=_next_folio(db, ctx),
+        folio="",  # assigned (with collision retry) by _flush_with_folio_retry
         folio_externo=data.folio_externo,
         fecha_afiliacion=data.fecha_afiliacion or date.today(),
         curp_enc=curp_enc, curp_masked=curp_masked,
@@ -117,7 +157,7 @@ def create_militante(db: Session, ctx: CampaignContext, data: MilitanteCreate) -
         created_by=ctx.user.id,
     )
     db.add(m)
-    db.flush()
+    _flush_with_folio_retry(db, ctx, m)
     flags = compute_quality_flags(m)
     flags["posible_duplicado"] = _flag_duplicate(db, ctx, m)
     m.quality_flags = flags
@@ -151,16 +191,33 @@ def _militante_role_scoped(ctx: CampaignContext):
     return scoped_query(Militante, ctx).where(sa.false())
 
 
+def _bypass_territory(ctx: CampaignContext) -> bool:
+    """Roles exempt from the section-territory gate: platform-wide roles
+    (superadmin/ADMIN) and the field roles that only ever see their own rows
+    (ACTIVISTA/CAPTURISTA), which the role scope already restricts."""
+    return ctx.is_superadmin or ctx.role == UserRole.ADMIN \
+        or ctx.role in (UserRole.ACTIVISTA, UserRole.CAPTURISTA)
+
+
+def _territory_gated(db: Session, ctx: CampaignContext):
+    """Role scope + section-territory gate, the single source of truth shared by
+    list/get (and therefore reveal/set_estado). For non-bypass roles
+    (COORDINADOR/LIDER) an empty territory yields NO rows — they can only see,
+    reveal, and validate militantes inside their assigned secciones, even
+    unowned (activista_id NULL) ones."""
+    stmt = _militante_role_scoped(ctx)
+    if _bypass_territory(ctx):
+        return stmt
+    secciones = territory_service.scope_secciones(db, ctx.user)
+    return stmt.where(Militante.seccion.in_(secciones)) if secciones else stmt.where(sa.false())
+
+
 def list_militantes(db: Session, ctx: CampaignContext, *, seccion, estado, activista,
                     flag, q, limit, offset) -> tuple[list[Militante], int, bool]:
-    secciones = territory_service.scope_secciones(db, ctx.user)
-    bypass_territory = ctx.is_superadmin or ctx.role == UserRole.ADMIN \
-        or ctx.role in (UserRole.ACTIVISTA, UserRole.CAPTURISTA)
-    has_territory = bypass_territory or bool(secciones)
+    has_territory = _bypass_territory(ctx) or bool(
+        territory_service.scope_secciones(db, ctx.user))
 
-    stmt = _militante_role_scoped(ctx)
-    if not bypass_territory:
-        stmt = stmt.where(Militante.seccion.in_(secciones)) if secciones else stmt.where(sa.false())
+    stmt = _territory_gated(db, ctx)
     if seccion:
         stmt = stmt.where(Militante.seccion == seccion)
     if estado:
@@ -170,13 +227,17 @@ def list_militantes(db: Session, ctx: CampaignContext, *, seccion, estado, activ
     if q:
         stmt = stmt.where(Militante.nombre_completo.ilike(f"%{q}%"))
 
-    total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
-    rows = list(db.execute(
-        stmt.order_by(Militante.created_at.desc()).limit(limit).offset(offset)
-    ).scalars().all())
-
-    if flag:  # in-memory filter on the page (quality flags are JSON)
-        rows = [r for r in rows if (r.quality_flags or {}).get(flag)]
+    ordered = stmt.order_by(Militante.created_at.desc())
+    if flag:
+        # quality_flags is JSON — filter in Python, but on the FULL scoped set so
+        # total and paging stay consistent (single-campaign scale makes this cheap).
+        all_rows = list(db.execute(ordered).scalars().all())
+        filtered = [r for r in all_rows if (r.quality_flags or {}).get(flag)]
+        total = len(filtered)
+        rows = filtered[offset:offset + limit]
+    else:
+        total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
+        rows = list(db.execute(ordered.limit(limit).offset(offset)).scalars().all())
 
     ids = {r.activista_id for r in rows if r.activista_id}
     names: dict[str, str] = {}
@@ -192,8 +253,11 @@ def list_militantes(db: Session, ctx: CampaignContext, *, seccion, estado, activ
 
 
 def get_militante(db: Session, ctx: CampaignContext, mid: str) -> Optional[Militante]:
+    # Same role scope + territory gate as list_militantes, so reveal/set_estado
+    # (which route through here) cannot touch militantes outside the caller's
+    # territory — including unowned (activista_id NULL) rows.
     return db.execute(
-        _militante_role_scoped(ctx).where(Militante.id == mid)
+        _territory_gated(db, ctx).where(Militante.id == mid)
     ).scalar_one_or_none()
 
 

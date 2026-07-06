@@ -42,8 +42,54 @@ def test_list_scoped_by_activista(activista_ctx, otro_activista_ctx, db_session)
     assert rows[0].nombre_completo == "Mía"
 
 
+# ── I-3: quality-flag filter must be consistent with total + paging ───────────
+def test_list_flag_filter_total_and_paging(activista_ctx, db_session):
+    # two militantes without CURP (falta_curp True), one with CURP (falta_curp False)
+    militante_service.create_militante(db_session, activista_ctx,
+        MilitanteCreate(nombre_completo="Sin1", consentimiento=True, seccion="4127"))
+    militante_service.create_militante(db_session, activista_ctx,
+        MilitanteCreate(nombre_completo="Sin2", consentimiento=True, seccion="4127"))
+    militante_service.create_militante(db_session, activista_ctx,
+        MilitanteCreate(nombre_completo="Con", consentimiento=True,
+                        curp="LOPA900101MMCXXX01", seccion="4127"))
+    rows, total, _ = militante_service.list_militantes(
+        db_session, activista_ctx, seccion=None, estado=None, activista=None,
+        flag="falta_curp", q=None, limit=50, offset=0)
+    assert total == 2  # count reflects the flag filter, not the unfiltered set
+    assert all((r.quality_flags or {}).get("falta_curp") for r in rows)
+    assert {r.nombre_completo for r in rows} == {"Sin1", "Sin2"}
+
+
+# ── I-2: folio derives from MAX suffix → no reuse after soft-delete ───────────
+def test_folio_not_reused_after_soft_delete(activista_ctx, db_session):
+    from datetime import datetime, timezone
+    m1 = militante_service.create_militante(db_session, activista_ctx,
+        MilitanteCreate(nombre_completo="Uno", consentimiento=True, seccion="4127"))
+    m1.deleted_at = datetime.now(timezone.utc)
+    db_session.commit()
+    m2 = militante_service.create_militante(db_session, activista_ctx,
+        MilitanteCreate(nombre_completo="Dos", consentimiento=True, seccion="4127"))
+    assert m1.folio != m2.folio  # deleted folio not reused
+
+
 # ── Task 6: validate (estado) + reveal (PII) ──────────────────────────────────
 from app.schemas.militante import MilitanteEstadoUpdate
+
+
+# ── I-1: territory gate applies to get/reveal/set_estado, not just list ───────
+def test_coordinador_territory_gates_get_reveal_validate(coordinador_ctx, activista_ctx, db_session):
+    # activista1 sits inside coord's hierarchy, but seccion 9999 is OUTSIDE coord's
+    # territory (4127) → coord must not get / reveal / validate this militante.
+    m = militante_service.create_militante(db_session, activista_ctx,
+        MilitanteCreate(nombre_completo="Fuera", consentimiento=True,
+                        curp="LOPA900101MMCXXX01", clave_elector="LOPXAN90010115M100",
+                        seccion="9999"))
+    assert militante_service.get_militante(db_session, coordinador_ctx, m.id) is None
+    assert militante_service.reveal_militante(db_session, coordinador_ctx, m.id) is None
+    assert militante_service.set_estado(db_session, coordinador_ctx, m.id,
+        MilitanteEstadoUpdate(estado="VALIDADO")) is None
+    # sanity: the capturing activista (territory-exempt) still sees it
+    assert militante_service.get_militante(db_session, activista_ctx, m.id) is not None
 
 
 def test_set_estado_validado_audits(coordinador_ctx, activista_ctx, db_session):
