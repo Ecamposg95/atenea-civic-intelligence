@@ -132,61 +132,77 @@ export default function PanoramaMilitantesPage() {
         emptyMessage="Aún no hay militantes registrados"
       >
         <div className="flex flex-col gap-4">
-          {/* Bloque 1: Avance */}
-          <Card title="Avance" accentDot>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="card-premium p-4">
-                <span className="eyebrow block">Total militantes</span>
-                <div className="mt-2 font-display text-2xl font-bold tabular-nums text-ink">
-                  <AnimatedNumber value={kpis?.total ?? 0} />
+          {/* Bloque 1: Avance — el número que Lucy lee de un vistazo */}
+          <Card title="Avance de afiliación" accentDot>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+              {/* Hero KPI: total de militantes vs. meta */}
+              <div className="hud-corners card-premium relative overflow-hidden p-6 lg:col-span-3">
+                <span className="eyebrow">Total militantes</span>
+                <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="font-display text-5xl font-bold leading-none tabular-nums text-gradient sm:text-6xl">
+                    <AnimatedNumber value={kpis?.total ?? 0} />
+                  </span>
+                  {kpis?.meta ? (
+                    <span className="font-mono text-sm text-ink-faint">
+                      / {kpis.meta.toLocaleString("en-US")} meta
+                    </span>
+                  ) : null}
                 </div>
+
                 {data && data.trend.length > 0 && (
-                  <div className="mt-2 -mb-1">
-                    <Sparkline data={data.trend} height={28} className="w-full" />
+                  <div className="mt-3 -mb-1 max-w-xs">
+                    <Sparkline data={data.trend} height={32} className="w-full" />
+                  </div>
+                )}
+
+                {avancePct != null && (
+                  <div className="mt-5">
+                    <div className="flex items-center justify-between text-xs text-ink-faint">
+                      <span>Avance hacia la meta</span>
+                      <span className="font-mono text-sm font-semibold tabular-nums text-accent">
+                        {(avancePct * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-panel-hover">
+                      <div
+                        className="h-full rounded-full bg-accent-gradient shadow-glow-accent transition-all duration-700 ease-out"
+                        style={{ width: `${(avancePct * 100).toFixed(1)}%` }}
+                      />
+                    </div>
+                    <span className="mt-1 block text-right font-mono text-[11px] text-ink-faint">
+                      {kpis?.total} / {kpis?.meta}
+                    </span>
                   </div>
                 )}
               </div>
-              <div className="card-premium p-4">
-                <span className="eyebrow block">% validados</span>
-                <div className="mt-2 font-display text-2xl font-bold tabular-nums text-teal">
-                  {kpis ? pct(kpis.validados, kpis.total) : "—"}
-                </div>
-                <span className="mt-1 block text-xs text-ink-faint">
-                  {kpis?.validados ?? 0} de {kpis?.total ?? 0}
-                </span>
-              </div>
-              <div className="card-premium p-4">
-                <span className="eyebrow block">Ritmo 7 días</span>
-                <div className="mt-2 font-display text-2xl font-bold tabular-nums text-accent">
-                  <AnimatedNumber value={kpis?.ritmo_7d ?? 0} />
-                </div>
-                <span className="mt-1 block text-xs text-ink-faint">militantes/día</span>
-              </div>
-              <div className="card-premium p-4">
-                <span className="eyebrow block">Ritmo 30 días</span>
-                <div className="mt-2 font-display text-2xl font-bold tabular-nums text-accent">
-                  <AnimatedNumber value={kpis?.ritmo_30d ?? 0} />
-                </div>
-                <span className="mt-1 block text-xs text-ink-faint">militantes/día</span>
-              </div>
-            </div>
 
-            {avancePct != null && (
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-xs text-ink-faint">
-                  <span>Meta de afiliación</span>
-                  <span className="font-mono tabular-nums text-ink-muted">
-                    {kpis?.total} / {kpis?.meta}
+              {/* Métricas de apoyo — deliberadamente más discretas que el hero */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:col-span-2 lg:grid-cols-1">
+                <div className="card-premium p-4">
+                  <span className="eyebrow block">% validados</span>
+                  <div className="mt-1.5 font-display text-xl font-bold tabular-nums text-teal">
+                    {kpis ? pct(kpis.validados, kpis.total) : "—"}
+                  </div>
+                  <span className="mt-0.5 block text-xs text-ink-faint">
+                    {kpis?.validados ?? 0} de {kpis?.total ?? 0}
                   </span>
                 </div>
-                <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-panel-hover">
-                  <div
-                    className="h-full rounded-full bg-accent-gradient shadow-glow transition-all"
-                    style={{ width: `${(avancePct * 100).toFixed(1)}%` }}
-                  />
+                <div className="card-premium p-4">
+                  <span className="eyebrow block">Ritmo 7 días</span>
+                  <div className="mt-1.5 font-display text-xl font-bold tabular-nums text-accent">
+                    <AnimatedNumber value={kpis?.ritmo_7d ?? 0} />
+                  </div>
+                  <span className="mt-0.5 block text-xs text-ink-faint">militantes/día</span>
+                </div>
+                <div className="card-premium p-4">
+                  <span className="eyebrow block">Ritmo 30 días</span>
+                  <div className="mt-1.5 font-display text-xl font-bold tabular-nums text-accent">
+                    <AnimatedNumber value={kpis?.ritmo_30d ?? 0} />
+                  </div>
+                  <span className="mt-0.5 block text-xs text-ink-faint">militantes/día</span>
                 </div>
               </div>
-            )}
+            </div>
           </Card>
 
           {/* Bloque 2: Por sección (SMA) */}

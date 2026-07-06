@@ -66,6 +66,99 @@ const DOC_LABELS: Record<DocTipo, string> = {
   firma: "Firma",
 };
 
+const STEP_LABELS: Record<Step, string> = {
+  1: "Identidad",
+  2: "Contacto",
+  3: "Documentos",
+};
+
+/* Shared button treatments for the wizard nav — larger touch targets
+ * (one-handed field use) with a light tactile microinteraction. */
+const BACK_BTN_CLASS =
+  "inline-flex items-center gap-1.5 rounded-lg border border-line px-5 py-3 text-sm font-semibold text-ink-muted transition-all duration-150 hover:border-accent/40 hover:text-ink active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100";
+const NEXT_BTN_CLASS =
+  "btn-primary gap-1.5 px-6 py-3 text-base transition-transform duration-150 active:scale-[0.97] disabled:active:scale-100";
+
+function ChevronLeftIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------- stepper */
+
+/** 1·2·3 progress indicator: filled+check when done, glowing ring when
+ * active, quiet outline when upcoming. Purely presentational — `step`
+ * still drives which form panel renders below. */
+function StepIndicator({ step }: { step: Step }) {
+  const steps: Step[] = [1, 2, 3];
+  return (
+    <div className="flex items-center" aria-label={`Paso ${step} de 3`}>
+      {steps.map((s, i) => {
+        const done = step > s;
+        const active = step === s;
+        return (
+          <div key={s} className="flex items-center">
+            <div className="flex flex-col items-center gap-1.5">
+              <span
+                className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border font-display text-sm font-bold transition-all duration-300 ${
+                  done
+                    ? "border-teal/60 bg-teal/15 text-teal"
+                    : active
+                      ? "border-accent bg-accent/10 text-accent shadow-glow-accent"
+                      : "border-line text-ink-faint"
+                }`}
+              >
+                {done ? (
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                ) : (
+                  s
+                )}
+              </span>
+              <span
+                className={`hidden font-mono text-[10px] uppercase tracking-wider sm:block ${
+                  active ? "text-accent" : done ? "text-teal" : "text-ink-faint"
+                }`}
+              >
+                {STEP_LABELS[s]}
+              </span>
+            </div>
+            {i < steps.length - 1 && (
+              <div
+                className={`mx-2 h-0.5 w-6 rounded-full transition-colors duration-300 sm:w-10 ${
+                  step > s ? "bg-teal/60" : "bg-line"
+                }`}
+                aria-hidden="true"
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ----------------------------------------------------------- main page */
 
 export default function CapturaMilitantePage() {
@@ -272,22 +365,7 @@ export default function CapturaMilitantePage() {
         title="Registro de"
         accent="Militante"
         subtitle="Captura la afiliación de un militante en tres pasos: identidad, contacto y documentación."
-        actions={
-          <div className="flex items-center gap-2">
-            {([1, 2, 3] as Step[]).map((s) => (
-              <span
-                key={s}
-                className={`pill ${
-                  step === s
-                    ? "border-accent/40 bg-accent/10 text-accent"
-                    : "border-line text-ink-faint"
-                }`}
-              >
-                Paso {s}
-              </span>
-            ))}
-          </div>
-        }
+        actions={<StepIndicator step={step} />}
       />
 
       <Card
@@ -434,9 +512,10 @@ export default function CapturaMilitantePage() {
                 type="button"
                 disabled={!canGoStep2}
                 onClick={() => setStep(2)}
-                className="btn-primary"
+                className={NEXT_BTN_CLASS}
               >
                 Siguiente
+                <ChevronRightIcon />
               </button>
             </div>
           </div>
@@ -598,15 +677,13 @@ export default function CapturaMilitantePage() {
             </div>
 
             <div className="sm:col-span-2 mt-2 flex justify-between">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink-muted transition-colors hover:border-accent/40 hover:text-ink"
-              >
+              <button type="button" onClick={() => setStep(1)} className={BACK_BTN_CLASS}>
+                <ChevronLeftIcon />
                 Atrás
               </button>
-              <button type="button" onClick={() => setStep(3)} className="btn-primary">
+              <button type="button" onClick={() => setStep(3)} className={NEXT_BTN_CLASS}>
                 Siguiente
+                <ChevronRightIcon />
               </button>
             </div>
           </div>
@@ -768,15 +845,16 @@ export default function CapturaMilitantePage() {
                 type="button"
                 onClick={() => setStep(2)}
                 disabled={submitting}
-                className="rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink-muted transition-colors hover:border-accent/40 hover:text-ink disabled:opacity-50"
+                className={BACK_BTN_CLASS}
               >
+                <ChevronLeftIcon />
                 Atrás
               </button>
               <button
                 type="button"
                 disabled={!canSubmit}
                 onClick={() => void handleSubmit()}
-                className="btn-primary"
+                className={NEXT_BTN_CLASS}
               >
                 <svg
                   viewBox="0 0 24 24"

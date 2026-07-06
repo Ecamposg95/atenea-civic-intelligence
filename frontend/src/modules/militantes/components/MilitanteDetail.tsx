@@ -247,12 +247,18 @@ export function MilitanteDetail({ id, onClose, onChanged }: Props) {
                       <span
                         key={k}
                         title={FLAG_LABEL[k]}
-                        className={`pill border-transparent px-2 py-0.5 text-[10px] ${
+                        className={`pill items-center gap-1.5 border-transparent px-2 py-0.5 text-[10px] ${
                           FLAG_CRITICAL[k]
                             ? "bg-state-critical/10 text-state-critical"
                             : "bg-state-warning/10 text-state-warning"
                         }`}
                       >
+                        <span
+                          aria-hidden="true"
+                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                            FLAG_CRITICAL[k] ? "bg-state-critical" : "bg-state-warning"
+                          }`}
+                        />
                         {FLAG_LABEL[k]}
                       </span>
                     ))}

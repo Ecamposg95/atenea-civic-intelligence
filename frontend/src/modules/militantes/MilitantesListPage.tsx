@@ -80,13 +80,13 @@ function QualityDots({ flags }: { flags: QualityFlags | null }) {
     : [];
   if (active.length === 0) return <span className="text-ink-faint">—</span>;
   return (
-    <span className="flex items-center gap-1" aria-label="Banderas de calidad">
+    <span className="flex items-center gap-1.5" aria-label="Banderas de calidad">
       {active.map((k) => (
         <span
           key={k}
           title={FLAG_LABEL[k]}
           aria-hidden="true"
-          className={`h-2 w-2 shrink-0 rounded-full ${
+          className={`h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-panel ${
             FLAG_CRITICAL[k] ? "bg-state-critical" : "bg-state-warning"
           }`}
         />
