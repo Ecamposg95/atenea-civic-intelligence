@@ -61,6 +61,10 @@ const INTEL_TERRITORY: UserRole[] = ["superadmin", "admin", "coordinador", "lide
 const CONSOLE: UserRole[] = ["superadmin", "admin", "lider"];
 // Activist console a coordinador owns (dashboard, registros).
 const CONSOLE_COORD: UserRole[] = ["superadmin", "admin", "coordinador", "lider"];
+// Militante capture — coordinador tier + the field roles that actually affiliate people.
+const CONSOLE_CAPTURA: UserRole[] = [
+  "superadmin", "admin", "coordinador", "lider", "activista", "capturista",
+];
 const ADMINY: UserRole[] = ["superadmin", "admin"];
 const REPORTS: UserRole[] = ["superadmin", "admin", "coordinador", "lider", "analyst", "viewer", "consulta"];
 
@@ -191,6 +195,17 @@ const AdminEstructura = lazy(() =>
 const Promovidos = lazy(() =>
   import("@/modules/promovidos/PromovidosPage").then((m) => ({ default: m.PromovidosPage })),
 );
+const CapturaMilitante = lazy(() =>
+  import("@/modules/militantes/CapturaMilitantePage"),
+);
+const PanoramaMilitantes = lazy(() =>
+  import("@/modules/militantes/PanoramaMilitantesPage"),
+);
+const MilitantesList = lazy(() =>
+  import("@/modules/militantes/MilitantesListPage").then((m) => ({
+    default: m.MilitantesListPage,
+  })),
+);
 
 export const MODULES: ModuleDef[] = [
   // Plataforma (active)
@@ -221,6 +236,9 @@ export const MODULES: ModuleDef[] = [
   // Ciudadanía
   { key: "captura", path: "/captura", label: "Captura de Activistas", section: "ciudadania", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "admin", "lider", "activista", "capturista"] },
   { key: "promovidos", path: "/promovidos", label: "Promovidos", section: "ciudadania", icon: VotersIcon, state: "active", element: Promovidos, roles: ["superadmin", "admin", "coordinador", "lider"] },
+  { key: "militantes-captura", path: "/militantes/captura", label: "Afiliar militante", section: "ciudadania", icon: VotersIcon, state: "active", element: CapturaMilitante, roles: CONSOLE_CAPTURA },
+  { key: "militantes", path: "/militantes", label: "Panorama afiliación", section: "ciudadania", icon: VotersIcon, state: "active", element: PanoramaMilitantes, roles: CONSOLE_COORD, end: true },
+  { key: "militantes-lista", path: "/militantes/lista", label: "Padrón de militantes", section: "ciudadania", icon: VotersIcon, state: "active", element: MilitantesList, roles: CONSOLE_COORD },
   { key: "ai-analyst", path: "/ai-analyst", label: "AI Analyst / Copiloto", section: "ciudadania", icon: AiIcon, state: "preview", element: AiAnalyst, roles: ["superadmin", "admin", "coordinador", "analyst"] },
   { key: "demografia", path: "/demografia", label: "Demografía & Censo", section: "ciudadania", icon: VotersIcon, state: "preview", element: Demografia, roles: INTEL },
   {
