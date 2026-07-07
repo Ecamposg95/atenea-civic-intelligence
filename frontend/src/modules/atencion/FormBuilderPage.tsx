@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { useAsync } from "@/hooks/useAsync";
 import {
   createForm,
@@ -124,6 +125,7 @@ export function FormBuilderPage() {
 
   const secciones = schema.secciones ?? [];
   const clampedSectionIdx = Math.min(selectedSectionIdx, Math.max(0, secciones.length - 1));
+  const totalCampos = secciones.reduce((acc, s) => acc + s.campos.length, 0);
 
   /* ------------------------------------------------------ meta handlers */
 
@@ -330,7 +332,7 @@ export function FormBuilderPage() {
 
       {/* Saved forms switcher */}
       {savedForms.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="reveal mb-4 flex flex-wrap gap-2" style={{ animationDelay: "40ms" }}>
           {savedForms.map((f) => (
             <button
               key={f.id}
@@ -358,7 +360,7 @@ export function FormBuilderPage() {
       )}
 
       {/* Meta */}
-      <div className="reveal mb-4" style={{ animationDelay: "160ms" }}>
+      <div className="reveal mb-4" style={{ animationDelay: "100ms" }}>
         <Card title="Datos del formulario" accentDot>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <label className="flex flex-col gap-1.5 sm:col-span-2">
@@ -446,7 +448,15 @@ export function FormBuilderPage() {
       </div>
 
       {/* Left: palette + sections | Center: structure | Right: preview */}
-      <div className="reveal grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr_380px]" style={{ animationDelay: "200ms" }}>
+      <div className="reveal mb-4" style={{ animationDelay: "160ms" }}>
+        <SectionHeading
+          eyebrow="Constructor"
+          title="Diseño del formulario"
+          note={`${secciones.length} sección${secciones.length === 1 ? "" : "es"} · ${totalCampos} campo${totalCampos === 1 ? "" : "s"}`}
+        />
+      </div>
+
+      <div className="reveal grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr_380px]" style={{ animationDelay: "220ms" }}>
         {/* Left column */}
         <div className="flex flex-col gap-4">
           <Card title="Agregar campo" accentDot>
