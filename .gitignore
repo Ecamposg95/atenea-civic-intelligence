@@ -46,3 +46,6 @@ docs/data/
 *.xlsx
 *.xls
 *.csv
+
+# --- Claude Code local (settings + agent worktrees) ---
+.claude/
