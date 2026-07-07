@@ -3,6 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
+import { MetricCard } from "@/components/ui/MetricCard";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { StatusPill } from "@/components/ui/StatusPill";
 import { AlertIcon, ShieldIcon } from "@/components/ui/icons";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getPerfil } from "@/api/registros";
@@ -303,7 +306,7 @@ export default function CapturaMilitantePage() {
     return (
       <AppLayout title="Afiliación de Militantes" crumb="Militantes">
         <PageHeader eyebrow="Afiliación" title="Registro de" accent="Militante" />
-        <div className="card-premium flex flex-col items-center gap-4 px-5 py-12 text-center">
+        <div className="card-premium reveal flex flex-col items-center gap-4 px-5 py-12 text-center">
           <span className="metric-chip h-12 w-12 text-state-warning">
             <AlertIcon width={20} height={20} />
           </span>
@@ -326,8 +329,8 @@ export default function CapturaMilitantePage() {
     return (
       <AppLayout title="Afiliación de Militantes" crumb="Militantes">
         <PageHeader eyebrow="Afiliación" title="Registro de" accent="Militante" />
-        <div className="card-premium flex flex-col items-center gap-4 px-5 py-12 text-center">
-          <span className="metric-chip h-14 w-14 text-state-success">
+        <div className="reveal mx-auto flex max-w-sm flex-col items-center gap-5 py-8 text-center">
+          <span className="metric-chip h-14 w-14 text-state-success shadow-glow-teal">
             <svg
               viewBox="0 0 24 24"
               width="22"
@@ -342,11 +345,20 @@ export default function CapturaMilitantePage() {
             </svg>
           </span>
           <div>
-            <p className="font-semibold text-ink">Militante registrado</p>
-            <p className="mt-1 text-sm text-ink-muted">Folio de afiliación</p>
-            <p className="mt-1 font-display text-2xl font-bold text-gradient">
-              {folio}
+            <p className="font-display text-lg font-bold text-ink">
+              Militante registrado
             </p>
+            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+              La afiliación quedó guardada correctamente.
+            </p>
+          </div>
+          <div className="w-full">
+            <MetricCard
+              label="Folio de afiliación"
+              value={folio}
+              tone="warm"
+              context="Guarda este folio para dar seguimiento"
+            />
           </div>
           <button type="button" className="btn-primary" onClick={resetAll}>
             Registrar otro
@@ -368,16 +380,12 @@ export default function CapturaMilitantePage() {
         actions={<StepIndicator step={step} />}
       />
 
-      <Card
-        title={
-          step === 1
-            ? "Identidad"
-            : step === 2
-              ? "Contacto y domicilio"
-              : "Documentos y firma"
-        }
-        accentDot
-      >
+      <div className="reveal" style={{ animationDelay: "80ms" }}>
+        <SectionHeading eyebrow={`Paso ${step} de 3`} title={STEP_LABELS[step]} />
+      </div>
+
+      <div className="reveal mt-4" style={{ animationDelay: "140ms" }}>
+        <Card>
         {step === 1 && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -690,115 +698,105 @@ export default function CapturaMilitantePage() {
         )}
 
         {step === 3 && (
-          <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <PhotoCapture label="Credencial — frente" onCapture={setFrente} />
-              <PhotoCapture label="Credencial — reverso" onCapture={setReverso} />
-            </div>
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
+              <SectionHeading eyebrow="Credencial" title="Fotos y firma" />
 
-            <div>
-              <span className="field-label">Firma</span>
-              <div className="mt-1">
-                <SignaturePad onChange={setFirma} />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <PhotoCapture label="Credencial — frente" onCapture={setFrente} />
+                <PhotoCapture label="Credencial — reverso" onCapture={setReverso} />
               </div>
-            </div>
 
-            {/* Quality hints — non-blocking */}
-            <div className="flex flex-wrap gap-2">
-              {!frente && (
-                <span className="pill border-state-warning/40 text-state-warning">
-                  Falta frente
-                </span>
-              )}
-              {!reverso && (
-                <span className="pill border-state-warning/40 text-state-warning">
-                  Falta reverso
-                </span>
-              )}
-              {!firma && (
-                <span className="pill border-state-warning/40 text-state-warning">
-                  Falta firma
-                </span>
-              )}
-              {curpWarn && (
-                <span className="pill border-state-warning/40 text-state-warning">
-                  CURP incompleta
-                </span>
-              )}
-              {claveWarn && (
-                <span className="pill border-state-warning/40 text-state-warning">
-                  Clave de elector incompleta
-                </span>
-              )}
-            </div>
-
-            {/* Aviso de privacidad */}
-            <div className="card-premium p-5">
-              <div className="flex items-start gap-3">
-                <span className="metric-chip mt-0.5 h-9 w-9 shrink-0 text-state-warning">
-                  <ShieldIcon width={16} height={16} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-ink">
-                    Aviso de privacidad
-                  </p>
-                  <p className="mt-1 text-xs text-ink-muted">
-                    La CURP, la clave de elector y el teléfono son datos
-                    personales protegidos. Captúralos solo con consentimiento
-                    y úsalos únicamente para fines de la campaña.
-                  </p>
-                  <button
-                    type="button"
-                    className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-state-warning hover:underline"
-                    onClick={() => setPrivOpen((o) => !o)}
-                  >
-                    {privOpen ? "Ocultar texto" : "Ver texto completo"}
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="13"
-                      height="13"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className={`transition-transform duration-200 ${privOpen ? "rotate-180" : ""}`}
-                    >
-                      <path d="m6 9 6 6 6-6" />
-                    </svg>
-                  </button>
-                  {privOpen && (
-                    <p className="mt-3 text-xs leading-relaxed text-ink-muted">
-                      Los datos recabados (nombre, CURP, clave de elector,
-                      domicilio, sección, teléfono, correo y documentación
-                      fotográfica) serán tratados de forma confidencial y
-                      exclusivamente para las actividades de organización y
-                      afiliación de la campaña. No se compartirán con
-                      terceros ajenos a la misma ni se destinarán a un fin
-                      distinto. La persona titular puede solicitar en
-                      cualquier momento que sus datos sean eliminados del
-                      registro. El responsable del tratamiento es el
-                      promotor que recaba la información.
-                    </p>
-                  )}
+              <div>
+                <span className="field-label">Firma</span>
+                <div className="mt-1">
+                  <SignaturePad onChange={setFirma} />
                 </div>
               </div>
+
+              {/* Quality hints — non-blocking */}
+              <div className="flex flex-wrap gap-2">
+                {!frente && <StatusPill kind="warn">Falta frente</StatusPill>}
+                {!reverso && <StatusPill kind="warn">Falta reverso</StatusPill>}
+                {!firma && <StatusPill kind="warn">Falta firma</StatusPill>}
+                {curpWarn && <StatusPill kind="warn">CURP incompleta</StatusPill>}
+                {claveWarn && (
+                  <StatusPill kind="warn">Clave de elector incompleta</StatusPill>
+                )}
+              </div>
             </div>
 
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-teal/30 bg-teal/5 p-3">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
-                checked={form.consentimiento}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, consentimiento: e.target.checked }))
-                }
-              />
-              <span className="text-xs leading-relaxed text-ink-muted">
-                La persona dio su consentimiento para afiliarse y registrar
-                sus datos conforme al aviso de privacidad.
-              </span>
-            </label>
+            <div className="flex flex-col gap-4">
+              <SectionHeading eyebrow="Privacidad" title="Aviso y consentimiento" />
+
+              {/* Aviso de privacidad */}
+              <div className="card-premium p-5">
+                <div className="flex items-start gap-3">
+                  <span className="metric-chip mt-0.5 h-9 w-9 shrink-0 text-state-warning">
+                    <ShieldIcon width={16} height={16} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-ink">
+                      Aviso de privacidad
+                    </p>
+                    <p className="mt-1 text-xs text-ink-muted">
+                      La CURP, la clave de elector y el teléfono son datos
+                      personales protegidos. Captúralos solo con consentimiento
+                      y úsalos únicamente para fines de la campaña.
+                    </p>
+                    <button
+                      type="button"
+                      className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-state-warning hover:underline"
+                      onClick={() => setPrivOpen((o) => !o)}
+                    >
+                      {privOpen ? "Ocultar texto" : "Ver texto completo"}
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="13"
+                        height="13"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={`transition-transform duration-200 ${privOpen ? "rotate-180" : ""}`}
+                      >
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </button>
+                    {privOpen && (
+                      <p className="mt-3 text-xs leading-relaxed text-ink-muted">
+                        Los datos recabados (nombre, CURP, clave de elector,
+                        domicilio, sección, teléfono, correo y documentación
+                        fotográfica) serán tratados de forma confidencial y
+                        exclusivamente para las actividades de organización y
+                        afiliación de la campaña. No se compartirán con
+                        terceros ajenos a la misma ni se destinarán a un fin
+                        distinto. La persona titular puede solicitar en
+                        cualquier momento que sus datos sean eliminados del
+                        registro. El responsable del tratamiento es el
+                        promotor que recaba la información.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-teal/30 bg-teal/5 p-3">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                  checked={form.consentimiento}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, consentimiento: e.target.checked }))
+                  }
+                />
+                <span className="text-xs leading-relaxed text-ink-muted">
+                  La persona dio su consentimiento para afiliarse y registrar
+                  sus datos conforme al aviso de privacidad.
+                </span>
+              </label>
+            </div>
 
             {/* Upload progress */}
             {submitting && (
@@ -877,7 +875,8 @@ export default function CapturaMilitantePage() {
             </div>
           </div>
         )}
-      </Card>
+        </Card>
+      </div>
     </AppLayout>
   );
 }
