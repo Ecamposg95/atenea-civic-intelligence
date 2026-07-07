@@ -7,6 +7,6 @@ export default defineConfig({
     environment: "node",
     globals: true, // inject test/expect/describe/it without imports
     setupFiles: ["fake-indexeddb/auto"], // polyfill IndexedDB for unit tests
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
   },
 });

@@ -7,6 +7,7 @@ import { getSources } from "@/api/sources";
 import { useThemeStore } from "@/store/themeStore";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { CountdownElectoral } from "@/components/CountdownElectoral";
 import { CoverageBars, type CoverageDatum } from "@/components/dashboards/CoverageBars";
 import { ParticipationChart } from "@/components/dashboards/ParticipationChart";
 import { Heatmap } from "@/components/charts/Heatmap";
@@ -150,6 +151,7 @@ export function DashboardPage() {
         subtitle="Vista institucional en tiempo real de cobertura electoral, participación y gobernanza de datos territoriales."
         actions={
           <>
+            <CountdownElectoral date={data?.election_date ?? null} />
             {activitySeries.length > 0 && (
               <div className="card-premium px-4 py-3">
                 <div className="eyebrow mb-1.5">Actividad 14d</div>

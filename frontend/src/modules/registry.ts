@@ -206,6 +206,18 @@ const MilitantesList = lazy(() =>
     default: m.MilitantesListPage,
   })),
 );
+const PanoramaAtencion = lazy(() =>
+  import("@/modules/atencion/PanoramaAtencionPage"),
+);
+const CasosAtencion = lazy(() =>
+  import("@/modules/atencion/CasosPage"),
+);
+const CapturaAtencion = lazy(() =>
+  import("@/modules/atencion/CapturaAtencionPage"),
+);
+const FormBuilder = lazy(() =>
+  import("@/modules/atencion/FormBuilderPage"),
+);
 
 export const MODULES: ModuleDef[] = [
   // Plataforma (active)
@@ -239,6 +251,10 @@ export const MODULES: ModuleDef[] = [
   { key: "militantes-captura", path: "/militantes/captura", label: "Afiliar militante", section: "ciudadania", icon: VotersIcon, state: "active", element: CapturaMilitante, roles: CONSOLE_CAPTURA },
   { key: "militantes", path: "/militantes", label: "Panorama afiliación", section: "ciudadania", icon: VotersIcon, state: "active", element: PanoramaMilitantes, roles: ["superadmin", "admin", "coordinador"], end: true },
   { key: "militantes-lista", path: "/militantes/lista", label: "Padrón de militantes", section: "ciudadania", icon: VotersIcon, state: "active", element: MilitantesList, roles: CONSOLE_COORD },
+  { key: "atencion", path: "/atencion", label: "Panorama ciudadano", section: "ciudadania", icon: UserIcon, state: "active", element: PanoramaAtencion, roles: ["superadmin", "admin", "coordinador"], end: true },
+  { key: "atencion-casos", path: "/atencion/casos", label: "Casos", section: "ciudadania", icon: UserIcon, state: "active", element: CasosAtencion, roles: CONSOLE_COORD },
+  { key: "atencion-captura", path: "/atencion/captura", label: "Atender ciudadano", section: "ciudadania", icon: UserIcon, state: "active", element: CapturaAtencion, roles: CONSOLE_CAPTURA },
+  { key: "atencion-formularios", path: "/atencion/formularios", label: "Formularios", section: "ciudadania", icon: SettingsIcon, state: "active", element: FormBuilder, roles: ["superadmin", "admin", "coordinador"] },
   { key: "ai-analyst", path: "/ai-analyst", label: "AI Analyst / Copiloto", section: "ciudadania", icon: AiIcon, state: "preview", element: AiAnalyst, roles: ["superadmin", "admin", "coordinador", "analyst"] },
   { key: "demografia", path: "/demografia", label: "Demografía & Censo", section: "ciudadania", icon: VotersIcon, state: "preview", element: Demografia, roles: INTEL },
   {

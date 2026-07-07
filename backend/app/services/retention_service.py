@@ -38,6 +38,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.models.atencion import Caso, CasoEvento, FormResponse
 from app.models.campaign import Contest
 from app.models.militante import Militante
 from app.models.registro import Registro
@@ -54,6 +55,10 @@ class PurgeResult:
     post_election_purged: int = 0
     militantes_soft_deleted_purged: int = 0
     militantes_post_election_purged: int = 0
+    casos_soft_deleted_purged: int = 0
+    casos_post_election_purged: int = 0
+    form_responses_soft_deleted_purged: int = 0
+    form_responses_post_election_purged: int = 0
     campaigns_purged: List[str] = field(default_factory=list)
     dry_run: bool = False
 
@@ -65,6 +70,10 @@ class PurgeResult:
             + self.post_election_purged
             + self.militantes_soft_deleted_purged
             + self.militantes_post_election_purged
+            + self.casos_soft_deleted_purged
+            + self.casos_post_election_purged
+            + self.form_responses_soft_deleted_purged
+            + self.form_responses_post_election_purged
         )
 
 
@@ -98,6 +107,55 @@ def _purge_militante_docs(rows: list[Militante]) -> None:
 
     for row in rows:
         for key in (row.credencial_frente_key, row.credencial_reverso_key, row.firma_key):
+            if not key:
+                continue
+            try:
+                storage.delete_object(key)
+            except Exception:  # noqa: BLE001 - never let a storage hiccup abort a purge
+                logger.warning("retention.purge: failed to delete bucket object key=%s", key)
+
+
+def _purge_caso_evidence(db: Session, rows: list[Caso]) -> None:
+    """Best-effort delete of bucket evidencia objects attached to a batch of
+    casos about to be hard-deleted. Casos don't carry evidence keys directly —
+    they live on their CasoEvento (bitácora) rows — so this looks those up
+    first. Guards each object delete individually, same discipline as
+    ``_purge_militante_docs``.
+    """
+    from app.core import storage  # lazy: keeps the app importable without boto3
+
+    if not storage.storage_enabled():
+        return
+
+    caso_ids = [row.id for row in rows]
+    if not caso_ids:
+        return
+
+    keys = db.execute(
+        select(CasoEvento.evidencia_key).where(
+            CasoEvento.caso_id.in_(caso_ids), CasoEvento.evidencia_key.is_not(None)
+        )
+    ).scalars().all()
+
+    for key in keys:
+        if not key:
+            continue
+        try:
+            storage.delete_object(key)
+        except Exception:  # noqa: BLE001 - never let a storage hiccup abort a purge
+            logger.warning("retention.purge: failed to delete bucket object key=%s", key)
+
+
+def _purge_form_response_evidence(rows: list[FormResponse]) -> None:
+    """Best-effort delete of bucket evidencia objects (``evidencia_keys``) for a
+    batch of form responses about to be hard-deleted."""
+    from app.core import storage  # lazy: keeps the app importable without boto3
+
+    if not storage.storage_enabled():
+        return
+
+    for row in rows:
+        for key in (row.evidencia_keys or []):
             if not key:
                 continue
             try:
@@ -196,6 +254,64 @@ def purge_expired(
 
     result.militantes_soft_deleted_purged = militante_soft_count
 
+    # ── Pass A (casos): hard-delete soft-deleted rows past grace period ───────
+    caso_soft_filter = (
+        Caso.deleted_at.is_not(None),
+        Caso.deleted_at < soft_cutoff,
+    )
+
+    caso_soft_count: int = db.scalar(
+        select(func.count(Caso.id)).where(*caso_soft_filter)
+    ) or 0
+
+    if not dry_run and caso_soft_count > 0:
+        caso_rows = list(
+            db.execute(select(Caso).where(*caso_soft_filter)).scalars().all()
+        )
+        _purge_caso_evidence(db, caso_rows)
+        db.execute(delete(Caso).where(*caso_soft_filter))
+        record_audit(
+            db,
+            action="retention.purge",
+            entity_type="caso",
+            meta={
+                "pass": "soft_deleted",
+                "count": caso_soft_count,
+                "cutoff_days": settings.RETENTION_PURGE_SOFT_DELETED_DAYS,
+            },
+        )
+
+    result.casos_soft_deleted_purged = caso_soft_count
+
+    # ── Pass A (form_responses): hard-delete soft-deleted rows past grace ─────
+    fr_soft_filter = (
+        FormResponse.deleted_at.is_not(None),
+        FormResponse.deleted_at < soft_cutoff,
+    )
+
+    fr_soft_count: int = db.scalar(
+        select(func.count(FormResponse.id)).where(*fr_soft_filter)
+    ) or 0
+
+    if not dry_run and fr_soft_count > 0:
+        fr_rows = list(
+            db.execute(select(FormResponse).where(*fr_soft_filter)).scalars().all()
+        )
+        _purge_form_response_evidence(fr_rows)
+        db.execute(delete(FormResponse).where(*fr_soft_filter))
+        record_audit(
+            db,
+            action="retention.purge",
+            entity_type="form_response",
+            meta={
+                "pass": "soft_deleted",
+                "count": fr_soft_count,
+                "cutoff_days": settings.RETENTION_PURGE_SOFT_DELETED_DAYS,
+            },
+        )
+
+    result.form_responses_soft_deleted_purged = fr_soft_count
+
     # ── Pass B: post-election purge ───────────────────────────────────────────
     # Eligible: max(election_date) + RETENTION_DAYS_AFTER_ELECTION <= today
     #         ≡ max(election_date) <= today - RETENTION_DAYS_AFTER_ELECTION
@@ -267,6 +383,64 @@ def purge_expired(
             )
 
     result.militantes_post_election_purged = militante_post_count
+
+    # ── Pass B (casos): post-election purge, same eligible campaigns ──────────
+    caso_post_count = 0
+    if eligible_campaign_ids:
+        caso_post_filter = Caso.campaign_id.in_(eligible_campaign_ids)
+
+        caso_post_count = db.scalar(
+            select(func.count(Caso.id)).where(caso_post_filter)
+        ) or 0
+
+        if not dry_run and caso_post_count > 0:
+            caso_rows = list(
+                db.execute(select(Caso).where(caso_post_filter)).scalars().all()
+            )
+            _purge_caso_evidence(db, caso_rows)
+            db.execute(delete(Caso).where(caso_post_filter))
+            record_audit(
+                db,
+                action="retention.purge",
+                entity_type="caso",
+                meta={
+                    "pass": "post_election",
+                    "count": caso_post_count,
+                    "campaign_ids": eligible_campaign_ids,
+                    "cutoff_days": settings.RETENTION_DAYS_AFTER_ELECTION,
+                },
+            )
+
+    result.casos_post_election_purged = caso_post_count
+
+    # ── Pass B (form_responses): post-election purge, same eligible campaigns ─
+    fr_post_count = 0
+    if eligible_campaign_ids:
+        fr_post_filter = FormResponse.campaign_id.in_(eligible_campaign_ids)
+
+        fr_post_count = db.scalar(
+            select(func.count(FormResponse.id)).where(fr_post_filter)
+        ) or 0
+
+        if not dry_run and fr_post_count > 0:
+            fr_rows = list(
+                db.execute(select(FormResponse).where(fr_post_filter)).scalars().all()
+            )
+            _purge_form_response_evidence(fr_rows)
+            db.execute(delete(FormResponse).where(fr_post_filter))
+            record_audit(
+                db,
+                action="retention.purge",
+                entity_type="form_response",
+                meta={
+                    "pass": "post_election",
+                    "count": fr_post_count,
+                    "campaign_ids": eligible_campaign_ids,
+                    "cutoff_days": settings.RETENTION_DAYS_AFTER_ELECTION,
+                },
+            )
+
+    result.form_responses_post_election_purged = fr_post_count
 
     # ── Commit (single transaction for both passes) ───────────────────────────
     if not dry_run and result.total_purged > 0:

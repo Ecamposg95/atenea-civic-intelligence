@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.dependencies import TenantContext
 from app.integrations.ine import config as ine_config
 from app.models.audit_log import AuditLog
+from app.models.campaign import Contest
 from app.models.electoral_area import ElectoralArea
 from app.models.organization import Organization
 from app.models.user import User
@@ -46,6 +47,15 @@ def get_overview(db: Session, ctx: TenantContext) -> dict[str, Any]:
         organizations = 1
 
     data_sources = len(ine_config.SOURCES)
+
+    # --- Soonest upcoming election date (min non-null Contest.election_date) -
+    election_stmt = select(func.min(Contest.election_date)).where(
+        Contest.election_date.is_not(None), Contest.deleted_at.is_(None)
+    )
+    if not ctx.is_superadmin:
+        election_stmt = election_stmt.where(Contest.organization_id == ctx.organization_id)
+    election_date_value = db.execute(election_stmt).scalar_one_or_none()
+    election_date = election_date_value.isoformat() if election_date_value else None
 
     # --- Territorial coverage (areas by level) ------------------------------
     cov_stmt = select(ElectoralArea.level, func.count(ElectoralArea.id))
@@ -145,6 +155,7 @@ def get_overview(db: Session, ctx: TenantContext) -> dict[str, Any]:
             "users": active_users,
             "data_sources": data_sources,
         },
+        "election_date": election_date,
         "coverage": coverage,
         "trends": {"activity": activity},
         "by_action": by_action,

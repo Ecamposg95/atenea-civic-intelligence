@@ -28,4 +28,5 @@ export interface AnalyticsOverview {
   by_hour: { hour: number; count: number }[];
   alerts: AnalyticsAlert[];
   generated_at: string;
+  election_date: string | null;
 }

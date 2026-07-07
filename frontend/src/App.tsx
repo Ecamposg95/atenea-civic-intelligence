@@ -17,6 +17,11 @@ const ChangePasswordPage = lazy(() =>
 const ProfilePage = lazy(() =>
   import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
 );
+// Public, unauthenticated citizen intake form — no JWT, no AppLayout shell.
+// Only reachable end-to-end when the backend flag PUBLIC_FORMS_ENABLED is on
+// (see backend/app/routers/public_forms.py); otherwise the page's own fetch
+// 404s and it renders a friendly "not available" state.
+const PublicFormPage = lazy(() => import("@/modules/atencion/PublicFormPage"));
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -69,6 +74,8 @@ export default function App() {
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          {/* Public citizen intake — outside auth, no AppLayout shell. */}
+          <Route path="/p/:slug" element={<PublicFormPage />} />
           <Route
             path="/change-password"
             element={

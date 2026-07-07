@@ -65,6 +65,13 @@ class Settings(BaseSettings):
     LOGIN_RATE_LIMIT: str = Field(default="5/minute")
     SECURITY_HEADERS_ENABLED: bool = Field(default=True)
 
+    # --- Atención Ciudadana: public intake channel --------------------------
+    # Default False: the public router (no auth) is a documented deferral —
+    # honeypot + slowapi rate-limiting are NOT implemented in v1. Do not flip
+    # this to True in production until anti-abuse lands (see
+    # app/routers/public_forms.py's module docstring).
+    PUBLIC_FORMS_ENABLED: bool = Field(default=False)
+
     # --- SPA ----------------------------------------------------------------
     FRONTEND_DIST: str = Field(default="../frontend/dist")
 

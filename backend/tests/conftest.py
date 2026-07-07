@@ -29,6 +29,7 @@ from app.core.security import hash_password
 from app.database import Base, get_db
 from app.main import app
 from app.models.arco import ArcoRequest
+from app.models.atencion import Caso, CasoEvento, FormDefinition, FormResponse
 from app.models.audit_log import AuditLog
 from app.models.campaign import Campaign, CampaignMembership, Contest
 from app.models.catalog import Ambito, Cargo, Coalition, CoalitionParty, Party
@@ -79,6 +80,10 @@ Base.metadata.create_all(
         PrivacyNotice.__table__,
         PrivacyAcceptance.__table__,
         SeccionElectoral.__table__,
+        FormDefinition.__table__,
+        FormResponse.__table__,
+        Caso.__table__,
+        CasoEvento.__table__,
     ],
 )
 
