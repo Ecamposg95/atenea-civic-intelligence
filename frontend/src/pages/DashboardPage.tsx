@@ -8,16 +8,19 @@ import { useThemeStore } from "@/store/themeStore";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CountdownElectoral } from "@/components/CountdownElectoral";
-import { CoverageBars, type CoverageDatum } from "@/components/dashboards/CoverageBars";
-import { ParticipationChart } from "@/components/dashboards/ParticipationChart";
 import { Heatmap } from "@/components/charts/Heatmap";
 import { RadialGauge } from "@/components/charts/RadialGauge";
+import { AreaTrend } from "@/components/charts/AreaTrend";
+import { Bars } from "@/components/charts/Bars";
+import { ChartFrame } from "@/components/charts/ChartFrame";
 import { MapCanvas } from "@/components/maps/MapCanvas";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { DataState } from "@/components/ui/DataState";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Sparkline } from "@/components/ui/Sparkline";
+import { StatusPill } from "@/components/ui/StatusPill";
 import { useAsync } from "@/hooks/useAsync";
 import { PANEL_HEIGHTS } from "@/constants/ui";
 import {
@@ -54,6 +57,13 @@ const ALERT_TONE: Record<
     icon: "text-state-critical",
     pill: "border-state-critical/30 bg-state-critical/10 text-state-critical",
   },
+};
+
+/** Alert level -> StatusPill semantic kind (dot + label, never color-only). */
+const ALERT_KIND: Record<AnalyticsAlert["level"], "ok" | "warn" | "crit"> = {
+  info: "ok",
+  warning: "warn",
+  critical: "crit",
 };
 
 const KIND_BADGE: Record<string, string> = {
@@ -126,8 +136,13 @@ export function DashboardPage() {
     () => activity.map((p) => ({ label: p.period, value: p.value })),
     [activity],
   );
+  // AreaTrend's {x,y} point shape — same activity series, no new data.
+  const areaTrendPoints = useMemo(
+    () => activity.map((p) => ({ x: p.period, y: p.value })),
+    [activity],
+  );
 
-  const coverage: CoverageDatum[] = useMemo(() => {
+  const coverage: { level: string; count: number }[] = useMemo(() => {
     if (!areas) return [];
     const counts = new Map<string, number>();
     for (const f of areas.features) {
@@ -209,7 +224,12 @@ export function DashboardPage() {
           label="Usuarios activos"
           value={s ? nf.format(s.users) : "—"}
           countTo={s ? s.users : undefined}
-          tone="accent"
+          tone="warm"
+          context={
+            data
+              ? `${nf.format(data.by_actor.length)} activos en el audit log (14d)`
+              : undefined
+          }
           icon={<UserIcon width={18} height={18} />}
           delay={160}
         />
@@ -224,9 +244,12 @@ export function DashboardPage() {
       </div>
 
       {/* ---- Real audit pulse: gauge + extra KPIs + activity heatmap ---- */}
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="reveal mt-8">
+        <SectionHeading eyebrow="Tiempo real" title="Pulso operativo" note="Últimos 14 días" />
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="reveal" style={{ animationDelay: "120ms" }}>
-          <Card title="Pulso de actividad (hoy)" accentDot className="h-full">
+          <ChartFrame title="Actividad hoy" caption="vs. pico de los últimos 14 días">
             <DataState
               loading={overviewLoading}
               error={overviewError}
@@ -236,29 +259,30 @@ export function DashboardPage() {
               }
             >
               {data && (
-                <div className="flex items-center gap-5">
-                  <RadialGauge value={activityRatio} label="vs. pico 14d" />
-                  <div className="space-y-1.5">
-                    <div className="eyebrow">Eventos hoy</div>
-                    <div className="font-display text-2xl font-bold tabular-nums text-ink">
-                      {nf.format(todayEvents)}
-                    </div>
-                    <div className="text-xs text-ink-faint">
-                      Pico diario: {nf.format(peakEvents)}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-5">
+                    <RadialGauge value={activityRatio} label="vs. pico 14d" />
+                    <div className="space-y-1.5">
+                      <div className="eyebrow">Eventos hoy</div>
+                      <div className="font-display text-2xl font-bold tabular-nums text-ink">
+                        {nf.format(todayEvents)}
+                      </div>
+                      <div className="text-xs text-ink-faint">
+                        Pico diario: {nf.format(peakEvents)}
+                      </div>
                     </div>
                   </div>
+                  {activitySeries.length > 0 && (
+                    <Sparkline data={activitySeries} width={280} height={36} className="w-full" />
+                  )}
                 </div>
               )}
             </DataState>
-          </Card>
+          </ChartFrame>
         </div>
 
         <div className="reveal lg:col-span-2" style={{ animationDelay: "180ms" }}>
-          <Card
-            title="Resumen del audit trail (14d)"
-            accentDot
-            className="h-full"
-          >
+          <ChartFrame title="Resumen del audit trail" caption="Últimos 14 días">
             <DataState
               loading={overviewLoading}
               error={overviewError}
@@ -296,24 +320,17 @@ export function DashboardPage() {
                 </div>
               )}
             </DataState>
-          </Card>
+          </ChartFrame>
         </div>
       </div>
 
       {/* ---- Activity chart + governance ---- */}
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="reveal mt-8" style={{ animationDelay: "40ms" }}>
+        <SectionHeading eyebrow="Auditoría" title="Actividad y gobernanza" note="Audit log · 14 días" />
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="reveal lg:col-span-2" style={{ animationDelay: "120ms" }}>
-          <Card
-            title="Actividad de la plataforma"
-            accentDot
-            className="h-full"
-            action={
-              <div className="flex items-center gap-2">
-                <span className="eyebrow hidden sm:inline">Audit log</span>
-                <span className="pill border-line text-ink-muted">Últimos 14 días</span>
-              </div>
-            }
-          >
+          <ChartFrame title="Actividad de la plataforma" caption="Audit log · últimos 14 días">
             <DataState
               loading={overviewLoading}
               error={overviewError}
@@ -322,16 +339,9 @@ export function DashboardPage() {
                 <div className="h-[260px] animate-pulse rounded-lg bg-panel-hover" />
               }
             >
-              {data && (
-                <ParticipationChart
-                  data={data.trends.activity}
-                  height={260}
-                  valueFormat="number"
-                  seriesLabel="Eventos"
-                />
-              )}
+              {data && <AreaTrend points={areaTrendPoints} />}
             </DataState>
-          </Card>
+          </ChartFrame>
         </div>
 
         <div className="reveal" style={{ animationDelay: "200ms" }}>
@@ -372,7 +382,7 @@ export function DashboardPage() {
                         <div className="text-xs text-ink-faint">{a.detail}</div>
                       </div>
                     </div>
-                    <span className={`pill shrink-0 ${tone.pill}`}>{a.level}</span>
+                    <StatusPill kind={ALERT_KIND[a.level]}>{a.level}</StatusPill>
                   </div>
                 );
               })}
@@ -389,7 +399,10 @@ export function DashboardPage() {
       </div>
 
       {/* ---- Territorial coverage (mini-map) + data sources ---- */}
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="reveal mt-8" style={{ animationDelay: "40ms" }}>
+        <SectionHeading eyebrow="Territorio" title="Cobertura y fuentes" note="Cartografía y catálogo de datos" />
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="reveal" style={{ animationDelay: "160ms" }}>
           <Card
             title="Cobertura territorial"
@@ -421,7 +434,12 @@ export function DashboardPage() {
                   {/* Soften interaction cues to keep it a non-interactive briefing view */}
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-bg/80 to-transparent" />
                 </div>
-                {coverage.length > 0 && <CoverageBars data={coverage} height={140} />}
+                {coverage.length > 0 && (
+                  <Bars
+                    items={coverage.map((c) => ({ label: c.level, value: c.count }))}
+                    highlightFirst
+                  />
+                )}
               </div>
             ) : (
               <div className={`grid ${PANEL_HEIGHTS.mapMini} place-items-center text-center text-sm text-ink-faint`}>
