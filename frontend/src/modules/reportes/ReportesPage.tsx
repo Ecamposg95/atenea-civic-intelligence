@@ -3,12 +3,15 @@ import { useMemo, type ReactNode } from "react";
 
 import { getOverview } from "@/api/analytics";
 import { getAreas } from "@/api/maps";
-import { ParticipationChart } from "@/components/dashboards/ParticipationChart";
+import { AreaTrend } from "@/components/charts/AreaTrend";
+import { Bars } from "@/components/charts/Bars";
+import { ChartFrame } from "@/components/charts/ChartFrame";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { DataState } from "@/components/ui/DataState";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import {
   AnalyticsIcon,
@@ -17,13 +20,17 @@ import {
   UserIcon,
   VotersIcon,
 } from "@/components/ui/icons";
-import { PANEL_HEIGHTS } from "@/constants/ui";
 import { useAsync } from "@/hooks/useAsync";
 import type { AnalyticsOverview } from "@/types/analytics";
 
 import { downloadCSV } from "./export";
 
 const intFmt = new Intl.NumberFormat("es-MX");
+
+/** Display-only capitalization for level labels (e.g. "municipio" → "Municipio"). */
+function cap(s: string): string {
+  return s.length ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
 
 /** Localized, human-readable timestamp for the briefing provenance line. */
 function formatTimestamp(iso: string): string {
@@ -52,16 +59,6 @@ export function ReportesPage() {
     if (!statesState.data) return null;
     return statesState.data.features.length;
   }, [statesState.data]);
-
-  const maxAction = useMemo<number>(() => {
-    if (!overview) return 0;
-    return overview.by_action.reduce((m, a) => Math.max(m, a.count), 0);
-  }, [overview]);
-
-  const maxActor = useMemo<number>(() => {
-    if (!overview) return 0;
-    return overview.by_actor.reduce((m, a) => Math.max(m, a.count), 0);
-  }, [overview]);
 
   const isEmpty =
     !overviewState.loading &&
@@ -132,14 +129,7 @@ export function ReportesPage() {
           </div>
         }
       >
-        {overview && (
-          <Briefing
-            overview={overview}
-            stateCount={stateCount}
-            maxAction={maxAction}
-            maxActor={maxActor}
-          />
-        )}
+        {overview && <Briefing overview={overview} stateCount={stateCount} />}
       </DataState>
     </AppLayout>
   );
@@ -148,8 +138,6 @@ export function ReportesPage() {
 interface BriefingProps {
   overview: AnalyticsOverview;
   stateCount: number | null;
-  maxAction: number;
-  maxActor: number;
 }
 
 /**
@@ -158,10 +146,10 @@ interface BriefingProps {
  * an institutional report. Only real values are shown; all are labelled with
  * their source and generation timestamp.
  */
-function Briefing({ overview, stateCount, maxAction, maxActor }: BriefingProps) {
+function Briefing({ overview, stateCount }: BriefingProps) {
   // P-8: reveal wraps the primary content block for entrance animation
   return (
-    <div className="reveal space-y-4 print:space-y-3 print:bg-white print:p-0 print:text-black">
+    <div className="reveal space-y-6 print:space-y-3 print:bg-white print:p-0 print:text-black">
       {/* Print-only header (hidden on screen — screen uses PageHeader). */}
       <div className="hidden print:mb-4 print:block print:border-b print:border-black/20 print:pb-3">
         <h1 className="text-2xl font-bold">Atenea · Reporte Ejecutivo</h1>
@@ -174,132 +162,115 @@ function Briefing({ overview, stateCount, maxAction, maxActor }: BriefingProps) 
       </div>
 
       {/* KPI summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4 print:gap-2">
-        <KpiCard
-          label="Áreas electorales"
-          value={overview.summary.electoral_areas}
-          icon={<LayersIcon />}
-          tone="accent"
-          delay={60}
-        />
-        <KpiCard
-          label="Organizaciones"
-          value={overview.summary.organizations}
-          icon={<UserIcon />}
-          tone="teal"
-          delay={120}
-        />
-        <KpiCard
-          label="Usuarios"
-          value={overview.summary.users}
-          icon={<VotersIcon />}
-          tone="warning"
-          delay={180}
-        />
-        <KpiCard
-          label="Fuentes de datos"
-          value={overview.summary.data_sources}
-          icon={<DatabaseIcon />}
-          tone="accent"
-          delay={240}
-        />
+      <div className="space-y-4 print:space-y-2">
+        <SectionHeading eyebrow="Panorama" title="Indicadores clave" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4 print:gap-2">
+          <KpiCard
+            label="Áreas electorales"
+            value={overview.summary.electoral_areas}
+            icon={<LayersIcon />}
+            tone="accent"
+            delay={60}
+          />
+          <KpiCard
+            label="Organizaciones"
+            value={overview.summary.organizations}
+            icon={<UserIcon />}
+            tone="teal"
+            delay={120}
+          />
+          {/* Warm/coral is the featured KPI accent — never tied to a semantic
+              meaning, so it no longer borrows the "warning" tone here. */}
+          <KpiCard
+            label="Usuarios"
+            value={overview.summary.users}
+            icon={<VotersIcon />}
+            tone="warm"
+            delay={180}
+          />
+          <KpiCard
+            label="Fuentes de datos"
+            value={overview.summary.data_sources}
+            icon={<DatabaseIcon />}
+            tone="accent"
+            delay={240}
+          />
+        </div>
       </div>
 
       {/* Coverage by level + activity trend */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[360px_1fr] print:grid-cols-2 print:gap-3">
-        <Card
-          title="Cobertura por nivel"
-          accentDot
-          className="print:border print:border-black/20 print:bg-white print:text-black"
-          action={
-            stateCount !== null ? (
-              <span className="pill border-line text-[10px] text-ink-muted print:text-black">
-                {intFmt.format(stateCount)} entidades
-              </span>
-            ) : undefined
-          }
-        >
-          {overview.coverage.length === 0 ? (
-            <p className="text-sm text-ink-faint">Sin cobertura registrada.</p>
-          ) : (
-            <ul className="space-y-2.5">
-              {overview.coverage.map((c) => (
-                <li
-                  key={c.level}
-                  className="flex items-center justify-between gap-3 text-sm"
-                >
-                  <span className="capitalize text-ink-muted print:text-black">
-                    {c.level}
-                  </span>
-                  <span className="font-mono font-semibold text-ink print:text-black">
-                    {intFmt.format(c.count)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-4 text-[11px] leading-relaxed text-ink-faint print:text-black/60">
-            Fuente: cobertura territorial registrada en la plataforma.
-          </p>
-        </Card>
+      <div className="space-y-4 print:space-y-2">
+        <SectionHeading eyebrow="Detalle" title="Cobertura y tendencia" />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[360px_1fr] print:grid-cols-2 print:gap-3">
+          <ChartFrame
+            title="Cobertura por nivel"
+            caption={
+              stateCount !== null
+                ? `${intFmt.format(stateCount)} entidades cartografiadas`
+                : undefined
+            }
+            empty={overview.coverage.length === 0}
+          >
+            <Bars
+              items={overview.coverage.map((c) => ({
+                label: cap(c.level),
+                value: c.count,
+              }))}
+            />
+            <p className="mt-4 text-[11px] leading-relaxed text-ink-faint">
+              Fuente: cobertura territorial registrada en la plataforma.
+            </p>
+          </ChartFrame>
 
-        <Card
-          title="Tendencia de actividad"
-          accentDot
-          className="print:border print:border-black/20 print:bg-white print:text-black"
-          action={
-            <span className="text-[11px] text-ink-faint print:text-black/60">
-              eventos por periodo
-            </span>
-          }
-        >
-          {overview.trends.activity.length === 0 ? (
-            <p className="text-sm text-ink-faint">Sin actividad registrada.</p>
-          ) : (
-            // P-6: responsive height via PANEL_HEIGHTS.chartMd instead of hardcoded height={240}
-            <div className={PANEL_HEIGHTS.chartMd}>
-              <ParticipationChart
-                data={overview.trends.activity}
-                valueFormat="number"
-                seriesLabel="Eventos"
-              />
-            </div>
-          )}
-        </Card>
+          <ChartFrame
+            title="Tendencia de actividad"
+            caption="Eventos por periodo"
+            empty={overview.trends.activity.length === 0}
+          >
+            <AreaTrend
+              points={overview.trends.activity.map((p) => ({
+                x: p.period,
+                y: p.value,
+              }))}
+            />
+          </ChartFrame>
+        </div>
       </div>
 
       {/* Top actions + top actors */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 print:grid-cols-2 print:gap-3">
-        <Card
-          title="Acciones principales"
-          accentDot
-          className="print:border print:border-black/20 print:bg-white print:text-black"
-        >
-          <Breakdown
-            items={overview.by_action.map((a) => ({
-              label: a.action,
-              count: a.count,
-            }))}
-            max={maxAction}
-            emptyLabel="Sin acciones registradas."
-          />
-        </Card>
+      <div className="space-y-4 print:space-y-2">
+        <SectionHeading
+          eyebrow="Detalle"
+          title="Acciones y actores"
+          note={`Top ${overview.by_action.length} · Top ${overview.by_actor.length}`}
+        />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 print:grid-cols-2 print:gap-3">
+          <ChartFrame
+            title="Acciones principales"
+            empty={overview.by_action.length === 0}
+          >
+            <Bars
+              items={overview.by_action.map((a) => ({
+                label: a.action,
+                value: a.count,
+              }))}
+              highlightFirst
+            />
+          </ChartFrame>
 
-        <Card
-          title="Actores principales"
-          accentDot
-          className="print:border print:border-black/20 print:bg-white print:text-black"
-        >
-          <Breakdown
-            items={overview.by_actor.map((a) => ({
-              label: a.actor_id,
-              count: a.count,
-              mono: true,
-            }))}
-            max={maxActor}
-            emptyLabel="Sin actores registrados."
-          />
-        </Card>
+          <ChartFrame
+            title="Actores principales"
+            empty={overview.by_actor.length === 0}
+          >
+            <Bars
+              items={overview.by_actor.map((a) => ({
+                label: a.actor_id,
+                value: a.count,
+              }))}
+              highlightFirst
+            />
+          </ChartFrame>
+        </div>
       </div>
 
       {/* Alerts (only if present) */}
@@ -307,7 +278,7 @@ function Briefing({ overview, stateCount, maxAction, maxActor }: BriefingProps) 
         <Card
           title="Alertas"
           accentDot
-          className="print:border print:border-black/20 print:bg-white print:text-black"
+          className="reveal print:border print:border-black/20 print:bg-white print:text-black"
         >
           <ul className="space-y-2">
             {overview.alerts.map((a, i) => (
@@ -328,7 +299,7 @@ function Briefing({ overview, stateCount, maxAction, maxActor }: BriefingProps) 
       )}
 
       {/* Provenance footer */}
-      <div className="card-premium hud-corners flex flex-col gap-2 px-5 py-4 text-xs text-ink-faint sm:flex-row sm:items-center sm:justify-between print:border print:border-black/20 print:bg-white print:text-black/70">
+      <div className="card-premium hud-corners reveal flex flex-col gap-2 px-5 py-4 text-xs text-ink-faint sm:flex-row sm:items-center sm:justify-between print:border print:border-black/20 print:bg-white print:text-black/70">
         <span>
           Datos generados:{" "}
           <span className="font-mono text-ink-muted print:text-black">
@@ -347,7 +318,7 @@ interface KpiCardProps {
   label: string;
   value: number;
   icon: ReactNode;
-  tone: "accent" | "teal" | "warning";
+  tone: "accent" | "teal" | "warm";
   delay: number;
 }
 
@@ -362,56 +333,5 @@ function KpiCard({ label, value, icon, tone, delay }: KpiCardProps) {
       tone={tone}
       delay={delay}
     />
-  );
-}
-
-interface BreakdownItem {
-  label: string;
-  count: number;
-  mono?: boolean;
-}
-
-/** Labelled horizontal bars for an action/actor frequency breakdown. */
-function Breakdown({
-  items,
-  max,
-  emptyLabel,
-}: {
-  items: BreakdownItem[];
-  max: number;
-  emptyLabel: string;
-}) {
-  if (items.length === 0) {
-    return <p className="text-sm text-ink-faint">{emptyLabel}</p>;
-  }
-  return (
-    <ul className="space-y-3">
-      {items.map((it, i) => {
-        const pct = max > 0 ? (it.count / max) * 100 : 0;
-        return (
-          <li key={`${it.label}-${i}`} className="space-y-1.5">
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span
-                className={`truncate text-ink-muted print:text-black ${
-                  it.mono ? "font-mono text-xs" : ""
-                }`}
-                title={it.label}
-              >
-                {it.label}
-              </span>
-              <span className="font-mono font-semibold text-ink print:text-black">
-                {intFmt.format(it.count)}
-              </span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-pill bg-bg-sunken ring-1 ring-inset ring-white/5 print:bg-black/10 print:ring-0">
-              <div
-                className="h-full rounded-pill bg-accent-gradient"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          </li>
-        );
-      })}
-    </ul>
   );
 }
