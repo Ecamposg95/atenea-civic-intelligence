@@ -8,11 +8,15 @@ import {
 } from "@/api/admin";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { DataState } from "@/components/ui/DataState";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { MetricCard } from "@/components/ui/MetricCard";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SkeletonRows } from "@/components/ui/SkeletonCard";
-import { SearchIcon } from "@/components/ui/icons";
+import { StatusPill } from "@/components/ui/StatusPill";
+import { DatabaseIcon, SearchIcon, ShieldIcon, VotersIcon } from "@/components/ui/icons";
 import { useAuthStore } from "@/store/authStore";
 import { useCampaignStore } from "@/store/campaignStore";
 
@@ -25,6 +29,14 @@ function localToIso(value: string): string | undefined {
   if (!value) return undefined;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+}
+
+/** Up to two initials from a full name, for the Avatar element. */
+function initials(nombre: string): string {
+  const parts = nombre.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 // ─── Ephemeral reveal flash ───────────────────────────────────────────────────
@@ -174,6 +186,16 @@ export function AdminRegistrosPage() {
     qInput || seccionInput || liderInput || activistaInput || sinceInput || untilInput,
   );
 
+  // ── Summary KPIs — derived only from the already-fetched page (no extra fetch) ──
+  const consentCount = useMemo(
+    () => items.filter((r) => r.consentimiento).length,
+    [items],
+  );
+  const claveCount = useMemo(
+    () => items.filter((r) => Boolean(r.clave_masked)).length,
+    [items],
+  );
+
   // ── Reveal handler ─────────────────────────────────────────────────────────
   const handleReveal = useCallback(
     async (row: AdminRegistro) => {
@@ -217,7 +239,10 @@ export function AdminRegistrosPage() {
         key: "nombre_completo",
         header: "Nombre",
         render: (r) => (
-          <span className="font-medium text-ink">{r.nombre_completo}</span>
+          <span className="flex items-center gap-2.5">
+            <Avatar initials={initials(r.nombre_completo)} variant="brand" />
+            <span className="font-medium text-ink">{r.nombre_completo}</span>
+          </span>
         ),
       },
       {
@@ -262,6 +287,17 @@ export function AdminRegistrosPage() {
             {r.clave_masked ?? "—"}
           </span>
         ),
+      },
+      {
+        key: "consentimiento",
+        header: "Consentimiento",
+        render: (r) =>
+          r.consentimiento ? (
+            <StatusPill kind="ok">Sí</StatusPill>
+          ) : (
+            <StatusPill kind="warn">Sin registrar</StatusPill>
+          ),
+        hideOnCard: true,
       },
       {
         key: "created_at",
@@ -312,8 +348,46 @@ export function AdminRegistrosPage() {
         subtitle="Vista cross-tenant de capturas. Revelar clave queda auditado."
       />
 
+      {/* Summary — derived only from the page already on screen */}
+      <div className="reveal mt-5" style={{ animationDelay: "80ms" }}>
+        <SectionHeading
+          eyebrow="Resumen"
+          title="Vista general"
+          note={hasFilters ? "Con filtros aplicados" : "Todas las capturas"}
+        />
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <MetricCard
+            label="Registros"
+            value="—"
+            countTo={data?.total ?? 0}
+            tone="warm"
+            icon={<VotersIcon />}
+            context={hasFilters ? "Coincidencias con los filtros" : "Capturados en la base"}
+            delay={80}
+          />
+          <MetricCard
+            label="Con consentimiento"
+            value="—"
+            countTo={consentCount}
+            tone="teal"
+            icon={<ShieldIcon />}
+            context={`${consentCount} de ${items.length} en esta página`}
+            delay={140}
+          />
+          <MetricCard
+            label="Con clave capturada"
+            value="—"
+            countTo={claveCount}
+            tone="accent"
+            icon={<DatabaseIcon />}
+            context={`${claveCount} de ${items.length} en esta página`}
+            delay={200}
+          />
+        </div>
+      </div>
+
       {/* Filters */}
-      <div className="reveal mt-5" style={{ animationDelay: "180ms" }}>
+      <div className="reveal mt-5" style={{ animationDelay: "260ms" }}>
         <Card title="Filtros" accentDot>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
             {/* Búsqueda general */}
@@ -420,15 +494,9 @@ export function AdminRegistrosPage() {
       </div>
 
       {/* Table */}
-      <div className="reveal mt-5" style={{ animationDelay: "220ms" }}>
+      <div className="reveal mt-5" style={{ animationDelay: "320ms" }}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <span className="flex items-center gap-2 text-sm font-semibold tracking-tight text-ink">
-            <span
-              className="h-1.5 w-1.5 rounded-full bg-accent-gradient shadow-glow"
-              aria-hidden="true"
-            />
-            Registros
-          </span>
+          <SectionHeading eyebrow="Consola" title="Registros" />
           <span
             className={`font-mono text-xs text-ink-muted transition-opacity${loading ? " opacity-40" : ""}`}
           >
