@@ -44,8 +44,8 @@ const TONE: Record<
   warm: {
     text: "text-warm",
     glow: "shadow-glow",
-    stroke: "var(--c-warm)",
-    fill: "color-mix(in srgb, var(--c-warm) 30%, transparent)",
+    stroke: "rgb(var(--c-warm))",
+    fill: "color-mix(in srgb, rgb(var(--c-warm)) 30%, transparent)",
   },
   warning: {
     text: "text-state-warning",
