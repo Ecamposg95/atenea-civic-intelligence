@@ -3,11 +3,17 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
+import { CellBar } from "@/components/ui/CellBar";
 import { DataState } from "@/components/ui/DataState";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { MetricCard } from "@/components/ui/MetricCard";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SkeletonRows } from "@/components/ui/SkeletonCard";
+import { StatusPill } from "@/components/ui/StatusPill";
 import { SearchIcon } from "@/components/ui/icons";
+import { TONE_BADGE } from "@/constants/ui";
 import { useAsync } from "@/hooks/useAsync";
 import {
   listMilitantes,
@@ -26,12 +32,6 @@ const ESTADO_OPTIONS: { value: MilitanteEstado | ""; label: string }[] = [
   { value: "VALIDADO", label: "Validado" },
   { value: "OBSERVADO", label: "Observado" },
 ];
-
-const ESTADO_CLASS: Record<MilitanteEstado, string> = {
-  REGISTRADO: "border-line bg-panel-hover text-ink-muted",
-  VALIDADO: "border-state-ok/30 bg-state-ok/10 text-state-ok",
-  OBSERVADO: "border-state-warning/30 bg-state-warning/10 text-state-warning",
-};
 
 const ESTADO_LABEL: Record<MilitanteEstado, string> = {
   REGISTRADO: "Registrado",
@@ -66,12 +66,31 @@ const FLAG_CRITICAL: Partial<Record<FlagKey, true>> = {
   posible_duplicado: true,
 };
 
+/** Estado -> StatusPill semantic kind. REGISTRADO has no ok/warn/crit
+ * equivalent (it's a neutral "pending review" state, not a problem), so it
+ * falls back to the kit's neutral tone instead of forcing a mismatch. */
 function EstadoPill({ estado }: { estado: MilitanteEstado }) {
-  return (
-    <span className={`pill ${ESTADO_CLASS[estado] ?? ""}`}>
-      {ESTADO_LABEL[estado] ?? estado}
-    </span>
-  );
+  const label = ESTADO_LABEL[estado] ?? estado;
+  if (estado === "VALIDADO") return <StatusPill kind="ok">{label}</StatusPill>;
+  if (estado === "OBSERVADO") return <StatusPill kind="warn">{label}</StatusPill>;
+  return <span className={`pill ${TONE_BADGE.neutral}`}>{label}</span>;
+}
+
+/** Up to two initials from a full name, for the Avatar element. */
+function initials(nombre: string): string {
+  const parts = nombre.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/** Document-capture coverage (0..100): share of frente/reverso/firma present.
+ * Derived from fields the row already carries — no new fetch. */
+function docCoverage(r: Militante): number {
+  const have = [r.tiene_frente, r.tiene_reverso, r.tiene_firma].filter(
+    Boolean,
+  ).length;
+  return (have / 3) * 100;
 }
 
 function QualityDots({ flags }: { flags: QualityFlags | null }) {
@@ -149,6 +168,20 @@ export function MilitantesListPage() {
     qInput || seccionInput || activistaInput || estadoInput || flagInput,
   );
 
+  // Summary KPIs for the strip above the table — computed only from data
+  // already fetched for the current page (no extra request).
+  const validadosEnPagina = useMemo(
+    () => items.filter((r) => r.estado === "VALIDADO").length,
+    [items],
+  );
+  const conBanderasEnPagina = useMemo(
+    () =>
+      items.filter(
+        (r) => r.quality_flags && Object.values(r.quality_flags).some(Boolean),
+      ).length,
+    [items],
+  );
+
   const columns = useMemo<Column<Militante>[]>(
     () => [
       {
@@ -162,7 +195,10 @@ export function MilitantesListPage() {
         key: "nombre_completo",
         header: "Nombre",
         render: (r) => (
-          <span className="font-medium text-ink">{r.nombre_completo}</span>
+          <span className="flex items-center gap-2.5">
+            <Avatar initials={initials(r.nombre_completo)} variant="brand" />
+            <span className="font-medium text-ink">{r.nombre_completo}</span>
+          </span>
         ),
       },
       {
@@ -184,6 +220,12 @@ export function MilitantesListPage() {
           </span>
         ),
         hideOnCard: true,
+      },
+      {
+        key: "documentos",
+        header: "Documentos",
+        align: "right",
+        render: (r) => <CellBar value={docCoverage(r)} />,
       },
       {
         key: "estado",
@@ -208,8 +250,47 @@ export function MilitantesListPage() {
         subtitle="Padrón de militantes capturados por tu estructura de activistas."
       />
 
+      {/* Summary — resumen antes que detalle */}
+      <div className="reveal mt-5" style={{ animationDelay: "80ms" }}>
+        <SectionHeading
+          eyebrow="Padrón"
+          title="Resumen"
+          note={
+            data && data.total > 0
+              ? `${offset + 1}–${Math.min(offset + PAGE, data.total)} de ${data.total}`
+              : undefined
+          }
+        />
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <MetricCard
+          label="Militantes (filtro actual)"
+          value={String(data?.total ?? 0)}
+          countTo={data?.total ?? 0}
+          tone="warm"
+          context={hasFilters ? "Con filtros aplicados" : "Sin filtros"}
+          delay={0}
+        />
+        <MetricCard
+          label="Validados en esta página"
+          value={String(validadosEnPagina)}
+          countTo={validadosEnPagina}
+          tone="teal"
+          context={`${validadosEnPagina} de ${items.length} mostrados`}
+          delay={80}
+        />
+        <MetricCard
+          label="Con banderas en esta página"
+          value={String(conBanderasEnPagina)}
+          countTo={conBanderasEnPagina}
+          tone="accent"
+          context={`${conBanderasEnPagina} de ${items.length} mostrados`}
+          delay={160}
+        />
+      </div>
+
       {/* Filters */}
-      <div className="reveal mt-5" style={{ animationDelay: "180ms" }}>
+      <div className="reveal mt-5" style={{ animationDelay: "240ms" }}>
         <Card title="Filtros" accentDot>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <label className="flex flex-col gap-1.5 xl:col-span-2">
@@ -308,24 +389,19 @@ export function MilitantesListPage() {
       </div>
 
       {/* Table */}
-      <div className="reveal mt-5" style={{ animationDelay: "220ms" }}>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <span className="flex items-center gap-2 text-sm font-semibold tracking-tight text-ink">
-            <span
-              className="h-1.5 w-1.5 rounded-full bg-accent-gradient shadow-glow"
-              aria-hidden="true"
-            />
-            Militantes
-          </span>
-          <span
-            className={`font-mono text-xs text-ink-muted transition-opacity${
-              state.loading ? " opacity-40" : ""
-            }`}
-          >
-            {data && data.total > 0
-              ? `${offset + 1}–${Math.min(offset + PAGE, data.total)} de ${data.total} militantes`
-              : ""}
-          </span>
+      <div className="reveal mt-5" style={{ animationDelay: "280ms" }}>
+        <div
+          className={`mb-3 transition-opacity${state.loading ? " opacity-40" : ""}`}
+        >
+          <SectionHeading
+            eyebrow="Detalle"
+            title="Militantes"
+            note={
+              data && data.total > 0
+                ? `${offset + 1}–${Math.min(offset + PAGE, data.total)} de ${data.total} militantes`
+                : undefined
+            }
+          />
         </div>
 
         {data && !data.has_territory ? (
