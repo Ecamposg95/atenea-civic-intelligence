@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 
+import { AlertIcon, LogoMark } from "@/components/ui/icons";
 import { getPublicForm, submitPublicResponse, type FormDefinition } from "@/api/atencion";
 
 import { DynamicForm, validate } from "./components/DynamicForm";
@@ -15,7 +16,8 @@ import { DynamicForm, validate } from "./components/DynamicForm";
  * page renders the "not available" state below regardless of whether the
  * slug is real. It is deliberately rendered OUTSIDE the authenticated
  * `AppLayout` shell (no sidebar/topbar, no JWT, no `X-Campaign-Id`) — see the
- * route registration in `App.tsx`.
+ * route registration in `App.tsx`. It therefore carries its own brand masthead
+ * and backdrop so citizens land on something that reads as official Ágora.
  *
  * ANTI-ABUSE PENDING: the backend has no honeypot field or rate limiting on
  * this channel yet (documented in `public_forms.py`). Treat this page as a
@@ -24,19 +26,79 @@ import { DynamicForm, validate } from "./components/DynamicForm";
 
 type Stage = "loading" | "notfound" | "error" | "form" | "submitting" | "done";
 
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+/** Standalone chrome for the citizen surface: brand masthead + soft backdrop + footer. */
 function Shell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-bg px-4 py-12">
-      <div className="w-full max-w-xl">{children}</div>
+    <div className="relative min-h-screen bg-bg text-ink">
+      {/* Institutional backdrop — the same command-center language as PageHeader,
+          calmed down for an anonymous public surface. */}
+      <div className="grid-backdrop pointer-events-none absolute inset-0 opacity-60" aria-hidden="true" />
+      <div className="aura left-1/2 -top-24 h-72 w-72 -translate-x-1/2" aria-hidden="true" />
+      <div className="aura aura-teal right-0 top-1/3 h-64 w-64" aria-hidden="true" />
+
+      <div className="relative flex min-h-screen flex-col px-4 py-8 sm:py-12">
+        <header className="reveal mx-auto flex w-full max-w-xl items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-accent/15 text-accent shadow-glow-accent">
+            <LogoMark width={22} height={22} />
+          </span>
+          <div className="min-w-0 leading-tight">
+            <div className="font-display text-sm font-semibold tracking-tight text-ink">Ágora</div>
+            <div className="eyebrow">Atención Ciudadana</div>
+          </div>
+        </header>
+
+        <main className="flex flex-1 items-center justify-center py-8">
+          <div className="w-full max-w-xl">{children}</div>
+        </main>
+
+        <footer className="reveal mx-auto w-full max-w-xl text-center text-[11px] text-ink-faint">
+          Plataforma de Atención Ciudadana · Ágora
+        </footer>
+      </div>
     </div>
   );
 }
 
-function StatusCard({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
+/**
+ * Full-height status card for the terminal stages (loading / notfound / error /
+ * done). `tone` picks the icon chip color; `icon` defaults to an alert glyph.
+ */
+function StatusCard({
+  title,
+  body,
+  tone = "neutral",
+  icon,
+  action,
+}: {
+  title: string;
+  body: string;
+  tone?: "success" | "critical" | "neutral";
+  icon?: ReactNode;
+  action?: ReactNode;
+}) {
+  const toneClass =
+    tone === "success"
+      ? "text-teal"
+      : tone === "critical"
+        ? "text-state-critical"
+        : "text-ink-faint";
   return (
-    <div className="card-premium animate-fade-in flex flex-col items-center gap-2 p-8 text-center">
-      <p className="text-lg font-semibold text-ink">{title}</p>
-      <p className="max-w-sm text-sm leading-relaxed text-ink-muted">{body}</p>
+    <div className="card-premium reveal flex flex-col items-center gap-4 p-8 text-center">
+      <span className={`metric-chip h-14 w-14 ${toneClass}`}>
+        {icon ?? <AlertIcon width={20} height={20} />}
+      </span>
+      <div>
+        <p className="font-display text-lg font-semibold tracking-tight text-ink">{title}</p>
+        <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-ink-muted">{body}</p>
+      </div>
       {action}
     </div>
   );
@@ -128,8 +190,10 @@ export default function PublicFormPage() {
   if (stage === "loading") {
     return (
       <Shell>
-        <div className="card-premium animate-pulse p-8 text-center text-ink-faint">
-          Cargando formulario…
+        <div className="card-premium animate-pulse space-y-3 p-8">
+          <div className="mx-auto h-4 w-40 rounded bg-panel-hover" />
+          <div className="h-3 w-full rounded bg-panel-hover" />
+          <div className="h-3 w-2/3 rounded bg-panel-hover" />
         </div>
       </Shell>
     );
@@ -150,12 +214,13 @@ export default function PublicFormPage() {
     return (
       <Shell>
         <StatusCard
+          tone="critical"
           title="No se pudo cargar el formulario"
           body="Ocurrió un problema de conexión. Intenta de nuevo en unos minutos."
           action={
             <button
               type="button"
-              className="btn-ghost focus-ring mt-2"
+              className="btn-ghost focus-ring"
               onClick={() => setReloadNonce((n) => n + 1)}
             >
               Reintentar
@@ -170,6 +235,8 @@ export default function PublicFormPage() {
     return (
       <Shell>
         <StatusCard
+          tone="success"
+          icon={<CheckIcon />}
           title="¡Gracias!"
           body="Tu petición fue recibida. Si es necesario, alguien de nuestro equipo te contactará."
         />
@@ -182,12 +249,12 @@ export default function PublicFormPage() {
 
   return (
     <Shell>
-      <div className="card-premium p-6 sm:p-8">
-        <div className="mb-6">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-ink-faint">
-            Atención Ciudadana
-          </p>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight text-ink">{form.nombre}</h1>
+      <div className="card-premium reveal p-6 sm:p-8">
+        <div className="mb-6 border-b border-line pb-5">
+          <p className="eyebrow">Atención Ciudadana</p>
+          <h1 className="mt-2 font-display text-2xl font-bold leading-tight tracking-tight text-ink">
+            {form.nombre}
+          </h1>
           {form.descripcion && (
             <p className="mt-2 text-sm leading-relaxed text-ink-muted">{form.descripcion}</p>
           )}
@@ -197,10 +264,15 @@ export default function PublicFormPage() {
           <DynamicForm schema={form.schema} value={answers} onChange={handleChange} errors={errors} />
 
           {submitError && (
-            <p className="mt-4 text-sm text-state-critical">{submitError}</p>
+            <div className="mt-5 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
+              {submitError}
+            </div>
           )}
 
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex items-center justify-between gap-3 border-t border-line pt-5">
+            <p className="text-xs text-ink-faint">
+              Los campos marcados con <span className="text-state-critical">*</span> son obligatorios.
+            </p>
             <button
               type="submit"
               disabled={stage === "submitting"}
