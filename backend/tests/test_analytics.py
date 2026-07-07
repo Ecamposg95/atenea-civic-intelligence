@@ -56,3 +56,45 @@ def test_overview_includes_breakdowns(client):
     assert isinstance(by_hour, list) and len(by_hour) == 24
     assert [x["hour"] for x in by_hour] == list(range(24))
     assert all({"hour", "count"} <= set(x) for x in by_hour)
+
+
+def test_overview_election_date_null_when_no_contests(client):
+    headers = auth_headers(client, "admin@alpha.gov")
+    body = client.get("/api/analytics/overview", headers=headers).json()
+    assert "election_date" in body
+    # No Contest rows seeded for Alpha at this point in the module (this test
+    # runs before test_overview_election_date_returns_soonest below adds any).
+    assert body["election_date"] is None
+
+
+def test_overview_election_date_returns_soonest(client):
+    from datetime import date, timedelta
+
+    from sqlalchemy import select as _select
+
+    from app.models.campaign import Campaign, Contest
+    from app.models.catalog import Cargo
+
+    from .conftest import ALPHA_CAMPAIGN_ID, TestingSessionLocal
+
+    db = TestingSessionLocal()
+    try:
+        camp = db.execute(_select(Campaign).where(Campaign.id == ALPHA_CAMPAIGN_ID)).scalar_one()
+        cargo = db.execute(_select(Cargo).where(Cargo.key == "gubernatura")).scalar_one()
+        far = date.today() + timedelta(days=400)
+        near = date.today() + timedelta(days=100)
+        db.add_all([
+            Contest(campaign_id=camp.id, organization_id=camp.organization_id,
+                    cargo_id=cargo.id, election_date=far),
+            Contest(campaign_id=camp.id, organization_id=camp.organization_id,
+                    cargo_id=cargo.id, election_date=near),
+            Contest(campaign_id=camp.id, organization_id=camp.organization_id,
+                    cargo_id=cargo.id, election_date=None),
+        ])
+        db.commit()
+    finally:
+        db.close()
+
+    headers = auth_headers(client, "admin@alpha.gov")
+    body = client.get("/api/analytics/overview", headers=headers).json()
+    assert body["election_date"] == near.isoformat()

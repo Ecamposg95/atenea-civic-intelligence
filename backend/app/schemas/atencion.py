@@ -96,6 +96,10 @@ class CasoAsignarUpdate(BaseModel):
     nota: Optional[str] = Field(default=None, max_length=1000)
 
 
+class CasoEvidenciaUploadRead(BaseModel):
+    evidencia_key: str
+
+
 class CasoEventoCreate(BaseModel):
     tipo: str = Field(pattern=EVENTO_TIPO_PATTERN)
     texto: Optional[str] = Field(default=None, max_length=2000)

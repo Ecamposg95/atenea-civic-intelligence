@@ -10,13 +10,14 @@ direct POST /casos in this task's scope.
 """
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from app.dependencies import CampaignCtx, DbSession, require_roles
 from app.models.user import UserRole
 from app.schemas.atencion import (
-    CasoAsignarUpdate, CasoEstadoUpdate, CasoEventoCreate, CasoEventoRead, CasoList,
-    CasoPanorama, CasoRead, PanoramaKpis, PanoramaPorColonia, PanoramaPorResponsable,
+    CasoAsignarUpdate, CasoEstadoUpdate, CasoEventoCreate, CasoEventoRead,
+    CasoEvidenciaUploadRead, CasoList, CasoPanorama, CasoRead, PanoramaKpis,
+    PanoramaPorColonia, PanoramaPorResponsable,
 )
 from app.services import caso_service
 
@@ -26,6 +27,8 @@ _CAPTURE = Annotated[object, Depends(require_roles(
     UserRole.ACTIVISTA, UserRole.CAPTURISTA, UserRole.LIDER,
     UserRole.COORDINADOR, UserRole.ADMIN))]
 _REVIEW = Annotated[object, Depends(require_roles(UserRole.COORDINADOR, UserRole.ADMIN))]
+
+_MAX_EVIDENCIA_BYTES = 6 * 1024 * 1024
 
 
 def _to_panorama(data: dict) -> CasoPanorama:
@@ -98,11 +101,28 @@ def asignar(db: DbSession, ctx: CampaignCtx, _p: _REVIEW, cid: str, data: CasoAs
     return CasoRead.model_validate(c, from_attributes=True)
 
 
+@router.post("/casos/{cid}/evidencia", response_model=CasoEvidenciaUploadRead)
+async def upload_evidencia(db: DbSession, ctx: CampaignCtx, _p: _CAPTURE, cid: str,
+                            file: Annotated[UploadFile, File()]):
+    data = await file.read()
+    if len(data) > _MAX_EVIDENCIA_BYTES:
+        raise HTTPException(status_code=413, detail="Archivo demasiado grande")
+    key = caso_service.subir_evidencia(db, ctx, cid, data, file.content_type or "image/jpeg")
+    if key is None:
+        raise HTTPException(status_code=404, detail="Caso no encontrado")
+    return CasoEvidenciaUploadRead(evidencia_key=key)
+
+
 @router.post("/casos/{cid}/eventos", response_model=CasoEventoRead, status_code=status.HTTP_201_CREATED)
 def add_evento(db: DbSession, ctx: CampaignCtx, _p: _CAPTURE, cid: str, data: CasoEventoCreate):
-    evento = caso_service.add_evento(db, ctx, cid, data.tipo, texto=data.texto)
+    try:
+        evento = caso_service.add_evento(db, ctx, cid, data.tipo, texto=data.texto,
+                                          evidencia_key=data.evidencia_key)
+    except caso_service.InvalidEvidenciaKey:
+        raise HTTPException(status_code=422, detail="evidencia_key inválida")
     if evento is None:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
     return CasoEventoRead(
         id=evento.id, caso_id=evento.caso_id, tipo=evento.tipo, texto=evento.texto,
-        evidencia_url=None, actor_nombre=None, created_at=evento.created_at)
+        evidencia_url=caso_service.evidencia_url(evento.evidencia_key),
+        actor_nombre=None, created_at=evento.created_at)

@@ -8,6 +8,7 @@ territorial routing and an event log.
 """
 from __future__ import annotations
 
+import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
@@ -28,6 +29,12 @@ from app.services.audit_service import record_audit
 SLA_DIAS = {"PETICION": 7, "QUEJA": 5, "APOYO": 10, "OTRO": 7}
 
 _TERMINAL_ESTADOS = ("ATENDIDO", "CERRADO")
+
+
+class InvalidEvidenciaKey(ValueError):
+    """Raised when a client-supplied evidencia_key does not belong to the caso
+    it is being attached to (prevents linking a bitácora event to a foreign or
+    forged bucket object)."""
 
 
 def _mask(value: str) -> str:
@@ -372,26 +379,39 @@ def asignar(db: Session, ctx: CampaignContext, cid: str, user_id: Optional[str],
 
 def add_evento(db: Session, ctx: CampaignContext, cid: str, tipo: str, *,
                texto: Optional[str] = None, evidencia: Optional[bytes] = None,
-               content_type: str = "image/jpeg") -> Optional[CasoEvento]:
-    """Append a bitácora event (NOTA / EVIDENCIA). For EVIDENCIA with bytes, the
-    object is stored under casos/{campaign}/{caso}/ev-{n}.jpg and the key recorded."""
+               content_type: str = "image/jpeg",
+               evidencia_key: Optional[str] = None) -> Optional[CasoEvento]:
+    """Append a bitácora event (NOTA / EVIDENCIA).
+
+    Two ways to attach evidence: pass raw ``evidencia`` bytes (legacy inline
+    path — the object is stored under casos/{campaign}/{caso}/ev-{n}.jpg and
+    the key recorded), or pass an ``evidencia_key`` already returned by
+    ``subir_evidencia`` (the POST /casos/{cid}/evidencia upload endpoint) — in
+    that case the object is already in the bucket, so it's just linked. A
+    supplied ``evidencia_key`` MUST belong to this caso's own prefix.
+    """
     caso = get_caso(db, ctx, cid)
     if caso is None:
         return None
     tipo = tipo.upper()
-    evidencia_key = None
+    key = None
     if evidencia:
         from app.core import storage
         n = db.execute(
             select(func.count()).select_from(CasoEvento)
             .where(CasoEvento.caso_id == caso.id, CasoEvento.evidencia_key.isnot(None))
         ).scalar_one()
-        evidencia_key = f"casos/{caso.campaign_id}/{caso.id}/ev-{n + 1}.jpg"
-        storage.put_object(evidencia_key, evidencia, content_type)
+        key = f"casos/{caso.campaign_id}/{caso.id}/ev-{n + 1}.jpg"
+        storage.put_object(key, evidencia, content_type)
+    elif evidencia_key:
+        prefix = f"casos/{caso.campaign_id}/{caso.id}/"
+        if not evidencia_key.startswith(prefix):
+            raise InvalidEvidenciaKey("evidencia_key no pertenece a este caso")
+        key = evidencia_key
 
     evento = CasoEvento(
         organization_id=ctx.organization_id, caso_id=caso.id, tipo=tipo,
-        texto=texto, evidencia_key=evidencia_key, actor_id=ctx.user.id,
+        texto=texto, evidencia_key=key, actor_id=ctx.user.id,
     )
     db.add(evento)
     record_audit(db, action="caso.evento", actor_id=ctx.user.id,
@@ -400,6 +420,35 @@ def add_evento(db: Session, ctx: CampaignContext, cid: str, tipo: str, *,
     db.commit()
     db.refresh(evento)
     return evento
+
+
+def subir_evidencia(db: Session, ctx: CampaignContext, cid: str,
+                    data: bytes, content_type: str) -> Optional[str]:
+    """Upload a case-evidence object to the bucket under
+    casos/{campaign}/{caso}/ev-{uuid}.jpg and return the storage key.
+
+    The object is not yet linked to any bitácora event — the caller records
+    that separately via ``add_evento(..., evidencia_key=key)`` (mirrors the
+    two-step upload-then-reference flow used for form-response evidencia).
+    """
+    from app.core import storage
+    caso = get_caso(db, ctx, cid)
+    if caso is None:
+        return None
+    key = f"casos/{caso.campaign_id}/{caso.id}/ev-{uuid.uuid4()}.jpg"
+    storage.put_object(key, data, content_type)
+    record_audit(db, action="caso.evidencia.upload", actor_id=ctx.user.id,
+                 organization_id=ctx.organization_id, entity_type="caso", entity_id=caso.id)
+    db.commit()
+    return key
+
+
+def evidencia_url(key: Optional[str]) -> Optional[str]:
+    """Presigned GET for a CasoEvento's evidencia_key, or None if unset."""
+    if not key:
+        return None
+    from app.core import storage
+    return storage.presigned_get(key)
 
 
 # ── Panorama ───────────────────────────────────────────────────────────────────

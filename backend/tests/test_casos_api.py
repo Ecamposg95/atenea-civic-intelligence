@@ -146,3 +146,67 @@ def test_coordinador_can_set_estado_and_asignar(client):
     evento = client.post(f"/api/casos/{cid}/eventos", headers=h,
                           json={"tipo": "NOTA", "texto": "seguimiento"})
     assert evento.status_code == 201, evento.text
+
+
+def _open_caso(client, h, slug):
+    f = client.post("/api/forms", headers=h, json=_form_payload(slug)).json()
+    r = client.post("/api/responses", headers=h, json={
+        "form_definition_id": f["id"],
+        "answers": {"nombre": "Deo", "descripcion": "bache", "seccion": "4127"}})
+    assert r.status_code == 201, r.text
+    return r.json()["caso_id"]
+
+
+def test_evidencia_upload_and_evento_flow(client, monkeypatch):
+    import app.core.storage as storage
+
+    puts: dict = {}
+    monkeypatch.setattr(storage, "put_object", lambda key, data, ct: puts.__setitem__(key, data))
+    monkeypatch.setattr(storage, "presigned_get", lambda key, ttl=60: f"https://signed/{key}")
+
+    _ensure_coord_territory_4127()
+    h = _hdr(client, "coord@alpha.gov")
+    cid = _open_caso(client, h, "pet-evidencia-test")
+
+    up = client.post(f"/api/casos/{cid}/evidencia", headers=h,
+                      files={"file": ("foto.jpg", b"\xff\xd8fakejpegbytes", "image/jpeg")})
+    assert up.status_code == 200, up.text
+    key = up.json()["evidencia_key"]
+    assert key.startswith(f"casos/{ALPHA_CAMPAIGN_ID}/{cid}/ev-")
+    assert key in puts
+
+    evento = client.post(f"/api/casos/{cid}/eventos", headers=h,
+                          json={"tipo": "EVIDENCIA", "evidencia_key": key})
+    assert evento.status_code == 201, evento.text
+    body = evento.json()
+    assert body["evidencia_url"] == f"https://signed/{key}"
+
+
+def test_evidencia_upload_rejects_oversized_file(client):
+    _ensure_coord_territory_4127()
+    h = _hdr(client, "coord@alpha.gov")
+    cid = _open_caso(client, h, "pet-evidencia-big-test")
+
+    big = b"x" * (6 * 1024 * 1024 + 1)
+    up = client.post(f"/api/casos/{cid}/evidencia", headers=h,
+                      files={"file": ("foto.jpg", big, "image/jpeg")})
+    assert up.status_code == 413, up.text
+
+
+def test_evidencia_upload_requires_existing_caso(client, monkeypatch):
+    import app.core.storage as storage
+    monkeypatch.setattr(storage, "put_object", lambda *a, **k: None)
+    h = _hdr(client, "coord@alpha.gov")
+    up = client.post("/api/casos/does-not-exist/evidencia", headers=h,
+                      files={"file": ("foto.jpg", b"jpg", "image/jpeg")})
+    assert up.status_code == 404
+
+
+def test_evento_rejects_foreign_evidencia_key(client):
+    _ensure_coord_territory_4127()
+    h = _hdr(client, "coord@alpha.gov")
+    cid = _open_caso(client, h, "pet-evidencia-foreign-test")
+
+    evento = client.post(f"/api/casos/{cid}/eventos", headers=h, json={
+        "tipo": "EVIDENCIA", "evidencia_key": "casos/other-campaign/other-caso/ev-x.jpg"})
+    assert evento.status_code == 422
