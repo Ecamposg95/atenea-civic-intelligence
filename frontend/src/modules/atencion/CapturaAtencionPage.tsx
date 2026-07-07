@@ -325,6 +325,7 @@ export default function CapturaAtencionPage() {
       />
 
       <div className="flex flex-col gap-4">
+        <div className="reveal" style={{ animationDelay: "120ms" }}>
         <Card title="Escanear credencial" accentDot>
           <p className="text-xs leading-relaxed text-ink-muted">
             Toma una foto de la credencial de elector para prellenar los
@@ -369,9 +370,10 @@ export default function CapturaAtencionPage() {
             </p>
           )}
         </Card>
+        </div>
 
         {ocrKeys.size > 0 && (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2">
+          <div className="reveal flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2">
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-accent">
               OCR — verifica
             </span>
@@ -383,6 +385,7 @@ export default function CapturaAtencionPage() {
           </div>
         )}
 
+        <div className="reveal" style={{ animationDelay: "160ms" }}>
         <Card title={form.nombre} accentDot>
           {form.descripcion && (
             <p className="mb-4 text-xs text-ink-muted">{form.descripcion}</p>
@@ -410,6 +413,7 @@ export default function CapturaAtencionPage() {
             </div>
           </form>
         </Card>
+        </div>
       </div>
     </AppLayout>
   );

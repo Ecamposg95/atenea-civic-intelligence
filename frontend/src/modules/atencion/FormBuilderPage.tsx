@@ -358,7 +358,7 @@ export function FormBuilderPage() {
       )}
 
       {/* Meta */}
-      <div className="mb-4">
+      <div className="reveal mb-4" style={{ animationDelay: "160ms" }}>
         <Card title="Datos del formulario" accentDot>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <label className="flex flex-col gap-1.5 sm:col-span-2">
@@ -446,7 +446,7 @@ export function FormBuilderPage() {
       </div>
 
       {/* Left: palette + sections | Center: structure | Right: preview */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr_380px]">
+      <div className="reveal grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr_380px]" style={{ animationDelay: "200ms" }}>
         {/* Left column */}
         <div className="flex flex-col gap-4">
           <Card title="Agregar campo" accentDot>

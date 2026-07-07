@@ -243,7 +243,13 @@ export function DynamicForm({ schema, value, onChange, errors }: DynamicFormProp
         if (visibleCampos.length === 0) return null;
         return (
           <div key={`${seccion.titulo}-${idx}`} className="flex flex-col gap-4">
-            <h3 className="text-sm font-semibold text-ink">{seccion.titulo}</h3>
+            <h3 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-ink">
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-gradient shadow-glow"
+                aria-hidden="true"
+              />
+              {seccion.titulo}
+            </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {visibleCampos.map((field) => (
                 <Field
