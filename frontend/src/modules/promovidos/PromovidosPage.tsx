@@ -171,6 +171,7 @@ export function PromovidosPage() {
                 columns={COLUMNS}
                 rows={data?.items ?? []}
                 rowKey={(p) => p.id}
+                pageSize={data?.items.length || 50}
                 defaultSortKey="nombre_completo"
                 defaultSortDir="asc"
                 emptyMessage="Sin promovidos…"
