@@ -12,6 +12,7 @@ export default {
           accent: { DEFAULT: ch("--c-accent"), strong: ch("--c-accent-strong") },
           teal: { DEFAULT: ch("--c-teal") },
           amber: { DEFAULT: ch("--c-amber") },
+          warm: { DEFAULT: ch("--c-warm"), soft: ch("--c-warm-soft") },
           line: { DEFAULT: ch("--c-line"), strong: ch("--c-line-strong") },
           ink: { DEFAULT: ch("--c-ink"), muted: ch("--c-ink-muted"), faint: ch("--c-ink-faint") },
           state: { info: ch("--c-info"), warning: ch("--c-warning"), critical: ch("--c-critical"), ok: ch("--c-ok") },
