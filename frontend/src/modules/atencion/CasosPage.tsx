@@ -6,8 +6,11 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { DataState } from "@/components/ui/DataState";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { MetricCard } from "@/components/ui/MetricCard";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SkeletonRows } from "@/components/ui/SkeletonCard";
-import { SearchIcon } from "@/components/ui/icons";
+import { StatusPill, type StatusKind } from "@/components/ui/StatusPill";
+import { AlertIcon, LayersIcon, SearchIcon, UserIcon } from "@/components/ui/icons";
 import { useAsync } from "@/hooks/useAsync";
 import { listCasos, type Caso } from "@/api/atencion";
 import { listUsers } from "@/api/users";
@@ -15,6 +18,8 @@ import { listUsers } from "@/api/users";
 import { CasoDetail } from "./components/CasoDetail";
 
 const PAGE = 20;
+
+const nf = new Intl.NumberFormat("es-MX");
 
 // Estado color semantics (global-constraints): PENDIENTE=neutral, EN_PROCESO=accent/cyan,
 // ATENDIDO=success/teal, CERRADO=muted. Mirrors PanoramaAtencionPage's palette so the
@@ -86,15 +91,16 @@ export function slaInfo(caso: Pick<Caso, "fecha_compromiso" | "estado">): SlaInf
   return { tone: "neutral", label: caso.fecha_compromiso };
 }
 
-const SLA_CLASS: Record<SlaTone, string> = {
-  critical: "border-state-critical/30 bg-state-critical/10 text-state-critical",
-  warning: "border-state-warning/30 bg-state-warning/10 text-state-warning",
-  neutral: "border-line bg-panel-hover text-ink-faint",
+// SLA tone -> StatusPill semantic kind: vencido -> crit, próximo -> warn, ok -> ok.
+const SLA_KIND: Record<SlaTone, StatusKind> = {
+  critical: "crit",
+  warning: "warn",
+  neutral: "ok",
 };
 
 export function SlaBadge({ caso }: { caso: Pick<Caso, "fecha_compromiso" | "estado"> }) {
   const info = slaInfo(caso);
-  return <span className={`pill ${SLA_CLASS[info.tone]}`}>{info.label}</span>;
+  return <StatusPill kind={SLA_KIND[info.tone]}>{info.label}</StatusPill>;
 }
 
 /**
@@ -157,6 +163,22 @@ export function CasosPage() {
   const data = state.data;
   const items = useMemo(() => data?.items ?? [], [data]);
   const hasFilters = Boolean(qInput || colonInput || estadoInput || tipoInput || asignadoInput);
+
+  // Summary KPI strip — derived from the already-fetched page (no extra endpoint).
+  // "Vencido"/"Por vencer"/"Sin asignar" reflect the current page only, since the
+  // list endpoint doesn't return filtered-wide aggregates.
+  const kpiCounts = useMemo(() => {
+    let vencidos = 0;
+    let porVencer = 0;
+    let sinAsignar = 0;
+    for (const item of items) {
+      const tone = slaInfo(item).tone;
+      if (tone === "critical") vencidos += 1;
+      else if (tone === "warning") porVencer += 1;
+      if (!item.asignado_nombre) sinAsignar += 1;
+    }
+    return { vencidos, porVencer, sinAsignar };
+  }, [items]);
 
   const columns = useMemo<Column<Caso>[]>(
     () => [
@@ -225,8 +247,50 @@ export function CasosPage() {
         subtitle="Peticiones, quejas y apoyos ciudadanos: estado, cumplimiento de SLA y bitácora por caso."
       />
 
+      {/* Resumen: KPI strip derived from the already-fetched page */}
+      <section className="reveal mt-6 flex flex-col gap-4" style={{ animationDelay: "60ms" }}>
+        <SectionHeading eyebrow="Vista general" title="Resumen" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            label="Casos"
+            value={data ? nf.format(data.total) : "—"}
+            countTo={data?.total ?? 0}
+            tone="warm"
+            context="Con los filtros aplicados"
+            icon={<LayersIcon width={16} height={16} />}
+            delay={0}
+          />
+          <MetricCard
+            label="SLA vencido"
+            value={nf.format(kpiCounts.vencidos)}
+            countTo={kpiCounts.vencidos}
+            tone="critical"
+            context="En esta página"
+            icon={<AlertIcon width={16} height={16} />}
+            delay={60}
+          />
+          <MetricCard
+            label="Por vencer"
+            value={nf.format(kpiCounts.porVencer)}
+            countTo={kpiCounts.porVencer}
+            tone="warning"
+            context="Próximos 2 días · esta página"
+            delay={120}
+          />
+          <MetricCard
+            label="Sin asignar"
+            value={nf.format(kpiCounts.sinAsignar)}
+            countTo={kpiCounts.sinAsignar}
+            tone="accent"
+            context="En esta página"
+            icon={<UserIcon width={16} height={16} />}
+            delay={180}
+          />
+        </div>
+      </section>
+
       {/* Filters */}
-      <div className="reveal mt-5" style={{ animationDelay: "180ms" }}>
+      <div className="reveal mt-5" style={{ animationDelay: "220ms" }}>
         <Card title="Filtros" accentDot>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <label className="flex flex-col gap-1.5 xl:col-span-2">
@@ -319,70 +383,69 @@ export function CasosPage() {
       </div>
 
       {/* Table */}
-      <div className="reveal mt-5" style={{ animationDelay: "220ms" }}>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <span className="flex items-center gap-2 text-sm font-semibold tracking-tight text-ink">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent-gradient shadow-glow" aria-hidden="true" />
-            Casos
-          </span>
-          <span className={`font-mono text-xs text-ink-muted transition-opacity${state.loading ? " opacity-40" : ""}`}>
-            {data && data.total > 0
+      <div className="reveal mt-5" style={{ animationDelay: "280ms" }}>
+        <SectionHeading
+          title="Casos"
+          note={
+            data && data.total > 0
               ? `${offset + 1}–${Math.min(offset + PAGE, data.total)} de ${data.total} casos`
-              : ""}
-          </span>
-        </div>
+              : undefined
+          }
+        />
 
-        {data && !data.has_territory ? (
-          <div className="card-premium px-5 py-12 text-center text-ink-muted">
-            Pídele a tu administrador que te asigne un territorio.
-          </div>
-        ) : (
-          <>
-            <DataState
-              loading={state.loading}
-              error={state.error}
-              isEmpty={!state.loading && !state.error && items.length === 0}
-              emptyMessage="Sin casos para los filtros seleccionados."
-              onRetry={state.reload}
-              skeleton={
-                <div className="card-premium p-4">
-                  <SkeletonRows rows={8} />
-                </div>
-              }
-            >
-              <DataTable
-                columns={columns}
-                rows={items}
-                rowKey={(r) => r.id}
-                pageSize={PAGE}
-                onRowClick={(r) => setSelectedId(r.id)}
+        <div className="mt-4">
+          {data && !data.has_territory ? (
+            <div className="card-premium px-5 py-12 text-center text-ink-muted">
+              Pídele a tu administrador que te asigne un territorio.
+            </div>
+          ) : (
+            <>
+              <DataState
+                loading={state.loading}
+                error={state.error}
+                isEmpty={!state.loading && !state.error && items.length === 0}
                 emptyMessage="Sin casos para los filtros seleccionados."
-              />
-            </DataState>
+                onRetry={state.reload}
+                skeleton={
+                  <div className="card-premium p-4">
+                    <SkeletonRows rows={8} />
+                  </div>
+                }
+              >
+                <DataTable
+                  columns={columns}
+                  rows={items}
+                  rowKey={(r) => r.id}
+                  pageSize={PAGE}
+                  onRowClick={(r) => setSelectedId(r.id)}
+                  emptyMessage="Sin casos para los filtros seleccionados."
+                />
+              </DataState>
 
-            {/* Server-side pagination */}
-            {!state.loading && !state.error && (data?.total ?? 0) > PAGE && (
-              <div className="mt-3 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  disabled={state.loading || offset === 0}
-                  onClick={() => setOffset(Math.max(0, offset - PAGE))}
-                  className="btn-ghost focus-ring disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Anterior
-                </button>
-                <button
-                  type="button"
-                  disabled={state.loading || !data || offset + PAGE >= data.total}
-                  onClick={() => setOffset(offset + PAGE)}
-                  className="btn-ghost focus-ring disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Siguiente
-                </button>
-              </div>
-            )}
-          </>
-        )}
+              {/* Server-side pagination */}
+              {!state.loading && !state.error && (data?.total ?? 0) > PAGE && (
+                <div className="mt-3 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={state.loading || offset === 0}
+                    onClick={() => setOffset(Math.max(0, offset - PAGE))}
+                    className="btn-ghost focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    type="button"
+                    disabled={state.loading || !data || offset + PAGE >= data.total}
+                    onClick={() => setOffset(offset + PAGE)}
+                    className="btn-ghost focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {selectedId && (
