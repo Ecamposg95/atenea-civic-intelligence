@@ -1,13 +1,14 @@
 // frontend/src/modules/atencion/PanoramaAtencionPage.tsx
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ChartFrame } from "@/components/charts/ChartFrame";
 import { Donut, type DonutDatum } from "@/components/charts/Donut";
-import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
-import { Card } from "@/components/ui/Card";
 import { DataState } from "@/components/ui/DataState";
 import type { Column } from "@/components/ui/DataTable";
 import { DataTable } from "@/components/ui/DataTable";
-import { AlertIcon } from "@/components/ui/icons";
+import { MetricCard } from "@/components/ui/MetricCard";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { AlertIcon, LayersIcon, ShieldIcon } from "@/components/ui/icons";
 import { useAsync } from "@/hooks/useAsync";
 import { getCasoPanorama, type CasoPanorama } from "@/api/atencion";
 
@@ -41,6 +42,8 @@ const ESTADO_DOT_CLASS: Record<string, string> = {
 
 const pct = (num: number, den: number): string =>
   den > 0 ? `${((num / den) * 100).toFixed(1)}%` : "—";
+
+const nf = new Intl.NumberFormat("es-MX");
 
 // Territorial "semáforo": colonias con más casos pendientes que atendidos se marcan en rojo/ámbar.
 const semaforoClass = (count: number, max: number): string => {
@@ -122,65 +125,69 @@ export default function PanoramaAtencionPage() {
         isEmpty={isEmpty}
         emptyMessage="Aún no hay casos"
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
           {/* Bloque 1: KPI row */}
-          <Card title="Estado general" accentDot>
+          <section className="flex flex-col gap-4">
+            <SectionHeading eyebrow="Atención Ciudadana" title="Estado general" />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              <div className="card-premium p-4">
-                <span className="eyebrow block">Total casos</span>
-                <div className="mt-1.5 font-display text-3xl font-bold tabular-nums text-gradient">
-                  <AnimatedNumber value={kpis?.total ?? 0} />
-                </div>
-              </div>
+              <MetricCard
+                label="Total casos"
+                value={kpis ? nf.format(kpis.total) : "—"}
+                countTo={kpis?.total ?? 0}
+                tone="warm"
+                context="Volumen total registrado"
+                icon={<LayersIcon width={16} height={16} />}
+                delay={0}
+              />
 
-              <div className="card-premium p-4">
-                <span className="eyebrow block">Pendientes</span>
-                <div className="mt-1.5 font-display text-3xl font-bold tabular-nums text-ink-muted">
-                  <AnimatedNumber value={kpis?.pendientes ?? 0} />
-                </div>
-                <span className="mt-0.5 block text-xs text-ink-faint">
-                  {kpis ? pct(kpis.pendientes, kpis.total) : "—"} del total
-                </span>
-              </div>
+              <MetricCard
+                label="Pendientes"
+                value={kpis ? nf.format(kpis.pendientes) : "—"}
+                countTo={kpis?.pendientes ?? 0}
+                tone="accent"
+                context={kpis ? `${pct(kpis.pendientes, kpis.total)} del total` : undefined}
+                delay={60}
+              />
 
-              <div className="card-premium p-4">
-                <span className="eyebrow block">Atendidos</span>
-                <div className="mt-1.5 font-display text-3xl font-bold tabular-nums text-teal">
-                  <AnimatedNumber value={kpis?.atendidos ?? 0} />
-                </div>
-                <span className="mt-0.5 block text-xs text-ink-faint">
-                  {kpis ? pct(kpis.atendidos, kpis.total) : "—"} del total
-                </span>
-              </div>
+              <MetricCard
+                label="Atendidos"
+                value={kpis ? nf.format(kpis.atendidos) : "—"}
+                countTo={kpis?.atendidos ?? 0}
+                tone="teal"
+                context={kpis ? `${pct(kpis.atendidos, kpis.total)} del total` : undefined}
+                icon={<ShieldIcon width={16} height={16} />}
+                delay={120}
+              />
 
-              {/* Hero warning: SLA vencidos */}
-              <div className="hud-corners card-premium relative overflow-hidden border-state-critical/30 bg-state-critical/5 p-4">
-                <div className="flex items-center gap-2">
-                  <span className="metric-chip h-8 w-8 shrink-0 text-state-critical">
-                    <AlertIcon width={16} height={16} />
-                  </span>
-                  <span className="eyebrow block text-state-critical">SLA vencidos</span>
-                </div>
-                <div className="mt-1.5 font-display text-3xl font-bold tabular-nums text-state-critical">
-                  <AnimatedNumber value={kpis?.sla_vencidos ?? 0} />
-                </div>
-                <span className="mt-0.5 block text-xs text-ink-faint">requieren atención inmediata</span>
-              </div>
+              <MetricCard
+                label="SLA vencidos"
+                value={kpis ? nf.format(kpis.sla_vencidos) : "—"}
+                countTo={kpis?.sla_vencidos ?? 0}
+                tone="critical"
+                context="Requieren atención inmediata"
+                icon={<AlertIcon width={16} height={16} />}
+                delay={180}
+              />
 
-              <div className="card-premium p-4">
-                <span className="eyebrow block">Tiempo prom.</span>
-                <div className="mt-1.5 font-display text-3xl font-bold tabular-nums text-accent">
-                  <AnimatedNumber value={kpis?.tiempo_prom_dias ?? 0} format={(n) => n.toFixed(1)} />
-                </div>
-                <span className="mt-0.5 block text-xs text-ink-faint">días promedio de resolución</span>
-              </div>
+              <MetricCard
+                label="Tiempo prom."
+                value={kpis ? (kpis.tiempo_prom_dias ?? 0).toFixed(1) : "—"}
+                countTo={kpis?.tiempo_prom_dias ?? 0}
+                format={(n) => n.toFixed(1)}
+                tone="accent"
+                context="Días promedio de resolución"
+                delay={240}
+              />
             </div>
-          </Card>
+          </section>
 
           {/* Bloque 2: Por estado */}
-          <Card title="Casos por estado" accentDot>
+          <ChartFrame
+            title="Casos por estado"
+            caption="Distribución del total de casos según su etapa actual."
+          >
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <Donut data={estadoDonut} height={220} />
+              <Donut data={estadoDonut} height={220} centerLabel="Casos" />
               <div className="flex flex-col justify-center gap-2">
                 {ESTADO_ORDER.map((estado) => (
                   <div key={estado} className="flex items-center justify-between gap-3 text-sm">
@@ -195,10 +202,11 @@ export default function PanoramaAtencionPage() {
                 ))}
               </div>
             </div>
-          </Card>
+          </ChartFrame>
 
           {/* Bloque 3: Por colonia — semáforo territorial */}
-          <Card title="Por colonia (semáforo territorial)" accentDot>
+          <section className="flex flex-col gap-4">
+            <SectionHeading title="Por colonia" note="Semáforo territorial" />
             <DataTable
               columns={COLONIA_COLUMNS(maxColonia)}
               rows={data?.por_colonia ?? []}
@@ -207,10 +215,11 @@ export default function PanoramaAtencionPage() {
               defaultSortDir="desc"
               emptyMessage="Aún no hay casos"
             />
-          </Card>
+          </section>
 
           {/* Bloque 4: Por responsable */}
-          <Card title="Por responsable" accentDot>
+          <section className="flex flex-col gap-4">
+            <SectionHeading title="Por responsable" />
             <DataTable
               columns={RESPONSABLE_COLUMNS}
               rows={data?.por_responsable ?? []}
@@ -219,7 +228,7 @@ export default function PanoramaAtencionPage() {
               defaultSortDir="desc"
               emptyMessage="Aún no hay casos"
             />
-          </Card>
+          </section>
         </div>
       </DataState>
     </AppLayout>
