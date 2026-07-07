@@ -66,11 +66,20 @@ class Settings(BaseSettings):
     SECURITY_HEADERS_ENABLED: bool = Field(default=True)
 
     # --- Atención Ciudadana: public intake channel --------------------------
-    # Default False: the public router (no auth) is a documented deferral —
-    # honeypot + slowapi rate-limiting are NOT implemented in v1. Do not flip
-    # this to True in production until anti-abuse lands (see
-    # app/routers/public_forms.py's module docstring).
+    # Default False: the public router (no auth). Anti-abuse guards (honeypot,
+    # slowapi per-IP rate limiting, payload/answer size caps, no file uploads)
+    # are now implemented on the submit path — but the channel stays gated OFF
+    # until it is deliberately enabled per-deployment.
     PUBLIC_FORMS_ENABLED: bool = Field(default=False)
+    # Per-IP rate limits for the anonymous submit endpoint (slowapi syntax).
+    # Two independent windows are enforced (a short burst window + a daily cap);
+    # both keyed on client IP. Conservative defaults — tune per deployment.
+    PUBLIC_FORM_RATE_LIMIT: str = Field(default="5/minute")
+    PUBLIC_FORM_DAILY_LIMIT: str = Field(default="50/day")
+    # Payload guards for the anonymous submit endpoint (defense against blob
+    # dumps). Total serialized answers size and per-answer value length caps.
+    PUBLIC_FORM_MAX_PAYLOAD_BYTES: int = Field(default=16384)  # 16 KiB
+    PUBLIC_FORM_MAX_ANSWER_LEN: int = Field(default=4000)
 
     # --- SPA ----------------------------------------------------------------
     FRONTEND_DIST: str = Field(default="../frontend/dist")

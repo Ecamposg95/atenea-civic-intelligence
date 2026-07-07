@@ -19,11 +19,21 @@ tier, whereas every public submission must land as ``moderacion="SIN_VERIFICAR"`
 creation to the same ``caso_service.crear_desde_respuesta`` used by the
 authenticated flow.
 
-ANTI-ABUSE IS NOT IMPLEMENTED (documented deferral): this endpoint has no
-honeypot field and no rate limiting. Before setting ``PUBLIC_FORMS_ENABLED=True``
-in production, add a honeypot field (reject submissions that fill it) and a
-slowapi rate limit (mirroring ``LOGIN_RATE_LIMIT`` / ``app.core.rate_limiting``)
-to both routes below — otherwise this channel is an open spam/DoS vector.
+ANTI-ABUSE (implemented): the anonymous submit endpoint is protected by four
+layers, all still behind the ``PUBLIC_FORMS_ENABLED`` gate:
+
+  1. Per-IP rate limiting via the shared ``app.core.rate_limiting.limiter``
+     (slowapi) — a short burst window (``PUBLIC_FORM_RATE_LIMIT``) AND a daily
+     cap (``PUBLIC_FORM_DAILY_LIMIT``), both keyed on client IP.
+  2. Honeypot fields (``website`` / ``_hp``) — filled by bots, invisible to
+     humans; a non-empty value is rejected (generic 400) BEFORE any response or
+     caso is created, and audited.
+  3. Payload guards — total serialized answers size and per-answer length are
+     bounded (``PUBLIC_FORM_MAX_PAYLOAD_BYTES`` / ``PUBLIC_FORM_MAX_ANSWER_LEN``)
+     so the endpoint can't be used to dump huge blobs.
+  4. No file uploads — ``foto``-type answers and any ``evidencia_keys`` are
+     stripped on the public path (the internal authenticated channel keeps
+     evidence support).
 """
 from __future__ import annotations
 
@@ -31,13 +41,14 @@ import json
 from dataclasses import dataclass
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Request, status
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core import crypto
 from app.core.config import settings
+from app.core.rate_limiting import limiter
 from app.dependencies import CampaignContext, DbSession
 from app.models.atencion import FormDefinition, FormResponse
 from app.models.user import UserRole
@@ -54,13 +65,25 @@ _PUBLIC_CANALES = ("PUBLICO", "AMBOS")
 class PublicFormResponseCreate(BaseModel):
     """Public-facing submission payload. No ``form_definition_id`` (comes from
     the URL slug) and no ``evidencia_keys`` (anonymous callers cannot reference
-    arbitrary bucket keys)."""
+    arbitrary bucket keys).
+
+    ``website`` / ``_hp`` are HONEYPOT fields: a real UI keeps them hidden and
+    empty, so any non-empty value flags an automated submission (see
+    ``_is_honeypot``). They are accepted (not rejected by validation) so the
+    rejection can happen silently server-side rather than leaking their purpose
+    via a 422.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
 
     answers: dict
     nombre_emisor: Optional[str] = Field(default=None, max_length=255)
     contacto: Optional[str] = Field(default=None, max_length=160)
     seccion: Optional[str] = Field(default=None, max_length=20)
     client_uuid: Optional[str] = Field(default=None, max_length=64)
+    # Honeypots (must stay empty for legitimate submissions).
+    website: Optional[str] = Field(default=None, max_length=255)
+    hp: Optional[str] = Field(default=None, alias="_hp", max_length=255)
 
 
 @dataclass(frozen=True)
@@ -111,11 +134,58 @@ def _mask(value: str) -> str:
     return f"****-{value[-4:]}" if value else ""
 
 
+def _is_honeypot(payload: PublicFormResponseCreate) -> bool:
+    """True if any honeypot field carries a value (bots fill these; humans don't)."""
+    return bool((payload.website or "").strip()) or bool((payload.hp or "").strip())
+
+
+def _guard_payload_size(payload: PublicFormResponseCreate) -> None:
+    """Reject oversized submissions so the public endpoint can't be used to
+    dump huge blobs. Enforces a total serialized-answers byte cap and a
+    per-answer-value length cap. Raises HTTPException(413) on violation.
+
+    The error message is intentionally generic and never echoes the offending
+    value (Golden Rule #9 — no PII in error responses)."""
+    if not isinstance(payload.answers, dict):
+        # Defensive: pydantic types this as dict, but guard anyway.
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="answers debe ser un objeto")
+    blob = json.dumps(payload.answers, ensure_ascii=False)
+    if len(blob.encode("utf-8")) > settings.PUBLIC_FORM_MAX_PAYLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail="Payload demasiado grande",
+        )
+    max_len = settings.PUBLIC_FORM_MAX_ANSWER_LEN
+    for value in payload.answers.values():
+        if isinstance(value, str) and len(value) > max_len:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="Respuesta demasiado larga",
+            )
+
+
+def _strip_file_answers(schema: dict, answers: dict) -> dict:
+    """Drop any ``foto``-type answers: the public channel v1 accepts no file /
+    evidence uploads. Returns a new dict without those keys (silently ignored,
+    not an error), so an anonymous caller can never reference bucket objects."""
+    foto_keys = {
+        f.get("key")
+        for sec in schema.get("secciones", [])
+        for f in sec.get("campos", [])
+        if f.get("tipo") == "foto"
+    }
+    if not foto_keys:
+        return answers
+    return {k: v for k, v in answers.items() if k not in foto_keys}
+
+
 def _crear_public_response(db: Session, form: FormDefinition,
                             payload: PublicFormResponseCreate) -> FormResponse:
     """Mirrors response_service.crear_response, fixing moderacion to
     SIN_VERIFICAR (public/unauthenticated intake is never auto-verified)."""
-    validated = validate_answers(form.schema, payload.answers)
+    safe_answers = _strip_file_answers(form.schema, payload.answers)
+    validated = validate_answers(form.schema, safe_answers)
     pub, sens = split_sensitive(form.schema, validated)
     answers_enc = crypto.encrypt_clave(json.dumps(sens)) if sens else None
     contacto_masked = _mask(payload.contacto) if payload.contacto else None
@@ -157,11 +227,31 @@ def get_public_form(db: DbSession, slug: str):
 
 @router.post("/public/forms/{slug}/responses", response_model=FormResponseRead,
              status_code=status.HTTP_201_CREATED)
-def create_public_response(db: DbSession, slug: str, data: PublicFormResponseCreate):
+@limiter.limit(settings.PUBLIC_FORM_RATE_LIMIT)
+@limiter.limit(settings.PUBLIC_FORM_DAILY_LIMIT)
+def create_public_response(request: Request, db: DbSession, slug: str,
+                            data: PublicFormResponseCreate):
+    # Anti-abuse ordering: the enabled gate + form resolution first (so a
+    # disabled/unknown channel is indistinguishable from any other), then the
+    # cheap in-memory guards (honeypot, size) BEFORE any DB writes. Per-IP rate
+    # limiting is applied by the decorators above (429 via the global handler).
     _guard_enabled()
     form = _resolve_public_form(db, slug)
     if form is None:
         raise HTTPException(status_code=404, detail="Formulario no encontrado")
+
+    if _is_honeypot(data):
+        # Silently reject: no response, no caso. Audit it (org derived from the
+        # resolved form, never from input) without logging any PII.
+        record_audit(db, action="response.reject.honeypot",
+                     entity_type="form_response", entity_id=None,
+                     organization_id=form.organization_id)
+        db.commit()
+        # Generic 400 that does not reveal the honeypot mechanism.
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Solicitud inválida")
+
+    _guard_payload_size(data)
 
     try:
         resp = _crear_public_response(db, form, data)
