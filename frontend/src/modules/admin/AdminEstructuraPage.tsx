@@ -4,14 +4,29 @@ import { getEstructura, type EstructuraNode } from "@/api/admin";
 import { createUser, updateUser } from "@/api/users";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { DataState } from "@/components/ui/DataState";
+import { MetricCard } from "@/components/ui/MetricCard";
 import { Modal } from "@/components/ui/Modal";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { StatusPill } from "@/components/ui/StatusPill";
+import { DatabaseIcon, UserIcon, VotersIcon } from "@/components/ui/icons";
 import { useAsync } from "@/hooks/useAsync";
 import { useCampaignStore } from "@/store/campaignStore";
 import type { UserRole } from "@/types/auth";
 import type { UserCreatePayload, UserUpdatePayload } from "@/types/users";
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Up to two initials from a full name, for the Avatar element. */
+const initials = (nombre: string): string => {
+  const parts = nombre.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -34,6 +49,8 @@ export function AdminEstructuraPage() {
   const [editing, setEditing] = useState<EditableUser | null>(null);
 
   const liders = data ?? [];
+  const totalActivistas = liders.reduce((acc, n) => acc + n.activistas.length, 0);
+  const totalRegistros = liders.reduce((acc, n) => acc + n.total, 0);
 
   return (
     <AppLayout title="Estructura">
@@ -53,7 +70,54 @@ export function AdminEstructuraPage() {
         }
       />
 
-      <div className="reveal mt-2">
+      <DataState
+        loading={loading}
+        error={null}
+        skeleton={
+          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-20 animate-pulse rounded-card bg-panel-hover" />
+            ))}
+          </div>
+        }
+      >
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <MetricCard
+            label="Líderes"
+            value="—"
+            countTo={liders.length}
+            icon={<UserIcon width={18} height={18} />}
+            tone="accent"
+            delay={80}
+          />
+          <MetricCard
+            label="Activistas"
+            value="—"
+            countTo={totalActivistas}
+            icon={<VotersIcon width={18} height={18} />}
+            tone="teal"
+            delay={140}
+          />
+          <MetricCard
+            label="Registros"
+            value="—"
+            countTo={totalRegistros}
+            icon={<DatabaseIcon width={18} height={18} />}
+            tone="warm"
+            delay={200}
+          />
+        </div>
+      </DataState>
+
+      <div className="reveal mb-3" style={{ animationDelay: "100ms" }}>
+        <SectionHeading
+          eyebrow="Estructura"
+          title="Jerarquía"
+          note={`${liders.length} líder${liders.length === 1 ? "" : "es"}`}
+        />
+      </div>
+
+      <div className="reveal">
         <DataState
           loading={loading}
           error={error}
@@ -144,11 +208,18 @@ function LiderCard({
   onEditActivista: (a: EstructuraNode["activistas"][number]) => void;
 }) {
   return (
-    <Card
-      title={node.full_name}
-      accentDot
-      action={
-        <div className="flex items-center gap-2">
+    <Card>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar initials={initials(node.full_name)} variant="brand" />
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold tracking-tight text-ink">
+              {node.full_name}
+            </div>
+            <div className="truncate text-xs text-ink-faint">{node.email}</div>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
           <span className="pill border-accent/30 bg-accent/10 text-accent">
             {node.total} registros
           </span>
@@ -159,12 +230,10 @@ function LiderCard({
             Editar
           </button>
         </div>
-      }
-    >
-      <div className="mb-3 text-xs text-ink-faint">{node.email}</div>
+      </div>
 
       {node.activistas.length === 0 ? (
-        <p className="text-xs text-ink-faint italic">Sin activistas asignados.</p>
+        <StatusPill kind="warn">Sin activistas asignados</StatusPill>
       ) : (
         <ul className="divide-y divide-line">
           {node.activistas.map((a) => (
@@ -172,14 +241,17 @@ function LiderCard({
               key={a.id}
               className="flex items-center justify-between py-2.5 text-sm"
             >
-              <div className="min-w-0">
-                <span className="truncate font-medium text-ink">{a.full_name}</span>
-                <span className="ml-2 font-mono text-xs text-ink-faint">{a.email}</span>
-                {a.seccion && (
-                  <span className="ml-2 pill border-line bg-panel-hover text-xs text-ink-muted">
-                    Sección {a.seccion}
-                  </span>
-                )}
+              <div className="flex min-w-0 items-center gap-2.5">
+                <Avatar initials={initials(a.full_name)} variant="warm" />
+                <div className="min-w-0">
+                  <span className="truncate font-medium text-ink">{a.full_name}</span>
+                  <span className="ml-2 font-mono text-xs text-ink-faint">{a.email}</span>
+                  {a.seccion && (
+                    <span className="ml-2 pill border-line bg-panel-hover text-xs text-ink-muted">
+                      Sección {a.seccion}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="ml-3 flex shrink-0 items-center gap-2">
                 <span className="pill border-teal/30 bg-teal/10 text-teal">
