@@ -131,17 +131,16 @@ const ACTIVISTA_COLUMNS: Column<PorActivista>[] = [
 export default function PanoramaMilitantesPage() {
   const state = useAsync(getPanorama, []);
   const data = state.data;
-  const isEmpty = !state.loading && !state.error && (data?.kpis.total ?? 0) === 0;
+  const isEmpty = !state.loading && !state.error && (data?.kpis?.total ?? 0) === 0;
 
   const kpis = data?.kpis;
   const avancePct = kpis && kpis.meta ? Math.min(1, kpis.total / kpis.meta) : null;
 
-  const vsPromovidosData =
-    data?.por_seccion.map((s) => ({
-      seccion: s.seccion,
-      militantes: s.militantes,
-      promovidos: s.promovidos,
-    })) ?? [];
+  const vsPromovidosData = (data?.por_seccion ?? []).map((s) => ({
+    seccion: s.seccion,
+    militantes: s.militantes,
+    promovidos: s.promovidos,
+  }));
 
   const estadoDonutData: DonutDatum[] = kpis
     ? [
