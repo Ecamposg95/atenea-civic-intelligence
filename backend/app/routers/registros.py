@@ -16,7 +16,8 @@ router = APIRouter(tags=["registros"])
 # Escritura: activistas, capturistas, líderes, admins (COORDINADOR se excluye a
 # propósito — usa la consola, no captura). Superadmins auto-pasan.
 CapturaWriteCtx = Annotated[object, Depends(require_roles(
-    UserRole.ACTIVISTA, UserRole.CAPTURISTA, UserRole.LIDER, UserRole.ADMIN))]
+    UserRole.ACTIVISTA, UserRole.CAPTURISTA, UserRole.LIDER,
+    UserRole.COORDINADOR, UserRole.ADMIN))]
 # Lectura: lo mismo + COORDINADOR (ve a su estructura; el scoping real lo impone
 # _role_scoped en el service).
 CapturaReadCtx = Annotated[object, Depends(require_roles(

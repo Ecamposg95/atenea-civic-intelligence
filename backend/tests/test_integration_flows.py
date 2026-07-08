@@ -612,9 +612,10 @@ class TestRbacMatrixFlow:
     # -- COORDINADOR -----------------------------------------------------------
 
     def test_coordinador_console_and_intel_access(self, client):
-        """COORDINADOR reads admin console + territory analytics; blocked from
-        capture/reveal AND from the reference-dataset intel proxy (she is a
-        campaign/territory operator, not an intelligence viewer)."""
+        """COORDINADOR (campaign executive) reads admin console + territory
+        analytics, captures, and reveals (audited); blocked only from the
+        reference-dataset intel proxy (she is a campaign/territory operator,
+        not an intelligence viewer)."""
         h = _hdr(client, "coord@alpha.gov")
         ih = auth_headers(client, "coord@alpha.gov")
 
@@ -622,18 +623,19 @@ class TestRbacMatrixFlow:
         assert client.get("/api/admin/registros", headers=h).status_code == 200
         assert client.get("/api/admin/metricas", headers=h).status_code == 200
 
-        # Capture: 403
+        # Capture: 201 (quick-capture / digitize paper)
         assert client.post(
             "/api/registros",
             json={"nombre_completo": "Coord Capture Attempt", "consentimiento": True},
             headers=h,
-        ).status_code == 403
+        ).status_code == 201
 
-        # Reveal clave: 403 (permission guard fires before resource lookup)
+        # Reveal clave: permission passes now → resource lookup → 404 for a
+        # nonexistent registro (coordinador may reveal, audited).
         assert client.post(
             "/api/admin/registros/00000000-0000-0000-0000-000000000000/revelar-clave",
             headers=h,
-        ).status_code == 403
+        ).status_code == 404
 
         # Reference-dataset proxy (IEEM / World Bank): 403 — not campaign data.
         assert client.get("/api/intel/ieem/datasets", headers=ih).status_code == 403

@@ -36,6 +36,7 @@ export interface RegistroCreate {
   sexo?: string;
   edad?: number;
   estructura?: string;
+  promotor?: string;
   observacion?: string;
   clave_elector?: string;
   consentimiento: boolean;

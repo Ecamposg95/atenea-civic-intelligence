@@ -85,6 +85,7 @@ def create_registro(db: Session, ctx: CampaignContext, data: RegistroCreate) -> 
         sexo=data.sexo,
         edad=data.edad,
         estructura=data.estructura,
+        promotor=data.promotor,
         observacion=data.observacion,
         clave_elector_enc=clave_enc,
         clave_masked=clave_masked,

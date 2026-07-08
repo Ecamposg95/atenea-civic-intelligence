@@ -91,11 +91,11 @@ def test_scope_mine_excludes_team(client):
     client.delete(f"/api/registros/{rid}", headers=ha1)
 
 
-def test_coordinador_can_read_but_not_write(client):
+def test_coordinador_can_read_and_write(client):
     hc = _hdr(client, "coord@alpha.gov")
     # lectura permitida (200)
     assert client.get("/api/registros/mios", headers=hc).status_code == 200
-    # escritura denegada (403)
+    # escritura permitida (201) — el coordinador ahora captura (digitaliza papel)
     assert client.post("/api/registros", json={
-        "nombre_completo": "Coord no captura", "consentimiento": True},
-        headers=hc).status_code == 403
+        "nombre_completo": "Coord captura", "consentimiento": True},
+        headers=hc).status_code == 201

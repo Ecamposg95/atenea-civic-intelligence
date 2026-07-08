@@ -29,13 +29,14 @@ def test_capturista_can_capture(client):
     client.delete(f"/api/registros/{r.json()['id']}", headers=_h(client, "capturista@alpha.gov"))
 
 
-def test_coordinador_cannot_capture(client):
+def test_coordinador_can_capture(client):
+    # The campaign COORDINADOR can capture (quick-capture / digitize paper).
     r = client.post(
         "/api/registros",
-        json={"nombre_completo": "X", "consentimiento": True},
+        json={"nombre_completo": "Coord Captura", "consentimiento": True},
         headers=_h(client, "coord@alpha.gov"),
     )
-    assert r.status_code == 403, r.text
+    assert r.status_code == 201, r.text
 
 
 def test_coordinador_sees_admin_registros(client):

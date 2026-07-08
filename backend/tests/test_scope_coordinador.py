@@ -66,6 +66,18 @@ def test_coordinador_sees_records_outside_own_hierarchy(client):
         db.execute(delete(Militante).where(Militante.folio == "SCOPE-MIL-1")); db.commit(); db.close()
 
 
+def test_coordinador_can_capture_with_promotor(client):
+    # The coordinador can now capture (quick-capture) and the promotor persists.
+    r = client.post("/api/registros",
+                    json={"nombre_completo": "Capturado Por Coord", "seccion": "7779",
+                          "promotor": "Lista Garduno", "consentimiento": True},
+                    headers=_hdr(client, "coord@alpha.gov"))
+    assert r.status_code == 201, r.text
+    assert r.json()["promotor"] == "Lista Garduno"
+    db = TestingSessionLocal()
+    db.execute(delete(Registro).where(Registro.seccion == "7779")); db.commit(); db.close()
+
+
 def test_coordinador_does_not_see_other_campaign(client):
     org_id, outsider = _ids()
     db = TestingSessionLocal()

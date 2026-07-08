@@ -37,6 +37,7 @@ class RegistroCreate(BaseModel):
     sexo: Optional[str] = Field(default=None)
     edad: Optional[int] = Field(default=None, ge=0, le=120)
     estructura: Optional[str] = Field(default=None, max_length=120)
+    promotor: Optional[str] = Field(default=None, max_length=160)
     observacion: Optional[str] = Field(default=None, max_length=1000)
     clave_elector: Optional[str] = Field(default=None)
     consentimiento: bool

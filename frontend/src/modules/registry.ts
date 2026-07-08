@@ -182,6 +182,9 @@ const Historial = lazy(() =>
 const Captura = lazy(() =>
   import("@/modules/captura/CapturaPage").then((m) => ({ default: m.CapturaPage })),
 );
+const CapturaRapida = lazy(() =>
+  import("@/modules/captura/CapturaRapidaPage").then((m) => ({ default: m.CapturaRapidaPage })),
+);
 const AdminDashboard = lazy(() =>
   import("@/modules/admin/AdminDashboardPage").then((m) => ({
     default: m.AdminDashboardPage,
@@ -261,6 +264,7 @@ export const MODULES: ModuleDef[] = [
   { key: "banxico", path: "/banxico", label: "Macro-financiero (Banxico)", section: "inteligencia", icon: AnalyticsIcon, state: "preview", element: Banxico, roles: INTEL },
 
   // Ciudadanía
+  { key: "captura-rapida", path: "/captura-rapida", label: "Captura rápida", section: "ciudadania", icon: VotersIcon, state: "active", element: CapturaRapida, roles: CONSOLE_CAPTURA },
   { key: "captura", path: "/captura", label: "Captura de Activistas", section: "ciudadania", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "admin", "lider", "activista", "capturista"] },
   { key: "plan-territorial", path: "/plan-territorial", label: "Plan Territorial", section: "ciudadania", icon: LayersIcon, state: "active", element: PlanTerritorial, roles: CONSOLE_COORD },
   { key: "war-room", path: "/war-room", label: "War Room", section: "ciudadania", icon: AnalyticsIcon, state: "active", element: WarRoom, roles: CONSOLE_COORD },
