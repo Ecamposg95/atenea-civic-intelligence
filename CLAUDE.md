@@ -53,6 +53,62 @@ without modifying its foundations.
 
 ---
 
+## Command Center ejecutivo + Digitalización (2026-07-08)
+
+Layered on top of the activist module for the **San Mateo Atenco 2027** campaign
+(user "Lucy" = COORDINADOR). See `docs/superpowers/specs/2026-07-08-command-center-ejecutivo-visibilidad-captura-design.md`.
+
+### RBAC — COORDINADOR is campaign-wide
+
+The COORDINADOR is the **campaign executive**: they see and act on the **entire
+campaign**, not just their supervisory sub-tree. This changed the coordinador
+branch in every scope helper — `registro_service._role_scoped`,
+`militante_service._militante_role_scoped`, `caso_service._caso_role_scoped`,
+`promovido_service` — to return `scoped_query(Model, ctx)`, AND removed the
+sección **territory gate** for coordinador (`list_promovidos` bypass +
+`_bypass_territory` in militante/caso). LIDER and below stay hierarchy-scoped.
+Tenant/campaign isolation is untouched (`scoped_query` still filters org+campaign).
+The COORDINADOR can now also **capture** (`CapturaWriteCtx` +COORDINADOR) and
+**reveal** the clave (`admin.py::RevealCtx` = ADMIN+COORDINADOR, still audited).
+
+### Executive dashboard vs. platform dashboard
+
+- **`GET /dashboard/executive`** (`dashboard_service.executive`) — campaign KPIs
+  (promovidos/afiliados/casos/cobertura + countdown `election_date` + trend +
+  alerts), composed from `operacion_service.seguimiento` + militante/caso panoramas.
+  Frontend: `pages/DashboardPage.tsx` ("Centro de Mando", executive, Atenea kit).
+- **`pages/PlatformDashboardPage.tsx`** (route `/plataforma`, gated superadmin/admin) —
+  the moved **technical** blocks (audit log, data sources, cartography, governance).
+- **`app/seeds/demo_election_date.py`** — idempotent seed (Cargo+Contest,
+  `election_date=2027-06-06`), run unconditionally in the lifespan so the
+  countdown always has a date. `DEMO_CAMPAIGN_ID` env override.
+
+### Promovidos — richer views
+
+- `PromovidoRead` returns all Excel-imported fields (incl. `created_at`,
+  `direccion`, `promotor`); the table shows them all.
+- **Detail drawer** `modules/promovidos/components/PromovidoDetail.tsx` — click a
+  row → `GET /registros/:id` (full `RegistroRead`) grouped by section; includes an
+  audited **Revelar clave** button (coordinador+).
+
+### Digitalización del papel ("digitize Lucy's paper") — program
+
+Four flows; **1 and 2 shipped**, 3 and 4 pending.
+
+1. **Captura rápida** — `modules/captura/CapturaRapidaPage.tsx` (route
+   `/captura-rapida`, gated `CONSOLE_CAPTURA`). Lean mobile-first form reusing
+   `POST /registros`; "guardar y capturar otro" keeps sección+promotor. `promotor`
+   was added to `RegistroCreate` + service so it persists via the create API.
+2. **Importación masiva** — `POST /promovidos/import` (router promovidos, gated
+   ADMIN+COORDINADOR) reuses `import_service.parse_workbook`/`import_rows` (fixed
+   paper template; dedup by `basename(file)`+sheet+row → re-upload never dupes;
+   batch-audited `registro.import`). `commit=false`→preview, `commit=true`→import.
+   Frontend `modules/promovidos/ImportarPromovidosPage.tsx` (route `/promovidos/importar`).
+3. **OCR scan** (pending) — reuse Atención on-device INE OCR for paper forms.
+4. **Acuerdos y Minutas** (pending) — new module, own spec.
+
+---
+
 ## Where Things Live
 
 ### Backend
