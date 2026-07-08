@@ -3,11 +3,21 @@ import { compressImage } from "../lib/image";
 
 export function PhotoCapture({ label, onCapture }: { label: string; onCapture: (b: Blob | null) => void }) {
   const [preview, setPreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
-    const blob = await compressImage(f);
-    setPreview(URL.createObjectURL(blob));
-    onCapture(blob);
+    try {
+      const blob = await compressImage(f);
+      setError(null);
+      setPreview(URL.createObjectURL(blob));
+      onCapture(blob);
+    } catch {
+      setError("No se pudo procesar la foto. Intenta de nuevo o elige otra imagen.");
+      onCapture(null);
+    } finally {
+      // Allow re-selecting the same file (retry) by resetting the input value.
+      e.target.value = "";
+    }
   };
   return (
     <div className={`card-premium p-4 transition-colors ${preview ? "border-state-ok/30" : ""}`}>
@@ -29,6 +39,12 @@ export function PhotoCapture({ label, onCapture }: { label: string; onCapture: (
           alt={label}
           className="mt-2.5 h-40 w-full rounded-lg border border-line object-cover"
         />
+      )}
+
+      {error && (
+        <p className="mt-2.5 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-xs text-state-critical">
+          {error}
+        </p>
       )}
 
       {/* Large, thumb-friendly tap target for one-handed field capture. */}

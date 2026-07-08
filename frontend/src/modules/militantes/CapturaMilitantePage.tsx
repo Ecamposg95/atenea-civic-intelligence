@@ -75,6 +75,28 @@ const STEP_LABELS: Record<Step, string> = {
   3: "Documentos",
 };
 
+/**
+ * `crypto.randomUUID()` is only defined in secure contexts (HTTPS/localhost).
+ * Field deploys often run over plain HTTP on a LAN IP (http://<ip>), where
+ * `crypto.randomUUID` is undefined and calling it throws — crashing
+ * `buildPayload`. Fall back to a manual RFC4122-ish v4 generator so the
+ * capture flow keeps working there.
+ */
+function safeRandomUUID(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      // fall through to manual fallback below
+    }
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
+    const r = (Math.random() * 16) | 0;
+    const v = ch === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 /* Shared button treatments for the wizard nav — larger touch targets
  * (one-handed field use) with a light tactile microinteraction. */
 const BACK_BTN_CLASS =
@@ -253,7 +275,7 @@ export default function CapturaMilitantePage() {
       es_activista: form.es_activista,
       ...(form.estructura.trim() && { estructura: form.estructura.trim() }),
       ...(form.promotor.trim() && { promotor: form.promotor.trim() }),
-      client_uuid: crypto.randomUUID(),
+      client_uuid: safeRandomUUID(),
     };
   }, [form]);
 
@@ -302,7 +324,11 @@ export default function CapturaMilitantePage() {
 
   /* ------------------------------------------------------------ offline */
 
-  if (!isOnline) {
+  // If the registration already succeeded (folio issued), keep showing the
+  // success screen even if connectivity drops right after — don't bounce
+  // the user to a "necesitas conexión" wall for a request that already went
+  // through.
+  if (!isOnline && !folio) {
     return (
       <AppLayout title="Afiliación de Militantes" crumb="Militantes">
         <PageHeader eyebrow="Afiliación" title="Registro de" accent="Militante" />

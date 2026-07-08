@@ -3,22 +3,63 @@ import { useEffect, useRef } from "react";
 export function SignaturePad({ onChange }: { onChange: (b: Blob | null) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
+  const drew = useRef(false);
   useEffect(() => {
-    const c = ref.current!; const ctx = c.getContext("2d")!;
-    c.width = c.offsetWidth; c.height = 200;
-    ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.strokeStyle = "#e8faff";
+    const c = ref.current;
+    if (!c) return;
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+
+    // Re-measure the canvas bitmap to its live on-screen size. Resizing the
+    // bitmap unavoidably clears it (e.g. on phone rotation), so we just
+    // re-apply the stroke style — losing an in-progress signature on
+    // rotation is preferable to silently offset strokes.
+    const resize = () => {
+      c.width = c.offsetWidth || c.width;
+      c.height = c.offsetHeight || 200;
+      ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.strokeStyle = "#e8faff";
+    };
+    resize();
+
     const pos = (e: PointerEvent) => {
       const r = c.getBoundingClientRect();
       return { x: e.clientX - r.left, y: e.clientY - r.top };
     };
-    const down = (e: PointerEvent) => { drawing.current = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
-    const move = (e: PointerEvent) => { if (!drawing.current) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
-    const up = () => { if (!drawing.current) return; drawing.current = false; c.toBlob((b) => onChange(b), "image/png"); };
+    const down = (e: PointerEvent) => {
+      drawing.current = true;
+      drew.current = false;
+      const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y);
+    };
+    const move = (e: PointerEvent) => {
+      if (!drawing.current) return;
+      drew.current = true;
+      const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke();
+    };
+    const up = () => {
+      if (!drawing.current) return;
+      drawing.current = false;
+      // A tap with no drag never touched the canvas — don't emit a
+      // near-blank blob that would clear the "Falta firma" warning.
+      if (!drew.current) return;
+      c.toBlob((b) => onChange(b), "image/png");
+    };
     c.addEventListener("pointerdown", down); c.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
-    return () => { c.removeEventListener("pointerdown", down); c.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("resize", resize);
+    window.addEventListener("orientationchange", resize);
+    return () => {
+      c.removeEventListener("pointerdown", down); c.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("orientationchange", resize);
+    };
   }, [onChange]);
-  const clear = () => { const c = ref.current!; c.getContext("2d")!.clearRect(0, 0, c.width, c.height); onChange(null); };
+  const clear = () => {
+    const c = ref.current!;
+    c.getContext("2d")!.clearRect(0, 0, c.width, c.height);
+    drew.current = false;
+    onChange(null);
+  };
   return (
     <div>
       <div className="hud-corners relative overflow-hidden rounded-lg border border-line bg-bg-sunken">
