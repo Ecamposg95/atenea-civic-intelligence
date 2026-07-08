@@ -10,6 +10,7 @@ import { MetricCard } from "@/components/ui/MetricCard";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { useAsync } from "@/hooks/useAsync";
 import { listPromovidos, type Promovido } from "@/api/promovidos";
+import { PromovidoDetail } from "./components/PromovidoDetail";
 
 const PAGE = 50;
 
@@ -139,6 +140,7 @@ export function PromovidosPage() {
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
   const [offset, setOffset] = useState(0);
+  const [selected, setSelected] = useState<Promovido | null>(null);
 
   // Debounce raw search input → committed value, resetting to the first page.
   useEffect(() => {
@@ -155,7 +157,7 @@ export function PromovidosPage() {
   return (
     <AppLayout title="Promovidos" crumb="Ciudadanía">
       <PageHeader eyebrow="Ciudadanía" title="Tabla de" accent="Promovidos"
-        subtitle="Ciudadanos promovidos en tu territorio, con contexto electoral por sección." />
+        subtitle="Ciudadanos promovidos de tu campaña, con contexto electoral por sección. Clic en una fila para ver todo el detalle." />
 
       {data && !data.has_territory ? (
         <div className="card-premium reveal px-5 py-12 text-center text-ink-muted">
@@ -179,7 +181,7 @@ export function PromovidosPage() {
                 value={String(data?.total ?? 0)}
                 countTo={data?.total ?? 0}
                 tone="warm"
-                context="En tu territorio asignado"
+                context="En tu campaña"
                 delay={0}
               />
               <MetricCard
@@ -207,6 +209,7 @@ export function PromovidosPage() {
                 defaultSortKey="nombre_completo"
                 defaultSortDir="asc"
                 emptyMessage="Sin promovidos…"
+                onRowClick={(p) => setSelected(p)}
               />
 
               {/* Server-side pagination — the table above only ever holds one page. */}
@@ -234,6 +237,8 @@ export function PromovidosPage() {
           </div>
         </DataState>
       )}
+
+      {selected && <PromovidoDetail promovido={selected} onClose={() => setSelected(null)} />}
     </AppLayout>
   );
 }
