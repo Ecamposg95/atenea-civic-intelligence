@@ -24,14 +24,17 @@ from app.core.config import settings
 #   - Vite SPA (inline scripts/styles during dev; hash-based in prod is ideal
 #     but 'unsafe-inline' keeps this configuration zero-friction)
 #   - MapLibre GL JS (blob: web-workers, data: / https: tile images)
+#   - PWA service worker at same-origin /sw.js (worker-src 'self')
+#   - Google Fonts (Sora/Manrope/JetBrains) — stylesheet from fonts.googleapis.com,
+#     font files from fonts.gstatic.com (see frontend/index.html)
 _CSP = (
     "default-src 'self'; "
     "script-src 'self' 'unsafe-inline' blob:; "
-    "style-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "img-src 'self' data: blob: https:; "
     "connect-src 'self' https:; "
-    "font-src 'self' data:; "
-    "worker-src blob:;"
+    "font-src 'self' data: https://fonts.gstatic.com; "
+    "worker-src 'self' blob:;"
 )
 
 

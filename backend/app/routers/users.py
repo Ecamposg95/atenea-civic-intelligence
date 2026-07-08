@@ -38,6 +38,14 @@ CreatorCtx = Annotated[
     Depends(require_roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER)),
 ]
 
+# Listing users is needed by COORDINADOR/LIDER to populate assignee selectors
+# (e.g. caso responsable). Still tenant-scoped in the service, so cross-tenant
+# users are never leaked. Reading a single user by id stays ADMIN-only (ManagerCtx).
+ListerCtx = Annotated[
+    TenantContext,
+    Depends(require_roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER)),
+]
+
 # Territory assignment: only superadmin (require_roles() with zero roles → only
 # superadmin auto-passes; see app/dependencies.py:require_roles).
 SuperadminCtx = Annotated[TenantContext, Depends(require_roles())]
@@ -72,7 +80,7 @@ def update_me(
 @router.get("", response_model=Page[UserRead], summary="List users")
 def list_users(
     db: DbSession,
-    ctx: ManagerCtx,
+    ctx: ListerCtx,
     pagination: Annotated[PaginationParams, Depends()],
     q: str | None = Query(None, description="Search name or email"),
     role: UserRole | None = Query(None),

@@ -357,3 +357,18 @@ def test_lider_id_must_be_a_lider(client: TestClient) -> None:
         headers=h,
     )
     assert resp.status_code == 400, resp.text
+
+
+def test_coordinador_and_lider_can_list_users(client: TestClient) -> None:
+    """COORDINADOR/LIDER may list users (assignee selectors); still tenant-scoped.
+    Reading a single user by id remains ADMIN-only."""
+    for email in ("coord@alpha.gov", "lider@alpha.gov"):
+        h = auth_headers(client, email)
+        resp = client.get("/api/users", headers=h)
+        assert resp.status_code == 200, (email, resp.text)
+        assert all(u["organization_id"] == _org_id(client, email)
+                   for u in resp.json()["items"])
+    # get-by-id stays admin-only for a coordinador
+    coord = auth_headers(client, "coord@alpha.gov")
+    some_id = client.get("/api/users", headers=coord).json()["items"][0]["id"]
+    assert client.get(f"/api/users/{some_id}", headers=coord).status_code == 403
