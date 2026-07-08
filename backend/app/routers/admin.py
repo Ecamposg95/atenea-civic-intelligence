@@ -24,6 +24,9 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 ConsoleCtx = Annotated[object, Depends(require_roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER))]
 # Reveal + auditoria: admin only (lider/activista excluded; superadmin auto-passes).
 AdminOnly = Annotated[object, Depends(require_roles(UserRole.ADMIN))]
+# Revealing the clave de elector: ADMIN + the campaign COORDINADOR (executive),
+# always audited (registro.reveal_clave). superadmin auto-passes.
+RevealCtx = Annotated[object, Depends(require_roles(UserRole.ADMIN, UserRole.COORDINADOR))]
 
 
 @router.get("/registros", response_model=AdminRegistroList)
@@ -67,7 +70,7 @@ def revelar_clave(
     registro_id: str,
     db: DbSession,
     ctx: AdminCtx,
-    _perm: AdminOnly,
+    _perm: RevealCtx,
 ) -> RevelarClaveResponse:
     try:
         plain = admin_service.reveal_clave(db, ctx, registro_id)

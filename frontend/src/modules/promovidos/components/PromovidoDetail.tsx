@@ -1,8 +1,9 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { DataState } from "@/components/ui/DataState";
 import { useAsync } from "@/hooks/useAsync";
 import { getRegistroDetalle, type Promovido } from "@/api/promovidos";
+import { revelarClave } from "@/api/admin";
 
 interface Props {
   promovido: Promovido;
@@ -45,6 +46,22 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 export function PromovidoDetail({ promovido: p, onClose }: Props) {
   const state = useAsync(() => getRegistroDetalle(p.id), [p.id]);
   const d = state.data;
+
+  const [clave, setClave] = useState<string | null>(null);
+  const [revealing, setRevealing] = useState(false);
+  const [revealError, setRevealError] = useState(false);
+
+  async function reveal() {
+    setRevealing(true);
+    setRevealError(false);
+    try {
+      setClave((await revelarClave(p.id)).clave_elector);
+    } catch {
+      setRevealError(true);
+    } finally {
+      setRevealing(false);
+    }
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -104,7 +121,25 @@ export function PromovidoDetail({ promovido: p, onClose }: Props) {
               <Group title="Consentimiento y credencial">
                 <Field label="Consentimiento" value={d.consentimiento ? "Sí" : "No"} />
                 <Field label="Fecha consentimiento" value={fmtFecha(d.consentimiento_at)} />
-                <Field label="Clave de elector" value={<span className="font-mono">{d.clave_masked ?? "—"}</span>} />
+                <Field label="Clave de elector" value={
+                  clave ? (
+                    <span className="font-mono text-warm">
+                      {clave}
+                      <span className="ml-1.5 text-[10px] font-sans text-ink-faint">· revelado (queda en el audit log)</span>
+                    </span>
+                  ) : (
+                    <span className="font-mono">
+                      {d.clave_masked ?? "—"}
+                      {d.clave_masked && (
+                        <button type="button" onClick={reveal} disabled={revealing}
+                          className="ml-2 rounded px-1.5 py-0.5 text-[11px] font-sans font-semibold text-accent hover:bg-accent/10 disabled:opacity-50">
+                          {revealing ? "Revelando…" : "Revelar"}
+                        </button>
+                      )}
+                      {revealError && <span className="ml-2 text-[10px] font-sans text-state-critical">No permitido</span>}
+                    </span>
+                  )
+                } />
               </Group>
               {d.observacion && (
                 <Group title="Observaciones">

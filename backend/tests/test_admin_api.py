@@ -78,6 +78,19 @@ def test_reveal_admin_only_and_audited(client):
     assert aud.status_code == 200 and aud.json()["total"] >= 1
 
 
+def test_reveal_coordinador_can_reveal_audited(client):
+    # The campaign COORDINADOR (executive) may reveal, campaign-wide + audited.
+    rid = _capture(client, "activista1@alpha.gov", nombre_completo="RevCoord",
+                   clave_elector="WXYZ1234567890ABC5")
+    ok = client.post(f"/api/admin/registros/{rid}/revelar-clave",
+                     headers=_hdr(client, "coord@alpha.gov", ALPHA_CAMPAIGN_ID))
+    assert ok.status_code == 200, ok.text
+    assert ok.json()["clave_elector"] == "WXYZ1234567890ABC5"
+    aud = client.get("/api/admin/auditoria?action=registro.reveal_clave",
+                     headers=_hdr(client, "admin@alpha.gov", ALPHA_CAMPAIGN_ID))
+    assert aud.status_code == 200 and aud.json()["total"] >= 1
+
+
 def test_reveal_noclave_returns_422(client):
     rid = _capture(client, "activista1@alpha.gov", nombre_completo="NoClave Person")
     h = _hdr(client, "admin@alpha.gov", ALPHA_CAMPAIGN_ID)
