@@ -218,6 +218,9 @@ const CapturaAtencion = lazy(() =>
 const FormBuilder = lazy(() =>
   import("@/modules/atencion/FormBuilderPage"),
 );
+const PanoramaMunicipio = lazy(() =>
+  import("@/modules/municipio/PanoramaMunicipioPage"),
+);
 
 export const MODULES: ModuleDef[] = [
   // Plataforma (active)
@@ -238,6 +241,7 @@ export const MODULES: ModuleDef[] = [
       dataSource: "Candidaturas MX (apielectoral.mx) — ya integrada en el backend.",
     },
   },
+  { key: "municipio-panorama", path: "/municipio", label: "San Mateo Atenco", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: PanoramaMunicipio, roles: INTEL_TERRITORY },
   { key: "territorios", path: "/territorios", label: "Territorios & Secciones", section: "inteligencia", icon: LayersIcon, state: "active", element: Territorios, roles: INTEL_TERRITORY },
   { key: "ieem", path: "/ieem", label: "Estado de México (IEEM)", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Ieem, roles: INTEL },
   { key: "worldbank", path: "/indicadores", label: "Indicadores Nacionales", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: WorldBank, roles: INTEL },

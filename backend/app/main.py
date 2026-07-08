@@ -38,6 +38,7 @@ from app.routers import (
     intel,
     maps,
     militantes,
+    municipio,
     organizations,
     privacy,
     promovidos,
@@ -79,6 +80,12 @@ async def lifespan(app: FastAPI):
 
         with SessionLocal() as db:
             seed_demo_territory(db)
+    if os.getenv("SEED_MUNICIPIO_INTEL", "").lower() == "true":
+        from app.database import SessionLocal
+        from app.seeds.demo_municipio_intel import seed_municipio_intel
+
+        with SessionLocal() as db:
+            seed_municipio_intel(db)
     yield
 
 
@@ -203,7 +210,7 @@ def _configure_error_handlers(app: FastAPI) -> None:
 def _register_routers(app: FastAPI) -> None:
     """Mount all API routers under the configured prefix."""
     prefix = settings.API_PREFIX
-    for module in (health, auth, users, organizations, campaigns, maps, analytics, sources, audit, intel, catalogs, territory, ingest, exports, registros, militantes, promovidos, privacy, admin, arco, reports, forms, responses, casos, public_forms):
+    for module in (health, auth, users, organizations, campaigns, maps, analytics, sources, audit, intel, catalogs, territory, ingest, exports, registros, militantes, municipio, promovidos, privacy, admin, arco, reports, forms, responses, casos, public_forms):
         app.include_router(module.router, prefix=prefix)
 
 
