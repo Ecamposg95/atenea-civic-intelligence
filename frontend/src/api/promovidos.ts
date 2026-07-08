@@ -13,6 +13,8 @@ export interface Promovido {
   participacion: number | null;
   margen: number | null;
   prioridad: string | null;
+  /** Optional: not yet returned by every backend build of PromovidoRead. */
+  created_at?: string | null;
 }
 
 export interface PromovidoList {

@@ -174,17 +174,12 @@ def _militante_role_scoped(ctx: CampaignContext):
     hierarchy OR unowned rows (territory is the real gate); admin=campaign; SA=all."""
     if ctx.is_superadmin or ctx.role == UserRole.ADMIN:
         return scoped_query(Militante, ctx)
-    if ctx.role in (UserRole.COORDINADOR, UserRole.LIDER):
-        # mirror registro_service hierarchy, but against militantes:
-        if ctx.role == UserRole.COORDINADOR:
-            lideres = select(User.id).where(User.coordinador_id == ctx.user.id)
-            activistas = select(User.id).where(User.lider_id.in_(lideres))
-            owned = or_(Militante.activista_id.in_(activistas),
-                        Militante.activista_id.in_(lideres),
-                        Militante.activista_id == ctx.user.id)
-        else:  # LIDER
-            sub = select(User.id).where(User.lider_id == ctx.user.id)
-            owned = or_(Militante.activista_id.in_(sub), Militante.activista_id == ctx.user.id)
+    if ctx.role == UserRole.COORDINADOR:
+        # Campaign executive: sees ALL militantes of the campaign (tenant-scoped).
+        return scoped_query(Militante, ctx)
+    if ctx.role == UserRole.LIDER:
+        sub = select(User.id).where(User.lider_id == ctx.user.id)
+        owned = or_(Militante.activista_id.in_(sub), Militante.activista_id == ctx.user.id)
         return scoped_query(Militante, ctx).where(or_(owned, Militante.activista_id.is_(None)))
     if ctx.role in (UserRole.ACTIVISTA, UserRole.CAPTURISTA):
         return scoped_query(Militante, ctx).where(Militante.activista_id == ctx.user.id)
@@ -195,7 +190,7 @@ def _bypass_territory(ctx: CampaignContext) -> bool:
     """Roles exempt from the section-territory gate: platform-wide roles
     (superadmin/ADMIN) and the field roles that only ever see their own rows
     (ACTIVISTA/CAPTURISTA), which the role scope already restricts."""
-    return ctx.is_superadmin or ctx.role == UserRole.ADMIN \
+    return ctx.is_superadmin or ctx.role in (UserRole.ADMIN, UserRole.COORDINADOR) \
         or ctx.role in (UserRole.ACTIVISTA, UserRole.CAPTURISTA)
 
 

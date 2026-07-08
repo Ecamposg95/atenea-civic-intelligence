@@ -87,6 +87,11 @@ export const SECTION_ORDER: ModuleSection[] = [
 const Dashboard = lazy(() =>
   import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
 );
+const PlatformDashboard = lazy(() =>
+  import("@/pages/PlatformDashboardPage").then((m) => ({
+    default: m.PlatformDashboardPage,
+  })),
+);
 const MapExplorer = lazy(() =>
   import("@/pages/MapExplorerPage").then((m) => ({ default: m.MapExplorerPage })),
 );
@@ -311,4 +316,5 @@ export const MODULES: ModuleDef[] = [
   { key: "configuracion", path: "/configuracion", label: "Configuración", section: "administracion", icon: SettingsIcon, state: "active", element: Configuracion, roles: ADMINY },
   { key: "organizaciones", path: "/organizaciones", label: "Organizaciones", section: "administracion", icon: ShieldIcon, state: "active", element: Organizaciones, roles: ["superadmin"] },
   { key: "campaigns", path: "/campaigns", label: "Campañas", section: "administracion", icon: AnalyticsIcon, state: "active", element: Campaigns, roles: ADMINY },
+  { key: "plataforma", path: "/plataforma", label: "Plataforma", section: "administracion", icon: DatabaseIcon, state: "active", element: PlatformDashboard, roles: ["superadmin", "admin"] },
 ];

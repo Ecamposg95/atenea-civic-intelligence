@@ -35,13 +35,10 @@ def _role_scoped(ctx: CampaignContext):
     if role == UserRole.ADMIN:
         return stmt
     if role == UserRole.COORDINADOR:
-        # líderes cuyo coordinador soy yo → sus activistas (+ los líderes mismos)
-        lideres = select(User.id).where(User.coordinador_id == ctx.user.id)
-        activistas = select(User.id).where(User.lider_id.in_(lideres))
-        return stmt.where(or_(
-            Registro.activista_id.in_(activistas),
-            Registro.activista_id.in_(lideres),
-        ))
+        # Campaign executive: the coordinador runs the campaign and sees ALL of
+        # its registros (tenant isolation stays enforced by scoped_query above).
+        # LIDER and below remain hierarchy-scoped.
+        return stmt
     if role == UserRole.LIDER:
         sub = select(User.id).where(User.lider_id == ctx.user.id)
         return stmt.where(or_(Registro.activista_id.in_(sub),

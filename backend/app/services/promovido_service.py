@@ -30,7 +30,11 @@ def _promovido_role_scoped(ctx: CampaignContext):
     """
     if ctx.is_superadmin or ctx.role == UserRole.ADMIN:
         return _role_scoped(ctx)
-    if ctx.role in (UserRole.COORDINADOR, UserRole.LIDER):
+    if ctx.role == UserRole.COORDINADOR:
+        # Campaign-wide (see registro_service._role_scoped); already includes
+        # unowned promotor rows, so no extra OR is needed.
+        return _role_scoped(ctx)
+    if ctx.role == UserRole.LIDER:
         hierarchy_ids = select(_role_scoped(ctx).subquery().c.id)
         return scoped_query(Registro, ctx).where(
             or_(Registro.id.in_(hierarchy_ids), Registro.activista_id.is_(None))
@@ -44,7 +48,8 @@ def list_promovidos(
     prioridad: Optional[str], q: Optional[str], limit: int, offset: int,
 ) -> tuple[list[Registro], int, bool]:
     secciones = territory_service.scope_secciones(db, ctx.user)
-    bypass_territory = ctx.is_superadmin or ctx.role == UserRole.ADMIN
+    # COORDINADOR is the campaign executive → campaign-wide, no territory gate.
+    bypass_territory = ctx.is_superadmin or ctx.role in (UserRole.ADMIN, UserRole.COORDINADOR)
     has_territory = bypass_territory or bool(secciones)
 
     stmt = _promovido_role_scoped(ctx)

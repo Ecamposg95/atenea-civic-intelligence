@@ -28,6 +28,13 @@ const initials = (nombre: string): string => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
+/** es-MX short date, null-safe against missing/invalid values. */
+const formatFecha = (value: string | null | undefined): string => {
+  if (!value) return "—";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("es-MX");
+};
+
 const COLUMNS: Column<Promovido>[] = [
   {
     key: "nombre_completo",
@@ -79,6 +86,17 @@ const COLUMNS: Column<Promovido>[] = [
     hideOnCard: true,
     sortValue: (p) => p.estructura ?? "",
     render: (p) => p.estructura ?? "—",
+  },
+  {
+    key: "created_at",
+    header: "Fecha de captura",
+    hideOnCard: true,
+    sortValue: (p) => (p.created_at ? new Date(p.created_at).getTime() : -Infinity),
+    render: (p) => (
+      <span className="font-mono text-xs tabular-nums text-ink-muted">
+        {formatFecha(p.created_at)}
+      </span>
+    ),
   },
   {
     key: "participacion",

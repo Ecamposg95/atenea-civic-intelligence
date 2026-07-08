@@ -44,7 +44,9 @@ def test_promovidos_scoped_and_enriched(client):
     body = r.json()
     assert body["has_territory"] is True
     names = [i["nombre_completo"] for i in body["items"]]
-    assert "Promovido Uno" in names and "Fuera" not in names  # territory filter
+    # COORDINADOR is campaign-wide (no territory gate) → sees both the in-territory
+    # promovido AND the one in another sección.
+    assert "Promovido Uno" in names and "Fuera" in names
     row = next(i for i in body["items"] if i["nombre_completo"] == "Promovido Uno")
     assert row["prioridad"] == "COMPETITIVA" and row["margen"] == -115
     assert "clave_elector" not in row  # Golden Rule #9

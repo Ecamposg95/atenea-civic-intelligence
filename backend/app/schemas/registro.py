@@ -97,6 +97,7 @@ class RegistroRead(BaseModel):
     edad: Optional[int]
     estructura: Optional[str]
     observacion: Optional[str]
+    promotor: Optional[str] = None
     activista_nombre: Optional[str] = None
     clave_masked: Optional[str]
     consentimiento: bool

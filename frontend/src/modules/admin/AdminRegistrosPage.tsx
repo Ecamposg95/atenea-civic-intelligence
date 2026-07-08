@@ -256,6 +256,22 @@ export function AdminRegistrosPage() {
         hideOnCard: true,
       },
       {
+        key: "colonia",
+        header: "Colonia",
+        render: (r) => <span className="text-sm text-ink-muted">{r.colonia ?? "—"}</span>,
+        hideOnCard: true,
+      },
+      {
+        key: "telefono",
+        header: "Contacto",
+        render: (r) => (
+          <span className="font-mono text-xs tabular-nums text-ink-muted">
+            {r.telefono ?? "—"}
+          </span>
+        ),
+        hideOnCard: true,
+      },
+      {
         key: "activista_nombre",
         header: "Activista",
         render: (r) => (
