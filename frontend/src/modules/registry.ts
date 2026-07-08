@@ -224,6 +224,9 @@ const PanoramaMunicipio = lazy(() =>
 const PlanTerritorial = lazy(() =>
   import("@/modules/operacion/PlanTerritorialPage"),
 );
+const WarRoom = lazy(() =>
+  import("@/modules/operacion/WarRoomPage"),
+);
 
 export const MODULES: ModuleDef[] = [
   // Plataforma (active)
@@ -255,6 +258,7 @@ export const MODULES: ModuleDef[] = [
   // Ciudadanía
   { key: "captura", path: "/captura", label: "Captura de Activistas", section: "ciudadania", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "admin", "lider", "activista", "capturista"] },
   { key: "plan-territorial", path: "/plan-territorial", label: "Plan Territorial", section: "ciudadania", icon: LayersIcon, state: "active", element: PlanTerritorial, roles: CONSOLE_COORD },
+  { key: "war-room", path: "/war-room", label: "War Room", section: "ciudadania", icon: AnalyticsIcon, state: "active", element: WarRoom, roles: CONSOLE_COORD },
   { key: "promovidos", path: "/promovidos", label: "Promovidos", section: "ciudadania", icon: VotersIcon, state: "active", element: Promovidos, roles: ["superadmin", "admin", "coordinador", "lider"] },
   { key: "militantes-captura", path: "/militantes/captura", label: "Afiliar militante", section: "ciudadania", icon: VotersIcon, state: "active", element: CapturaMilitante, roles: CONSOLE_CAPTURA },
   { key: "militantes", path: "/militantes", label: "Panorama afiliación", section: "ciudadania", icon: VotersIcon, state: "active", element: PanoramaMilitantes, roles: ["superadmin", "admin", "coordinador"], end: true },

@@ -98,6 +98,22 @@ def test_plan_edit_gated_to_manager(client):
     assert r.status_code == 403
 
 
+def test_seguimiento_rollup_semaforo_and_trend(client):
+    _seed()  # section 8881: 2 promovidos vs suggested meta 30 → rojo
+    r = client.get("/api/operacion/seguimiento", headers=_hdr(client, "coord@alpha.gov"))
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["resumen"]["secciones"] >= 1
+    assert body["resumen"]["en_riesgo"] >= 1
+    sem = next((s for s in body["semaforo"] if s["seccion"] == _SEC), None)
+    assert sem is not None and sem["status"] == "rojo" and sem["promovidos"] == 2
+    # cumulative weekly trend (from the 2 seeded promovidos' created_at)
+    assert isinstance(body["tendencia"], list) and body["tendencia"]
+    assert body["tendencia"][-1]["promovidos"] >= 2
+    # alerts carry the shortfall
+    assert all("faltan" in a for a in body["alertas"])
+
+
 def test_agenda_crud(client):
     created = client.post("/api/operacion/agenda", headers=_hdr(client, "coord@alpha.gov"),
                           json={"fase": 30, "titulo": _AGENDA_MARK, "descripcion": "Diagnóstico"})

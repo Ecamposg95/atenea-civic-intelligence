@@ -50,6 +50,11 @@ def upsert_plan(seccion: str, data: PlanUpdate, db: DbSession, ctx: CampaignCtx,
     return {"ok": True}
 
 
+@router.get("/seguimiento")
+def seguimiento(db: DbSession, ctx: CampaignCtx, _p: _READ):
+    return operacion_service.seguimiento(db, ctx)
+
+
 @router.get("/agenda")
 def agenda(db: DbSession, ctx: CampaignCtx, _p: _READ):
     return operacion_service.list_agenda(db, ctx)

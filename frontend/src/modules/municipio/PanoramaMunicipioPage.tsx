@@ -21,7 +21,7 @@ const pct = (v: number | null | undefined) =>
 // 4-way section priority → badge tone (StatusPill only covers 3 semantic kinds,
 // and priority is a category, not a good/bad state — same call as Promovidos).
 const PRIORIDAD_TONE: Record<string, string> = {
-  DEFENDER_EXPANDIR: "text-ok bg-ok/12",
+  DEFENDER_EXPANDIR: "text-state-ok bg-state-ok/12",
   COMPETITIVA: "text-warm bg-warm/14",
   RECUPERAR_OPOSICION: "text-amber bg-amber/15",
   ALTA_PERSUADIBLE: "text-accent bg-accent/12",

@@ -2,6 +2,7 @@
 live avance) + agenda 30/60/90. Campaign-scoped."""
 from __future__ import annotations
 
+from collections import Counter
 from typing import Optional
 
 from fastapi import HTTPException
@@ -165,3 +166,72 @@ def update_agenda(db: Session, ctx: CampaignContext, item_id: str, data: dict) -
     db.commit()
     return {"id": item.id, "fase": item.fase, "titulo": item.titulo,
             "descripcion": item.descripcion, "done": item.done, "orden": item.orden}
+
+
+# ── Seguimiento / war room ───────────────────────────────────────────────────
+
+def _weekly_trend(db: Session, ctx: CampaignContext, last_n: int = 12) -> list[dict]:
+    """Cumulative promovidos by ISO week, derived from Registro.created_at
+    (immutable → real history for free, no snapshot table)."""
+    fechas = db.execute(
+        select(Registro.created_at).where(
+            Registro.campaign_id == ctx.campaign_id,
+            Registro.organization_id == ctx.organization_id,
+            Registro.deleted_at.is_(None),
+            Registro.created_at.is_not(None),
+        )
+    ).scalars().all()
+    por_semana: Counter = Counter()
+    for dt in fechas:
+        y, w, _ = dt.isocalendar()
+        por_semana[(y, w)] += 1
+    acc = 0
+    out: list[dict] = []
+    for key in sorted(por_semana):
+        acc += por_semana[key]
+        out.append({"semana": f"{key[0]}-W{key[1]:02d}", "promovidos": acc})
+    return out[-last_n:]
+
+
+def _status(pct: int) -> str:
+    return "verde" if pct >= 100 else ("ambar" if pct >= 60 else "rojo")
+
+
+def seguimiento(db: Session, ctx: CampaignContext) -> dict:
+    planes = list_planes(db, ctx)
+    semaforo: list[dict] = []
+    meta_total = 0
+    prom_total = 0
+    for p in planes:
+        meta = p["avance"]["meta"] or 0
+        prom = p["avance"]["promovidos"]
+        pct = p["avance"]["pct"] if p["avance"]["pct"] is not None else 0
+        meta_total += meta
+        prom_total += prom
+        semaforo.append({
+            "seccion": p["seccion"],
+            "prioridad": p["electoral"]["prioridad"],
+            "persuadible": p["electoral"]["persuadible"],
+            "meta": meta,
+            "promovidos": prom,
+            "pct": pct,
+            "status": _status(pct),
+        })
+    alertas = sorted(
+        (s for s in semaforo if s["status"] == "rojo"),
+        key=lambda s: s["meta"] - s["promovidos"], reverse=True,
+    )[:8]
+    alertas = [{**a, "faltan": max(0, a["meta"] - a["promovidos"])} for a in alertas]
+    return {
+        "resumen": {
+            "secciones": len(semaforo),
+            "meta_total": meta_total,
+            "promovidos_total": prom_total,
+            "pct_global": round(min(100, prom_total / meta_total * 100)) if meta_total else None,
+            "en_riesgo": sum(1 for s in semaforo if s["status"] == "rojo"),
+            "al_dia": sum(1 for s in semaforo if s["status"] == "verde"),
+        },
+        "tendencia": _weekly_trend(db, ctx),
+        "semaforo": sorted(semaforo, key=lambda s: s["pct"]),  # worst first
+        "alertas": alertas,
+    }

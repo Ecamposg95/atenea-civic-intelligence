@@ -39,6 +39,34 @@ export interface AgendaItem {
   orden: number;
 }
 
+export interface SemaforoRow {
+  seccion: string;
+  prioridad: string | null;
+  persuadible: boolean;
+  meta: number;
+  promovidos: number;
+  pct: number;
+  status: "verde" | "ambar" | "rojo";
+}
+
+export interface Seguimiento {
+  resumen: {
+    secciones: number;
+    meta_total: number;
+    promovidos_total: number;
+    pct_global: number | null;
+    en_riesgo: number;
+    al_dia: number;
+  };
+  tendencia: { semana: string; promovidos: number }[];
+  semaforo: SemaforoRow[];
+  alertas: (SemaforoRow & { faltan: number })[];
+}
+
+export async function getSeguimiento(): Promise<Seguimiento> {
+  return (await apiClient.get("/operacion/seguimiento")).data;
+}
+
 export async function getPlanes(): Promise<PlanRow[]> {
   return (await apiClient.get("/operacion/planes")).data;
 }
