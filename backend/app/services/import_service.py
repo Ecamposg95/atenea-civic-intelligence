@@ -130,7 +130,8 @@ def _client_uuid(path: str, sheet: str, idx: int) -> str:
     return hashlib.sha1(key.encode("utf-8")).hexdigest()[:32]
 
 
-def import_rows(db: Session, *, organization_id: str, campaign_id: str, path: str) -> dict:
+def import_rows(db: Session, *, organization_id: str, campaign_id: str, path: str,
+                actor_id: Optional[str] = None) -> dict:
     """Idempotently import promovidos from ``path`` into ``Registro``.
 
     Never logs or prints PII — only counts. Writes one ``registro.import``
@@ -176,7 +177,7 @@ def import_rows(db: Session, *, organization_id: str, campaign_id: str, path: st
         importadas += 1
     file_ref = hashlib.sha1(os.path.basename(path).encode("utf-8")).hexdigest()[:16]
     record_audit(
-        db, action="registro.import", actor_id=None,
+        db, action="registro.import", actor_id=actor_id,
         organization_id=organization_id, entity_type="registro_batch",
         entity_id=file_ref,
         meta={"leidas": leidas, "importadas": importadas, "duplicadas": duplicadas},

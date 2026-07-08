@@ -26,6 +26,34 @@ export async function getRegistroDetalle(id: string): Promise<RegistroDetalle> {
   return (await apiClient.get(`/registros/${id}`)).data;
 }
 
+/** Bulk import (standard paper Excel template). */
+export interface ImportMuestra {
+  nombre_completo: string;
+  seccion: string | null;
+  colonia: string | null;
+  promotor: string | null;
+}
+export interface ImportPreview {
+  commit: false;
+  leidas: number;
+  muestra: ImportMuestra[];
+}
+export interface ImportResult {
+  commit: true;
+  leidas: number;
+  importadas: number;
+  duplicadas: number;
+}
+
+async function _importPost(file: File, commit: boolean) {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("commit", commit ? "true" : "false");
+  return (await apiClient.post("/promovidos/import", fd)).data;
+}
+export const previewImport = (file: File): Promise<ImportPreview> => _importPost(file, false);
+export const commitImport = (file: File): Promise<ImportResult> => _importPost(file, true);
+
 export interface Promovido {
   id: string;
   nombre_completo: string;

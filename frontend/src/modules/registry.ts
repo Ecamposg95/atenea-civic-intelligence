@@ -185,6 +185,9 @@ const Captura = lazy(() =>
 const CapturaRapida = lazy(() =>
   import("@/modules/captura/CapturaRapidaPage").then((m) => ({ default: m.CapturaRapidaPage })),
 );
+const ImportarPromovidos = lazy(() =>
+  import("@/modules/promovidos/ImportarPromovidosPage").then((m) => ({ default: m.ImportarPromovidosPage })),
+);
 const AdminDashboard = lazy(() =>
   import("@/modules/admin/AdminDashboardPage").then((m) => ({
     default: m.AdminDashboardPage,
@@ -265,6 +268,7 @@ export const MODULES: ModuleDef[] = [
 
   // Ciudadanía
   { key: "captura-rapida", path: "/captura-rapida", label: "Captura rápida", section: "ciudadania", icon: VotersIcon, state: "active", element: CapturaRapida, roles: CONSOLE_CAPTURA },
+  { key: "promovidos-importar", path: "/promovidos/importar", label: "Importar promovidos", section: "ciudadania", icon: DatabaseIcon, state: "active", element: ImportarPromovidos, roles: ["superadmin", "admin", "coordinador"] },
   { key: "captura", path: "/captura", label: "Captura de Activistas", section: "ciudadania", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "admin", "lider", "activista", "capturista"] },
   { key: "plan-territorial", path: "/plan-territorial", label: "Plan Territorial", section: "ciudadania", icon: LayersIcon, state: "active", element: PlanTerritorial, roles: CONSOLE_COORD },
   { key: "war-room", path: "/war-room", label: "War Room", section: "ciudadania", icon: AnalyticsIcon, state: "active", element: WarRoom, roles: CONSOLE_COORD },

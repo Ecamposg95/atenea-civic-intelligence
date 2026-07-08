@@ -1,5 +1,5 @@
 """GET /promovidos — scope territorial + enriquecimiento electoral."""
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from tests.conftest import auth_headers, ALPHA_CAMPAIGN_ID, TestingSessionLocal
 from app.models.electoral_area import AreaLevel, ElectoralArea
 from app.models.seccion_electoral import SeccionElectoral
@@ -83,3 +83,74 @@ def test_promovidos_admin_bypasses_territory(client):
     assert body["has_territory"] is True
     names = [i["nombre_completo"] for i in body["items"]]
     assert "Promovido Uno" in names and "Fuera" in names  # admin: no territory filter
+
+
+_XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _make_template_xlsx(tmp_path, rows):
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Promotor Prueba"
+    ws.append(["#", "PRIMER APELLIDO", "SEGUNDO APELLIDO", "NOMBRE",
+               "DIA", "MES", "AÑO", "CALLE", "NUM", "COLONIA", "SECCION", "TELEFONO"])
+    ws.append([None] * 12)  # data starts at header + 2
+    for r in rows:
+        ws.append(r)
+    p = tmp_path / "ImportPrueba.xlsx"
+    wb.save(p)
+    return p
+
+
+def test_promovidos_import_preview_and_idempotent_commit(client, tmp_path):
+    p = _make_template_xlsx(tmp_path, [
+        [1, "Garduno", "Garrido", "Victor", 15, 6, 1990, "Matamoros", "514", "Concepcion", "6129", "7221459523"],
+        [2, "Lopez", "Perez", "Ana", 1, 1, 1985, "Juarez", "10", "Centro", "6130", "7220000000"],
+    ])
+    h = _h(client, "coord@alpha.gov")
+    try:
+        # preview: nothing written
+        with open(p, "rb") as f:
+            pre = client.post("/api/promovidos/import",
+                              files={"file": ("ImportPrueba.xlsx", f, _XLSX_MIME)},
+                              data={"commit": "false"}, headers=h)
+        assert pre.status_code == 200, pre.text
+        assert pre.json()["commit"] is False and pre.json()["leidas"] == 2
+        assert len(pre.json()["muestra"]) == 2
+
+        # commit: 2 imported
+        with open(p, "rb") as f:
+            c1 = client.post("/api/promovidos/import",
+                             files={"file": ("ImportPrueba.xlsx", f, _XLSX_MIME)},
+                             data={"commit": "true"}, headers=h)
+        assert c1.status_code == 200 and c1.json()["importadas"] == 2
+
+        # re-commit same file: idempotent → duplicates, 0 new
+        with open(p, "rb") as f:
+            c2 = client.post("/api/promovidos/import",
+                             files={"file": ("ImportPrueba.xlsx", f, _XLSX_MIME)},
+                             data={"commit": "true"}, headers=h)
+        assert c2.json()["importadas"] == 0 and c2.json()["duplicadas"] == 2
+    finally:
+        db = TestingSessionLocal()
+        db.execute(delete(Registro).where(Registro.seccion.in_(["6129", "6130"])))
+        db.commit(); db.close()
+
+
+def test_promovidos_import_rejects_non_excel(client):
+    import io
+    h = _h(client, "coord@alpha.gov")
+    r = client.post("/api/promovidos/import",
+                    files={"file": ("notas.txt", io.BytesIO(b"hola"), "text/plain")},
+                    data={"commit": "false"}, headers=h)
+    assert r.status_code == 422
+
+
+def test_promovidos_import_forbidden_for_activista(client):
+    import io
+    h = _h(client, "activista1@alpha.gov")
+    r = client.post("/api/promovidos/import",
+                    files={"file": ("x.xlsx", io.BytesIO(b"x"), _XLSX_MIME)},
+                    data={"commit": "false"}, headers=h)
+    assert r.status_code == 403
