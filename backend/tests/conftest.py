@@ -39,6 +39,7 @@ from app.models.ingestion import DataSource, IngestRun
 from app.models.organization import Organization
 from app.models.privacy import PrivacyAcceptance, PrivacyNotice
 from app.models.militante import Militante
+from app.models.operacion import AgendaItem, SeccionPlan
 from app.models.registro import Registro
 from app.models.seccion_electoral import SeccionElectoral
 from app.models.user import User, UserRole
@@ -84,6 +85,8 @@ Base.metadata.create_all(
         FormResponse.__table__,
         Caso.__table__,
         CasoEvento.__table__,
+        SeccionPlan.__table__,
+        AgendaItem.__table__,
     ],
 )
 
