@@ -190,7 +190,7 @@ export function TerritoriosPage() {
   const filteredMunicipios = useMemo(() => {
     const rows = q
       ? stateMunicipios.filter((f) =>
-          f.properties.name.toLowerCase().includes(q),
+          (f.properties.name ?? "").toLowerCase().includes(q),
         )
       : stateMunicipios.slice();
     rows.sort((a, b) => {

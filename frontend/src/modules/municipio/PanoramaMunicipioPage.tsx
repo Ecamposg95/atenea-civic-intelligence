@@ -30,7 +30,7 @@ const prioridadLabel = (p: string) =>
   p.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
 function SeccionesTabla({ secciones }: { secciones: SeccionRow[] }) {
-  const maxPart = Math.max(1, ...secciones.map((s) => s.participacion));
+  const maxPart = Math.max(1, ...secciones.map((s) => s.participacion ?? 0));
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -49,15 +49,15 @@ function SeccionesTabla({ secciones }: { secciones: SeccionRow[] }) {
             <tr key={s.seccion} className="border-t border-line/70 hover:bg-panel-hover">
               <td className="px-3 py-2 font-medium tabular-nums">{s.seccion}</td>
               <td className="px-3 py-2" style={{ minWidth: 130 }}>
-                <CellBar value={Math.round((s.participacion / maxPart) * 100)} />
+                <CellBar value={Math.round(((s.participacion ?? 0) / maxPart) * 100)} />
               </td>
-              <td className="px-3 py-2 text-right tabular-nums text-ink-muted">{nf.format(s.coalicion)}</td>
-              <td className="px-3 py-2 text-right tabular-nums text-ink-muted">{nf.format(s.morena)}</td>
+              <td className="px-3 py-2 text-right tabular-nums text-ink-muted">{num(s.coalicion)}</td>
+              <td className="px-3 py-2 text-right tabular-nums text-ink-muted">{num(s.morena)}</td>
               <td
                 className="px-3 py-2 text-right tabular-nums font-semibold"
-                style={{ color: s.margen >= 0 ? "rgb(var(--c-accent))" : "rgb(var(--c-warm))" }}
+                style={s.margen != null ? { color: s.margen >= 0 ? "rgb(var(--c-accent))" : "rgb(var(--c-warm))" } : undefined}
               >
-                {s.margen >= 0 ? "+" : ""}{nf.format(s.margen)}
+                {s.margen != null ? `${s.margen >= 0 ? "+" : ""}${nf.format(s.margen)}` : "—"}
               </td>
               <td className="px-3 py-2">
                 <span className={`inline-flex rounded-pill px-2 py-0.5 text-[11px] font-semibold ${PRIORIDAD_TONE[s.prioridad] ?? "text-ink-muted bg-line/60"}`}>

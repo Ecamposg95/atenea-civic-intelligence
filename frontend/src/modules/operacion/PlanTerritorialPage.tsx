@@ -24,19 +24,38 @@ const FASES = [30, 60, 90];
 
 /* ------------------------------------------------------------- edit modal */
 function EditPlan({ row, onClose, onSaved }: { row: PlanRow; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState<PlanUpdate>({
+  // Snapshot of the values the form was opened with — used to diff on save so
+  // untouched fields (e.g. the suggested meta_semanal) aren't persisted as if
+  // the user had explicitly set them.
+  const initial: PlanUpdate = {
     problema_dominante: row.plan.problema_dominante ?? "",
     liderazgo: row.plan.liderazgo ?? "",
     meta_semanal: row.plan.meta_semanal ?? row.plan.meta_sugerida,
     notas: row.plan.notas ?? "",
-  });
+  };
+  const [form, setForm] = useState<PlanUpdate>(initial);
   const [saving, setSaving] = useState(false);
 
   async function save() {
     setSaving(true);
     try {
-      await upsertPlan(row.seccion, form);
-      onSaved();
+      const diff: PlanUpdate = {};
+      if (form.problema_dominante !== initial.problema_dominante) {
+        diff.problema_dominante = form.problema_dominante;
+      }
+      if (form.liderazgo !== initial.liderazgo) {
+        diff.liderazgo = form.liderazgo;
+      }
+      if (form.meta_semanal !== initial.meta_semanal) {
+        diff.meta_semanal = form.meta_semanal;
+      }
+      if (form.notas !== initial.notas) {
+        diff.notas = form.notas;
+      }
+      if (Object.keys(diff).length > 0) {
+        await upsertPlan(row.seccion, diff);
+        onSaved();
+      }
       onClose();
     } finally {
       setSaving(false);
@@ -63,7 +82,15 @@ function EditPlan({ row, onClose, onSaved }: { row: PlanRow; onClose: () => void
           <label className="block text-sm">
             <span className="text-ink-muted">Meta semanal (promovidos)</span>
             <input type="number" min={0} className="field-input mt-1 w-full" value={form.meta_semanal ?? 0}
-              onChange={(e) => setForm({ ...form, meta_semanal: Number(e.target.value) })} />
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === "") {
+                  setForm({ ...form, meta_semanal: null });
+                  return;
+                }
+                const n = Number(raw);
+                if (!Number.isNaN(n)) setForm({ ...form, meta_semanal: n });
+              }} />
           </label>
           <label className="block text-sm">
             <span className="text-ink-muted">Notas</span>
@@ -155,6 +182,9 @@ export default function PlanTerritorialPage() {
         <SectionHeading eyebrow="Matriz operativa" title="Plan por sección" note="ordenado por margen (más disputadas primero)" />
         <div className="mt-4 card-premium p-2">
           <DataState loading={planes.loading} error={planes.error} onRetry={planes.reload}>
+            {rows.length === 0 ? (
+              <p className="p-4 text-sm text-ink-faint">Sin secciones en el plan territorial.</p>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -181,8 +211,8 @@ export default function PlanTerritorialPage() {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums font-semibold"
-                        style={{ color: r.electoral.margen >= 0 ? "rgb(var(--c-accent))" : "rgb(var(--c-warm))" }}>
-                        {r.electoral.margen >= 0 ? "+" : ""}{r.electoral.margen}
+                        style={r.electoral.margen != null ? { color: r.electoral.margen >= 0 ? "rgb(var(--c-accent))" : "rgb(var(--c-warm))" } : undefined}>
+                        {r.electoral.margen != null ? `${r.electoral.margen >= 0 ? "+" : ""}${r.electoral.margen}` : "—"}
                       </td>
                       <td className="px-3 py-2 text-ink-muted">{r.plan.problema_dominante ?? "—"}</td>
                       <td className="px-3 py-2 text-ink-muted">{r.plan.liderazgo ?? r.plan.responsable_nombre ?? "—"}</td>
@@ -200,6 +230,7 @@ export default function PlanTerritorialPage() {
                 </tbody>
               </table>
             </div>
+            )}
           </DataState>
         </div>
       </section>
