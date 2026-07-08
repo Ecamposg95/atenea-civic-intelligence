@@ -644,7 +644,7 @@ class TestRbacMatrixFlow:
         assert client.get("/api/reports/secciones", headers=h).status_code == 200
 
     def test_coordinador_data_cardinality_and_cross_scope_isolation(self, client):
-        """COORDINADOR sees only its substructure; capturista's and beta's rows hidden."""
+        """COORDINADOR sees ALL its campaign's registros (campaign-wide); beta's row (other tenant) hidden."""
         try:
             act1_h = _hdr(client, "activista1@alpha.gov")
             act2_h = _hdr(client, "activista2@alpha.gov")
@@ -694,19 +694,15 @@ class TestRbacMatrixFlow:
             body = resp.json()
             ids_seen = {r["id"] for r in body["items"]}
 
-            # T3 cardinality: exactly the two activistas in coord's hierarchy
-            assert body["total"] == 2, (
-                f"coord@ must see exactly 2 registros (its substructure), got {body['total']}"
-            )
+            # Campaign-wide: coord sees ALL alpha-campaign registros — its
+            # hierarchy AND the capturista's (same campaign, outside its sub-tree).
             assert rid1 in ids_seen, "activista1 registro must be visible to coord"
             assert rid2 in ids_seen, "activista2 registro must be visible to coord"
-
-            # Cross-scope isolation: capturista (not in hierarchy) is hidden
-            assert rid_cap not in ids_seen, (
-                "coord@ must NOT see capturista@'s registro (outside its hierarchy)"
+            assert rid_cap in ids_seen, (
+                "coord@ (campaign-wide) must now see capturista@'s registro in its campaign"
             )
 
-            # Cross-tenant isolation: beta is hidden
+            # Cross-tenant isolation MUST still hold: beta (other org/campaign) hidden.
             assert rid_beta not in ids_seen, (
                 "coord@ must NOT see beta tenant's registro"
             )

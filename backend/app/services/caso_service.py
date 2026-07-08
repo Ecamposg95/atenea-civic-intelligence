@@ -242,22 +242,15 @@ def _caso_role_scoped(ctx: CampaignContext):
     """
     if ctx.is_superadmin or ctx.role == UserRole.ADMIN:
         return scoped_query(Caso, ctx)
-    if ctx.role in (UserRole.COORDINADOR, UserRole.LIDER):
-        if ctx.role == UserRole.COORDINADOR:
-            lideres = select(User.id).where(User.coordinador_id == ctx.user.id)
-            activistas = select(User.id).where(User.lider_id.in_(lideres))
-            hierarchy = or_(
-                Caso.asignado_a.in_(activistas), Caso.asignado_a.in_(lideres),
-                Caso.asignado_a == ctx.user.id,
-                Caso.created_by.in_(activistas), Caso.created_by.in_(lideres),
-                Caso.created_by == ctx.user.id,
-            )
-        else:  # LIDER
-            activistas = select(User.id).where(User.lider_id == ctx.user.id)
-            hierarchy = or_(
-                Caso.asignado_a.in_(activistas), Caso.asignado_a == ctx.user.id,
-                Caso.created_by.in_(activistas), Caso.created_by == ctx.user.id,
-            )
+    if ctx.role == UserRole.COORDINADOR:
+        # Campaign executive: sees ALL casos of the campaign (tenant-scoped).
+        return scoped_query(Caso, ctx)
+    if ctx.role == UserRole.LIDER:
+        activistas = select(User.id).where(User.lider_id == ctx.user.id)
+        hierarchy = or_(
+            Caso.asignado_a.in_(activistas), Caso.asignado_a == ctx.user.id,
+            Caso.created_by.in_(activistas), Caso.created_by == ctx.user.id,
+        )
         return scoped_query(Caso, ctx).where(or_(hierarchy, Caso.asignado_a.is_(None)))
     if ctx.role in (UserRole.ACTIVISTA, UserRole.CAPTURISTA):
         owned = or_(Caso.asignado_a == ctx.user.id, Caso.created_by == ctx.user.id)
@@ -268,7 +261,7 @@ def _caso_role_scoped(ctx: CampaignContext):
 def _bypass_territory(ctx: CampaignContext) -> bool:
     """Roles exempt from the sección territory gate: platform-wide roles
     (superadmin/ADMIN) and field roles restricted to their own rows already."""
-    return ctx.is_superadmin or ctx.role == UserRole.ADMIN \
+    return ctx.is_superadmin or ctx.role in (UserRole.ADMIN, UserRole.COORDINADOR) \
         or ctx.role in (UserRole.ACTIVISTA, UserRole.CAPTURISTA)
 
 

@@ -77,19 +77,18 @@ from app.schemas.militante import MilitanteEstadoUpdate
 
 
 # ── I-1: territory gate applies to get/reveal/set_estado, not just list ───────
-def test_coordinador_territory_gates_get_reveal_validate(coordinador_ctx, activista_ctx, db_session):
-    # activista1 sits inside coord's hierarchy, but seccion 9999 is OUTSIDE coord's
-    # territory (4127) → coord must not get / reveal / validate this militante.
+def test_coordinador_sees_militante_across_territory(coordinador_ctx, activista_ctx, db_session):
+    # COORDINADOR is campaign-wide (no territory gate) → gets / reveals / validates
+    # a militante even in a sección outside their own area (9999).
     m = militante_service.create_militante(db_session, activista_ctx,
         MilitanteCreate(nombre_completo="Fuera", consentimiento=True,
                         curp="LOPA900101MMCXXX01", clave_elector="LOPXAN90010115M100",
                         seccion="9999"))
-    assert militante_service.get_militante(db_session, coordinador_ctx, m.id) is None
-    assert militante_service.reveal_militante(db_session, coordinador_ctx, m.id) is None
-    assert militante_service.set_estado(db_session, coordinador_ctx, m.id,
-        MilitanteEstadoUpdate(estado="VALIDADO")) is None
-    # sanity: the capturing activista (territory-exempt) still sees it
-    assert militante_service.get_militante(db_session, activista_ctx, m.id) is not None
+    assert militante_service.get_militante(db_session, coordinador_ctx, m.id) is not None
+    assert militante_service.reveal_militante(db_session, coordinador_ctx, m.id) is not None
+    out = militante_service.set_estado(db_session, coordinador_ctx, m.id,
+        MilitanteEstadoUpdate(estado="VALIDADO"))
+    assert out is not None and out.estado == "VALIDADO"
 
 
 def test_set_estado_validado_audits(coordinador_ctx, activista_ctx, db_session):

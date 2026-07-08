@@ -26,12 +26,14 @@ def test_consulta_role_sees_nothing():
         db.close()
 
 
-def test_coordinador_scope_includes_sub_structure():
-    # coord@alpha.gov coordina a lider@alpha.gov, cuyos activistas son activista1/2.
+def test_coordinador_scope_is_campaign_wide():
+    # COORDINADOR is the campaign executive → sees ALL campaign registros, so the
+    # scope has NO hierarchy restriction (only the tenant/campaign scope).
     db = TestingSessionLocal()
     try:
-        stmt = registro_service._role_scoped(_ctx(db, "coord@alpha.gov"))
-        assert "coordinador_id" in str(stmt) or "lider_id" in str(stmt)
+        sql = str(registro_service._role_scoped(_ctx(db, "coord@alpha.gov")))
+        assert "coordinador_id" not in sql and "lider_id" not in sql
+        assert "campaign_id" in sql and "organization_id" in sql  # tenant scope intact
     finally:
         db.close()
 
