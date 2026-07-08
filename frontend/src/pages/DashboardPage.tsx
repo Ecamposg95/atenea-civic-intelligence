@@ -98,25 +98,35 @@ export function DashboardPage() {
     reload: reloadOverview,
   } = useAsync<AnalyticsOverview>(() => getOverview(), []);
   const [areas, setAreas] = useState<AreasResponse | null>(null);
-  const [sources, setSources] = useState<SourceInfo[]>([]);
+  const [areasError, setAreasError] = useState<string | null>(null);
+  const [areasReloadKey, setAreasReloadKey] = useState(0);
   const [fitKey, setFitKey] = useState(0);
+
+  const {
+    data: sources,
+    loading: sourcesLoading,
+    error: sourcesError,
+    reload: reloadSources,
+  } = useAsync<SourceInfo[]>(() => getSources(), []);
 
   useEffect(() => {
     // State level only — light payload for the mini-map/coverage (municipality
     // level is ~1854 features / ~29MB and is loaded on demand in Map Explorer).
+    setAreasError(null);
     getAreas("state")
       .then((fc) => {
         setAreas(fc);
         if (fc.features.length > 0) setFitKey((k) => k + 1);
       })
-      .catch(() => setAreas({ type: "FeatureCollection", features: [] }));
-    getSources()
-      .then(setSources)
-      .catch(() => setSources([]));
-  }, []);
+      .catch((e: unknown) => {
+        setAreasError(
+          e instanceof Error ? e.message : "No se pudo cargar la cartografía.",
+        );
+      });
+  }, [areasReloadKey]);
 
   const s = data?.summary;
-  const activity = data?.trends.activity ?? [];
+  const activity = data?.trends?.activity ?? [];
   const activitySeries = useMemo(() => activity.map((p) => p.value), [activity]);
 
   // Real audit-activity figures (no fabricated values).
@@ -131,7 +141,7 @@ export function DashboardPage() {
   // Today's events relative to the busiest day in the 14d window.
   const todayEvents = activity.length > 0 ? activity[activity.length - 1].value : 0;
   const activityRatio = peakEvents > 0 ? todayEvents / peakEvents : 0;
-  const distinctActions = data?.by_action.length ?? 0;
+  const distinctActions = data?.by_action?.length ?? 0;
   const heatData = useMemo(
     () => activity.map((p) => ({ label: p.period, value: p.value })),
     [activity],
@@ -227,7 +237,7 @@ export function DashboardPage() {
           tone="warm"
           context={
             data
-              ? `${nf.format(data.by_actor.length)} activos en el audit log (14d)`
+              ? `${nf.format(data?.by_actor?.length ?? 0)} activos en el audit log (14d)`
               : undefined
           }
           icon={<UserIcon width={18} height={18} />}
@@ -355,7 +365,7 @@ export function DashboardPage() {
               }
             >
             <div className="space-y-2.5">
-              {data?.alerts.map((a, i) => {
+              {(data?.alerts ?? []).map((a, i) => {
                 const tone = ALERT_TONE[a.level];
                 return (
                   <div
@@ -386,7 +396,7 @@ export function DashboardPage() {
                   </div>
                 );
               })}
-              {data && data.alerts.length === 0 && (
+              {data && (data?.alerts?.length ?? 0) === 0 && (
                 <div className="flex items-center gap-2.5 rounded-lg border border-l-2 border-line border-l-teal bg-bg-sunken px-3 py-2.5">
                   <ShieldIcon width={16} height={16} className="text-teal" />
                   <p className="text-sm text-ink-muted">Sin alertas activas.</p>
@@ -417,7 +427,20 @@ export function DashboardPage() {
               </Link>
             }
           >
-            {!areas ? (
+            {areasError ? (
+              <div className={`grid ${PANEL_HEIGHTS.mapMini} place-items-center text-center text-sm text-ink-faint`}>
+                <div className="space-y-2">
+                  <p>No se pudo cargar la cartografía.</p>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => setAreasReloadKey((k) => k + 1)}
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              </div>
+            ) : !areas ? (
               <div className={`${PANEL_HEIGHTS.mapMini} animate-pulse rounded-lg bg-panel-hover`} />
             ) : hasAreas ? (
               <div className="space-y-4">
@@ -467,35 +490,46 @@ export function DashboardPage() {
               </Link>
             }
           >
-            <div className="space-y-2.5">
-              {sources.slice(0, 5).map((src, i) => (
-                <div
-                  key={src.id}
-                  className="reveal group flex items-center justify-between gap-3 rounded-lg border border-line bg-bg-sunken px-3 py-2.5 transition-all hover:-translate-y-0.5 hover:border-line-strong hover:bg-panel-hover"
-                  style={{ animationDelay: `${300 + i * 60}ms` }}
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="metric-chip h-8 w-8 shrink-0 text-accent transition-colors group-hover:text-teal">
-                      <DatabaseIcon width={15} height={15} />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm text-ink">{src.name}</div>
-                      {src.formats.length > 0 && (
-                        <div className="truncate font-mono text-[10px] uppercase tracking-wide text-ink-faint">
-                          {src.formats.slice(0, 4).join(" · ")}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <span className={`pill shrink-0 ${KIND_BADGE[src.kind] ?? "border-line"}`}>
-                    {src.kind}
-                  </span>
-                </div>
-              ))}
-              {sources.length === 0 && (
+            <DataState
+              loading={sourcesLoading}
+              error={sourcesError}
+              onRetry={reloadSources}
+              skeleton={
                 <div className="h-[180px] animate-pulse rounded-lg bg-panel-hover" />
-              )}
-            </div>
+              }
+            >
+              <div className="space-y-2.5">
+                {(sources ?? []).slice(0, 5).map((src, i) => (
+                  <div
+                    key={src.id}
+                    className="reveal group flex items-center justify-between gap-3 rounded-lg border border-line bg-bg-sunken px-3 py-2.5 transition-all hover:-translate-y-0.5 hover:border-line-strong hover:bg-panel-hover"
+                    style={{ animationDelay: `${300 + i * 60}ms` }}
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="metric-chip h-8 w-8 shrink-0 text-accent transition-colors group-hover:text-teal">
+                        <DatabaseIcon width={15} height={15} />
+                      </span>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm text-ink">{src.name}</div>
+                        {src.formats.length > 0 && (
+                          <div className="truncate font-mono text-[10px] uppercase tracking-wide text-ink-faint">
+                            {src.formats.slice(0, 4).join(" · ")}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`pill shrink-0 ${KIND_BADGE[src.kind] ?? "border-line"}`}>
+                      {src.kind}
+                    </span>
+                  </div>
+                ))}
+                {(sources ?? []).length === 0 && (
+                  <p className="p-4 text-center text-sm text-ink-faint">
+                    Sin fuentes de datos disponibles.
+                  </p>
+                )}
+              </div>
+            </DataState>
           </Card>
         </div>
       </div>

@@ -3,9 +3,9 @@ import { apiClient } from "./client";
 export interface PlanRow {
   seccion: string;
   electoral: {
-    margen: number;
+    margen: number | null;
     prioridad: string | null;
-    participacion: number;
+    participacion: number | null;
     persuadible: boolean;
   };
   plan: {

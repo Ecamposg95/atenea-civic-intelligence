@@ -16,12 +16,12 @@ export interface VotoPartido {
 
 export interface SeccionRow {
   seccion: string;
-  lista_nominal: number;
-  votos: number;
-  participacion: number;
-  coalicion: number;
-  morena: number;
-  margen: number;
+  lista_nominal: number | null;
+  votos: number | null;
+  participacion: number | null;
+  coalicion: number | null;
+  morena: number | null;
+  margen: number | null;
   prioridad: string;
 }
 
@@ -40,7 +40,7 @@ export interface SeccionesResumen {
 
 export interface MunicipioPanorama {
   municipio: { code: string; name: string };
-  socio: Record<string, number>;
+  socio: Record<string, number | undefined>;
   historico: HistoricoElectoral[];
   voto2024: VotoPartido[];
   coalicion_ganadora_votos: number | null;

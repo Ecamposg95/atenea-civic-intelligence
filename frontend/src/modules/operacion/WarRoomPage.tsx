@@ -14,6 +14,8 @@ const STATUS: Record<string, { dot: string; label: string }> = {
   ambar: { dot: "rgb(var(--c-amber))", label: "Atención" },
   rojo: { dot: "rgb(var(--c-critical))", label: "En riesgo" },
 };
+// Fallback for any status value not covered above (unexpected/legacy data).
+const DEFAULT_STATUS = { dot: "rgb(var(--c-ink-faint))", label: "Sin estado" };
 const prio = (p: string | null) =>
   (p ?? "—").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -31,23 +33,26 @@ function Semaforo({ rows }: { rows: SemaforoRow[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.seccion} className="border-t border-line/70 hover:bg-panel-hover">
-              <td className="px-3 py-2">
-                <span className="inline-flex items-center gap-1.5 text-xs font-medium">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATUS[r.status].dot }} />
-                  {STATUS[r.status].label}
-                </span>
-              </td>
-              <td className="px-3 py-2 font-medium tabular-nums">
-                {r.seccion}
-                {r.persuadible && <span className="ml-1.5 rounded-pill bg-warm/14 px-1.5 py-0.5 text-[10px] font-semibold text-warm">persuadible</span>}
-              </td>
-              <td className="px-3 py-2 text-ink-muted">{prio(r.prioridad)}</td>
-              <td className="px-3 py-2"><CellBar value={r.pct} /></td>
-              <td className="px-3 py-2 text-right tabular-nums text-ink-muted">{r.promovidos} / {r.meta}</td>
-            </tr>
-          ))}
+          {rows.map((r) => {
+            const st = STATUS[r.status] ?? DEFAULT_STATUS;
+            return (
+              <tr key={r.seccion} className="border-t border-line/70 hover:bg-panel-hover">
+                <td className="px-3 py-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: st.dot }} />
+                    {st.label}
+                  </span>
+                </td>
+                <td className="px-3 py-2 font-medium tabular-nums">
+                  {r.seccion}
+                  {r.persuadible && <span className="ml-1.5 rounded-pill bg-warm/14 px-1.5 py-0.5 text-[10px] font-semibold text-warm">persuadible</span>}
+                </td>
+                <td className="px-3 py-2 text-ink-muted">{prio(r.prioridad)}</td>
+                <td className="px-3 py-2"><CellBar value={r.pct} /></td>
+                <td className="px-3 py-2 text-right tabular-nums text-ink-muted">{r.promovidos} / {r.meta}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -111,7 +116,11 @@ export default function WarRoomPage() {
             <section>
               <SectionHeading eyebrow="Semáforo" title="Todas las secciones" note="ordenadas por avance (rezagadas primero)" />
               <div className="mt-4 card-premium p-2">
-                <Semaforo rows={d.semaforo} />
+                {d.semaforo.length > 0 ? (
+                  <Semaforo rows={d.semaforo} />
+                ) : (
+                  <p className="p-4 text-sm text-ink-faint">Sin secciones registradas.</p>
+                )}
               </div>
             </section>
           </div>

@@ -34,6 +34,8 @@ export function MapExplorerPage() {
   const [wmsTiles, setWmsTiles] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [areasError, setAreasError] = useState<string | null>(null);
+  const [areasReloadKey, setAreasReloadKey] = useState(0);
 
   // Map robustness controls.
   const [level, setLevel] = useState<string>("state"); // default light; "" = all (heavy: ~1854 municipios)
@@ -76,12 +78,18 @@ export function MapExplorerPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Re-fetch areas whenever the selected level changes.
+  // Re-fetch areas whenever the selected level changes (or a retry is requested).
   useEffect(() => {
+    setAreasError(null);
     getAreas(level || undefined)
       .then(setAreas)
-      .catch(() => setAreas({ type: "FeatureCollection", features: [] }));
-  }, [level]);
+      .catch((e: unknown) => {
+        setAreas({ type: "FeatureCollection", features: [] });
+        setAreasError(
+          e instanceof Error ? e.message : "No se pudieron cargar las áreas.",
+        );
+      });
+  }, [level, areasReloadKey]);
 
   const toggle = (id: string) =>
     setLayers((prev) =>
@@ -120,7 +128,7 @@ export function MapExplorerPage() {
     return {
       ...areas,
       features: areas.features.filter((f) =>
-        f.properties.name.toLowerCase().includes(q),
+        (f.properties.name ?? "").toLowerCase().includes(q),
       ),
     };
   }, [areas, search]);
@@ -188,6 +196,19 @@ export function MapExplorerPage() {
       {error && (
         <div className="reveal mb-4 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
           {error}
+        </div>
+      )}
+
+      {areasError && (
+        <div className="reveal mb-4 flex items-center justify-between gap-3 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
+          <span>{areasError}</span>
+          <button
+            type="button"
+            className="btn-ghost !px-2.5 !py-1 text-xs"
+            onClick={() => setAreasReloadKey((k) => k + 1)}
+          >
+            Reintentar
+          </button>
         </div>
       )}
 
