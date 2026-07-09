@@ -2,9 +2,14 @@ import { JSX, Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { ComingSoonPage } from "@/components/modules/ComingSoonPage";
-import { MODULES } from "@/modules/registry";
+import { MINUTAS_READ, MODULES } from "@/modules/registry";
 import { useAuthStore } from "@/store/authStore";
 import type { UserRole } from "@/types/auth";
+
+// Minutas & Acuerdos write tier (crear/editar) — mirrors CONSOLE_COORD in
+// modules/registry.ts (registry doesn't export it, so it's redeclared here;
+// see registry.ts's MINUTAS_READ for the read-tier counterpart).
+const MINUTAS_WRITE: UserRole[] = ["superadmin", "admin", "coordinador", "lider"];
 
 // Route-level code splitting: heavy deps (MapLibre, Recharts) load only on the
 // routes that need them, keeping the initial bundle small.
@@ -22,6 +27,13 @@ const ProfilePage = lazy(() =>
 // (see backend/app/routers/public_forms.py); otherwise the page's own fetch
 // 404s and it renders a friendly "not available" state.
 const PublicFormPage = lazy(() => import("@/modules/atencion/PublicFormPage"));
+
+// Minutas & Acuerdos param routes (:id) — kept out of modules/registry.ts
+// (MODULES entries double as Sidebar nav items, and a link with an unfilled
+// `:id` segment would be a broken nav item). The nav-visible /minutas and
+// /acuerdos list pages ARE registered in registry.ts as usual.
+const MinutaEditorPage = lazy(() => import("@/modules/minutas/MinutaEditorPage"));
+const MinutaDetailPage = lazy(() => import("@/modules/minutas/MinutaDetailPage"));
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -108,6 +120,40 @@ export default function App() {
               </RequireAuth>
             }
           />
+
+          {/* Minutas & Acuerdos param routes — see MinutaEditorPage/MinutaDetailPage
+              import comments above for why these live here instead of registry.ts. */}
+          <Route
+            path="/minutas/nueva"
+            element={
+              <RequireAuth>
+                <RequireRole roles={MINUTAS_WRITE}>
+                  <MinutaEditorPage />
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/minutas/:id"
+            element={
+              <RequireAuth>
+                <RequireRole roles={MINUTAS_READ}>
+                  <MinutaDetailPage />
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/minutas/:id/editar"
+            element={
+              <RequireAuth>
+                <RequireRole roles={MINUTAS_WRITE}>
+                  <MinutaEditorPage />
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

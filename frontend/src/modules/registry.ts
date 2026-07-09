@@ -67,6 +67,11 @@ const CONSOLE_CAPTURA: UserRole[] = [
 ];
 const ADMINY: UserRole[] = ["superadmin", "admin"];
 const REPORTS: UserRole[] = ["superadmin", "admin", "coordinador", "lider", "analyst", "viewer", "consulta"];
+// Minutas & Acuerdos — read tier (list/detail/mis-acuerdos) also reaches
+// activista/capturista, who attend reuniones but don't create/edit actas.
+export const MINUTAS_READ: UserRole[] = [
+  "superadmin", "admin", "coordinador", "lider", "activista", "capturista",
+];
 
 export const SECTION_LABELS: Record<ModuleSection, string> = {
   plataforma: "Plataforma",
@@ -238,6 +243,12 @@ const PlanTerritorial = lazy(() =>
 const WarRoom = lazy(() =>
   import("@/modules/operacion/WarRoomPage"),
 );
+const MinutasList = lazy(() =>
+  import("@/modules/minutas/MinutasListPage"),
+);
+const MisAcuerdos = lazy(() =>
+  import("@/modules/minutas/MisAcuerdosPage"),
+);
 
 export const MODULES: ModuleDef[] = [
   // Plataforma (active)
@@ -272,6 +283,11 @@ export const MODULES: ModuleDef[] = [
   { key: "captura", path: "/captura", label: "Captura de Activistas", section: "ciudadania", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "admin", "lider", "activista", "capturista"] },
   { key: "plan-territorial", path: "/plan-territorial", label: "Plan Territorial", section: "ciudadania", icon: LayersIcon, state: "active", element: PlanTerritorial, roles: CONSOLE_COORD },
   { key: "war-room", path: "/war-room", label: "War Room", section: "ciudadania", icon: AnalyticsIcon, state: "active", element: WarRoom, roles: CONSOLE_COORD },
+  // Minutas & Acuerdos — only the two non-parameterized routes are nav items;
+  // /minutas/nueva, /minutas/:id and /minutas/:id/editar are registered
+  // directly in App.tsx (param routes must not appear as Sidebar links).
+  { key: "minutas", path: "/minutas", label: "Minutas", section: "ciudadania", icon: AnalyticsIcon, state: "active", element: MinutasList, roles: MINUTAS_READ },
+  { key: "acuerdos", path: "/acuerdos", label: "Acuerdos", section: "ciudadania", icon: UserIcon, state: "active", element: MisAcuerdos, roles: MINUTAS_READ },
   { key: "promovidos", path: "/promovidos", label: "Promovidos", section: "ciudadania", icon: VotersIcon, state: "active", element: Promovidos, roles: ["superadmin", "admin", "coordinador", "lider"] },
   { key: "militantes-captura", path: "/militantes/captura", label: "Afiliar militante", section: "ciudadania", icon: VotersIcon, state: "active", element: CapturaMilitante, roles: CONSOLE_CAPTURA },
   { key: "militantes", path: "/militantes", label: "Panorama afiliación", section: "ciudadania", icon: VotersIcon, state: "active", element: PanoramaMilitantes, roles: ["superadmin", "admin", "coordinador"], end: true },
