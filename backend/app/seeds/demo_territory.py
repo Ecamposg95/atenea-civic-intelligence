@@ -77,4 +77,9 @@ def seed_demo_territory(db: Session) -> None:
                 name=f"Sección {code}", code=code, level=AreaLevel.SECCION,
                 organization_id=None, municipio_id=muni.id, parent_id=muni.id,
             ))
+        elif exists.municipio_id is None or exists.parent_id is None:
+            # Reconcile a pre-existing area (e.g. created bare by a test
+            # fixture) to the intended linked state, instead of skipping it.
+            exists.municipio_id = muni.id
+            exists.parent_id = muni.id
     db.commit()
