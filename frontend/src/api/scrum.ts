@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import type { Minuta } from "./minutas";
 
 export interface Sprint {
   id: string; nombre: string; objetivo?: string;
@@ -56,3 +57,23 @@ export const updateTask = async (wid: string, tid: string, p: Partial<Task>) =>
 export const deleteTask = async (wid: string, tid: string) => { await apiClient.delete(`/workitems/${wid}/tareas/${tid}`); };
 export const convertirAcuerdo = async (mid: string, aid: string) =>
   (await apiClient.post<WorkItem>(`/minutas/${mid}/acuerdos/${aid}/convertir`)).data;
+
+// ── Métricas + ceremonias ──
+export interface SprintMetrics {
+  comprometido: number;
+  completado: number;
+  historias_total: number;
+  historias_hechas: number;
+  por_estado: Record<string, number>;
+  sin_estimar: number;
+}
+export interface VelocidadPunto { sprint_id: string; nombre: string; fecha_fin: string; velocidad: number; }
+export interface BurndownDia { fecha: string; restante: number; ideal: number; }
+export interface Burndown { total_puntos: number; dias: BurndownDia[]; }
+
+export const getSprintMetrics = async (id: string) => (await apiClient.get<SprintMetrics>(`/sprints/${id}/metrics`)).data;
+export const getVelocidad = async (n = 6) => (await apiClient.get<VelocidadPunto[]>("/scrum/velocidad", { params: { n } })).data;
+export const getBurndown = async (id: string) => (await apiClient.get<Burndown>(`/sprints/${id}/burndown`)).data;
+export const listCeremonias = async (id: string) => (await apiClient.get<Page<Minuta>>(`/sprints/${id}/ceremonias`)).data;
+export const crearCeremonia = async (id: string, p: { titulo: string; fecha: string; tipo: string; lugar?: string; cuerpo?: string }) =>
+  (await apiClient.post<Minuta>(`/sprints/${id}/ceremonias`, p)).data;

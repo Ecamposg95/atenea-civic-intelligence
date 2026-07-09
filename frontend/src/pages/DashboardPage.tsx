@@ -13,11 +13,13 @@ import { Card } from "@/components/ui/Card";
 import { DataState } from "@/components/ui/DataState";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { Sparkline } from "@/components/ui/Sparkline";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { useAsync } from "@/hooks/useAsync";
 import { CHART_PALETTE } from "@/constants/ui";
 import {
   AlertIcon,
+  AnalyticsIcon,
   MapIcon,
   ShieldIcon,
   UserIcon,
@@ -27,6 +29,13 @@ import type { ExecutiveDashboard } from "@/api/dashboard";
 
 const nf = new Intl.NumberFormat("es-MX");
 const pf = (n: number) => `${nf.format(Math.round(n))}%`;
+
+const SCRUM_COLUMN_LABEL: Record<string, string> = {
+  POR_HACER: "Por hacer",
+  EN_CURSO: "En curso",
+  HECHO: "Hecho",
+};
+const SCRUM_COLUMNS = ["POR_HACER", "EN_CURSO", "HECHO"] as const;
 
 export function DashboardPage() {
   const { data, loading, error, reload } = useAsync<ExecutiveDashboard>(
@@ -98,6 +107,10 @@ export function DashboardPage() {
   const alertas = data?.alertas ?? [];
   const slaVencidos = casos?.sla_vencidos ?? 0;
   const hasAttention = alertas.length > 0 || slaVencidos > 0;
+
+  const scrum = data?.scrum;
+  const sprintActivo = scrum?.sprint_activo ?? null;
+  const scrumAtrasados = scrum?.atrasados ?? 0;
 
   return (
     <AppLayout title="Centro de Mando" crumb="Civic Intelligence Overview">
@@ -270,6 +283,121 @@ export function DashboardPage() {
                 </Card>
               </div>
             </div>
+
+            {/* ---- Scrum ---- */}
+            {scrum && (
+              <>
+                <div className="reveal mt-8" style={{ animationDelay: "40ms" }}>
+                  <SectionHeading
+                    eyebrow="Ejecución"
+                    title="Sprint en curso"
+                    note="Avance, tablero y velocidad del equipo"
+                  />
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+                  <div className="reveal lg:col-span-2" style={{ animationDelay: "120ms" }}>
+                    <Card
+                      title={sprintActivo ? sprintActivo.nombre : "Sprint activo"}
+                      accentDot
+                      className="h-full"
+                      action={
+                        <Link
+                          to="/sprints"
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-accent transition-colors hover:text-accent-strong"
+                        >
+                          <AnalyticsIcon width={14} height={14} /> Ver sprints
+                        </Link>
+                      }
+                    >
+                      {!sprintActivo ? (
+                        <p className="text-sm text-ink-muted">Sin sprint activo.</p>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between text-xs text-ink-faint">
+                            <span className="font-mono">
+                              {sprintActivo.fecha_inicio} → {sprintActivo.fecha_fin}
+                            </span>
+                            <span className="font-mono tabular-nums text-ink-muted">
+                              {nf.format(sprintActivo.completado)}/{nf.format(sprintActivo.comprometido)} pts
+                            </span>
+                          </div>
+                          <div className="mt-2 flex items-center gap-2">
+                            <div className="h-2.5 w-full shrink-0 overflow-hidden rounded-pill bg-ink-faint/15">
+                              <div
+                                className="h-full rounded-pill bg-teal"
+                                style={{ width: `${Math.max(0, Math.min(100, sprintActivo.pct))}%` }}
+                                role="progressbar"
+                                aria-valuenow={sprintActivo.pct}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                              />
+                            </div>
+                            <span className="font-mono text-xs font-semibold tabular-nums text-ink">
+                              {pf(sprintActivo.pct)}
+                            </span>
+                          </div>
+                          <div className="mt-4 grid grid-cols-3 gap-3">
+                            {SCRUM_COLUMNS.map((k) => (
+                              <div
+                                key={k}
+                                className="rounded-lg border border-line bg-bg-sunken px-3 py-2.5 text-center"
+                              >
+                                <div className="font-display text-lg font-bold tabular-nums text-ink">
+                                  {nf.format(scrum.por_columna[k] ?? 0)}
+                                </div>
+                                <div className="mt-0.5 text-[10px] uppercase tracking-wider text-ink-faint">
+                                  {SCRUM_COLUMN_LABEL[k] ?? k}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {scrum.sin_estimar > 0 && (
+                            <p className="mt-3 text-xs text-ink-faint">
+                              {nf.format(scrum.sin_estimar)} historias sin estimar
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </Card>
+                  </div>
+                  <div className="reveal" style={{ animationDelay: "180ms" }}>
+                    <Card title="Velocidad" accentDot className="h-full">
+                      {scrum.velocidad_ultima != null ? (
+                        <>
+                          <div className="font-display text-3xl font-bold tabular-nums tracking-tight text-ink">
+                            {nf.format(scrum.velocidad_ultima)}
+                            <span className="ml-1 text-sm font-medium text-ink-faint">pts</span>
+                          </div>
+                          <p className="mt-1 text-xs text-ink-faint">último sprint cerrado</p>
+                          {scrum.velocidad_tendencia.length > 1 && (
+                            <div className="mt-3 -mb-1">
+                              <Sparkline
+                                data={scrum.velocidad_tendencia}
+                                width={220}
+                                height={40}
+                                stroke="var(--chart-3)"
+                                fillFrom="color-mix(in srgb, var(--chart-3) 30%, transparent)"
+                                className="w-full"
+                              />
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-ink-muted">Aún no hay sprints cerrados.</p>
+                      )}
+                      {scrumAtrasados > 0 && (
+                        <div className="mt-3 flex items-center gap-2.5 rounded-lg border border-l-2 border-line border-l-state-warning bg-bg-sunken px-3 py-2.5">
+                          <AlertIcon width={16} height={16} className="shrink-0 text-state-warning" />
+                          <span className="text-sm text-ink">
+                            {nf.format(scrumAtrasados)} {scrumAtrasados === 1 ? "historia atrasada" : "historias atrasadas"}
+                          </span>
+                        </div>
+                      )}
+                    </Card>
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
       </DataState>

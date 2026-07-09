@@ -45,6 +45,25 @@ export interface ExecutiveDashboardAlerta {
   faltan: number;
 }
 
+export interface ExecutiveDashboardSprintActivo {
+  id: string;
+  nombre: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  comprometido: number;
+  completado: number;
+  pct: number;
+}
+
+export interface ExecutiveDashboardScrum {
+  sprint_activo: ExecutiveDashboardSprintActivo | null;
+  por_columna: Record<string, number>;
+  velocidad_ultima: number | null;
+  velocidad_tendencia: number[];
+  sin_estimar: number;
+  atrasados: number;
+}
+
 export interface ExecutiveDashboard {
   election_date: string | null;
   promovidos: ExecutiveDashboardPromovidos;
@@ -55,6 +74,8 @@ export interface ExecutiveDashboard {
   por_seccion_top: ExecutiveDashboardSeccionTop[];
   casos_por_estado: ExecutiveDashboardCasoEstado[];
   alertas: ExecutiveDashboardAlerta[];
+  /** Optional — only present once the scrum-PM block is deployed backend-side. */
+  scrum?: ExecutiveDashboardScrum;
 }
 
 /** Campaign-scoped executive briefing (coordinador+). */
