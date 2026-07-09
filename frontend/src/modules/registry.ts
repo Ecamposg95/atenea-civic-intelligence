@@ -72,6 +72,12 @@ const REPORTS: UserRole[] = ["superadmin", "admin", "coordinador", "lider", "ana
 export const MINUTAS_READ: UserRole[] = [
   "superadmin", "admin", "coordinador", "lider", "activista", "capturista",
 ];
+// Minutas & Acuerdos — write tier (crear/editar/publicar/cambiar estado de
+// acuerdo). Mirrors CONSOLE_COORD; exported so App.tsx/MinutasListPage/
+// MinutaDetailPage share one definition instead of hand-copying the array.
+export const MINUTAS_WRITE: UserRole[] = [
+  "superadmin", "admin", "coordinador", "lider",
+];
 
 export const SECTION_LABELS: Record<ModuleSection, string> = {
   plataforma: "Plataforma",

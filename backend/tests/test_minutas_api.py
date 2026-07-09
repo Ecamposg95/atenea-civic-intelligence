@@ -45,3 +45,32 @@ def test_acuerdos_transversal_endpoint(client):
     r = client.get("/api/acuerdos?vence_antes=2026-07-31", headers=h)
     assert r.status_code == 200
     assert r.json()["total"] == before + 1
+
+
+def test_lider_cannot_delete_minuta(client):
+    hcoord = _hdr(client, "coord@alpha.gov")
+    r = client.post("/api/minutas",
+                    json={"titulo": "no-delete-for-lider", "fecha": "2026-07-08"},
+                    headers=hcoord)
+    assert r.status_code == 201, r.text
+    mid = r.json()["id"]
+
+    hlider = _hdr(client, "lider@alpha.gov")
+    r2 = client.delete(f"/api/minutas/{mid}", headers=hlider)
+    assert r2.status_code == 403
+
+
+def test_published_minuta_locks_edits_for_lider(client):
+    h = _hdr(client, "lider@alpha.gov")
+    r = client.post("/api/minutas",
+                    json={"titulo": "acta a publicar", "fecha": "2026-07-08"},
+                    headers=h)
+    assert r.status_code == 201, r.text
+    mid = r.json()["id"]
+
+    r2 = client.patch(f"/api/minutas/{mid}", json={"estado": "PUBLICADA"}, headers=h)
+    assert r2.status_code == 200, r2.text
+    assert r2.json()["estado"] == "PUBLICADA"
+
+    r3 = client.patch(f"/api/minutas/{mid}", json={"cuerpo": "x"}, headers=h)
+    assert r3.status_code == 409

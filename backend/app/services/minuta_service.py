@@ -87,7 +87,9 @@ def enrich_acuerdos(db: Session, minuta: Minuta) -> None:
     names: dict[str, str] = {}
     if ids:
         for uid, fname in db.execute(
-                select(User.id, User.full_name).where(User.id.in_(ids))).all():
+                select(User.id, User.full_name).where(
+                    User.id.in_(ids),
+                    User.organization_id == minuta.organization_id)).all():
             names[uid] = fname
     for a in acuerdos:
         a.responsable_nombre = names.get(a.responsable_id)
@@ -297,7 +299,9 @@ def list_acuerdos(db: Session, ctx: CampaignContext, *, responsable_id=None,
     names: dict[str, str] = {}
     if ids:
         for uid, fname in db.execute(
-                select(User.id, User.full_name).where(User.id.in_(ids))).all():
+                select(User.id, User.full_name).where(
+                    User.id.in_(ids),
+                    User.organization_id == ctx.organization_id)).all():
             names[uid] = fname
     for a in rows:
         a.responsable_nombre = names.get(a.responsable_id)

@@ -6,13 +6,9 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { DataState } from "@/components/ui/DataState";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { useAsync } from "@/hooks/useAsync";
+import { MINUTAS_WRITE } from "@/modules/registry";
 import { useAuthStore } from "@/store/authStore";
 import { getMinuta, updateAcuerdo, updateMinuta, type Minuta } from "@/api/minutas";
-
-// Write tier (editar acta / publicar / cambiar estado de acuerdo) — mirrors
-// CONSOLE_COORD in modules/registry.ts. Duplicated locally per the codebase's
-// convention of not importing role lists across module boundaries.
-const WRITE_ROLES = ["superadmin", "admin", "coordinador", "lider"];
 
 const TIPO_LABEL: Record<string, string> = { REUNION: "Reunión", OTRO: "Otro" };
 const ESTADO_LABEL: Record<string, string> = { BORRADOR: "Borrador", PUBLICADA: "Publicada" };
@@ -45,7 +41,7 @@ export function MinutaDetailPage() {
   const { id } = useParams<{ id: string }>();
   const nav = useNavigate();
   const role = useAuthStore((s) => s.user?.role);
-  const canWrite = role ? WRITE_ROLES.includes(role) : false;
+  const canWrite = role ? MINUTAS_WRITE.includes(role) : false;
 
   const state = useAsync<Minuta>(() => {
     if (!id) return Promise.reject(new Error("Falta el id de la minuta."));

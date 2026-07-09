@@ -119,20 +119,28 @@ las lecturas; `audit_service.log(...)` en toda escritura sensible;
 | `POST` | `/minutas` | ADMIN, COORDINADOR, LIDER | Crear minuta (opcionalmente con acuerdos inline) |
 | `GET` | `/minutas` | + ACTIVISTA | Lista paginada, scope-aware; filtros: `tipo`, `estado`, `desde`/`hasta` |
 | `GET` | `/minutas/:id` | scope-aware | Detalle con sus acuerdos |
-| `PATCH` | `/minutas/:id` | autor + COORDINADOR/ADMIN | Editar / publicar (cambio de `estado`) |
-| `DELETE` | `/minutas/:id` | autor + COORDINADOR/ADMIN | Eliminar (auditado) |
+| `PATCH` | `/minutas/:id` | ADMIN, COORDINADOR, LIDER (mutate-scope; ver abajo) | Editar / publicar (cambio de `estado`) |
+| `DELETE` | `/minutas/:id` | ADMIN, COORDINADOR únicamente | Eliminar (auditado) |
 | `POST` | `/minutas/:id/acuerdos` | ADMIN, COORDINADOR, LIDER | Añadir acuerdo |
-| `PATCH` | `/minutas/:id/acuerdos/:aid` | responsable + COORDINADOR/ADMIN | Editar acuerdo / cambiar estado |
-| `DELETE` | `/minutas/:id/acuerdos/:aid` | autor + COORDINADOR/ADMIN | Eliminar acuerdo |
+| `PATCH` | `/minutas/:id/acuerdos/:aid` | ADMIN, COORDINADOR, LIDER | Editar acuerdo / cambiar estado — un responsable ACTIVISTA/CAPTURISTA **no** gestiona el estado de su propio acuerdo (decisión de producto confirmada) |
+| `DELETE` | `/minutas/:id/acuerdos/:aid` | ADMIN, COORDINADOR, LIDER (mutate-scope) | Eliminar acuerdo |
 | `GET` | `/acuerdos` | scope-aware | Vista transversal (**por vencer / mis acuerdos**); filtros: `responsable_id`, `estado`, `vence_antes` |
 
 ### Scoping (regla del repo: COORDINADOR es campaign-wide)
 
-- **COORDINADOR / ADMIN / SUPERADMIN**: ven toda la campaña
+- **COORDINADOR / ADMIN / SUPERADMIN**: ven y mutan toda la campaña
   (`scoped_query(Model, ctx)` sin gate de sub-árbol).
 - **LIDER / ACTIVISTA**: ven minutas que crearon, o donde figuran como asistente
   (`user_id` en `asistentes`) o como `responsable_id` de algún acuerdo.
 - Tenant/campaign isolation intacto (`scoped_query` filtra org+campaign siempre).
+- **Lectura vs. mutación**: una minuta `PUBLICADA` es visible **campaign-wide**
+  para cualquier rol de lectura (es el acta oficial de la campaña), pero una
+  `BORRADOR` sigue acotada a jerarquía/propiedad (autor o equipo del LIDER).
+  Las escrituras y el borrado usan un scope **más estricto** ("mutate-scope")
+  que nunca aplica el ensanche de `PUBLICADA`: solo COORDINADOR/ADMIN, o el
+  autor/su jerarquía LIDER, pueden alcanzar la fila para editarla o borrarla —
+  esto evita que un no-propietario use la visibilidad de lectura de una
+  `PUBLICADA` para mutarla o mutar sus acuerdos.
 
 ### Reglas de negocio
 

@@ -37,7 +37,6 @@ def list_acuerdos(db: DbSession, ctx: CampaignCtx, _p: _READ,
     rows, total = minuta_service.list_acuerdos(
         db, ctx, responsable_id=responsable_id, estado=estado,
         vence_antes=vence_antes, limit=limit, offset=offset)
-    db.commit()
     return AcuerdoList(items=[AcuerdoRead.model_validate(a, from_attributes=True) for a in rows],
                        total=total, limit=limit, offset=offset)
 
@@ -61,7 +60,6 @@ def list_minutas(db: DbSession, ctx: CampaignCtx, _p: _READ,
     rows, total = minuta_service.list_minutas(
         db, ctx, tipo=tipo, estado=estado, desde=desde, hasta=hasta,
         limit=limit, offset=offset)
-    db.commit()
     return MinutaList(items=[MinutaRead.model_validate(m, from_attributes=True) for m in rows],
                       total=total, limit=limit, offset=offset)
 

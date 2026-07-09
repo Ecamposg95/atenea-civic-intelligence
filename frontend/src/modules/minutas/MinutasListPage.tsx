@@ -9,16 +9,11 @@ import { MetricCard } from "@/components/ui/MetricCard";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SkeletonRows } from "@/components/ui/SkeletonCard";
 import { useAsync } from "@/hooks/useAsync";
+import { MINUTAS_WRITE } from "@/modules/registry";
 import { useAuthStore } from "@/store/authStore";
 import { listMinutas, type Minuta } from "@/api/minutas";
 
 const PAGE = 20;
-
-// Write tier (crear/editar/publicar) — mirrors CONSOLE_COORD in
-// modules/registry.ts. Duplicated locally rather than imported: registry.ts
-// doesn't export its role constants, and this mirrors how CasosPage /
-// CasoDetail duplicate their own estado maps on purpose.
-const WRITE_ROLES = ["superadmin", "admin", "coordinador", "lider"];
 
 const TIPO_LABEL: Record<string, string> = {
   REUNION: "Reunión",
@@ -44,7 +39,7 @@ const ESTADO_CLASS: Record<string, string> = {
 export function MinutasListPage() {
   const nav = useNavigate();
   const role = useAuthStore((s) => s.user?.role);
-  const canWrite = role ? WRITE_ROLES.includes(role) : false;
+  const canWrite = role ? MINUTAS_WRITE.includes(role) : false;
 
   const state = useAsync(() => listMinutas({ limit: PAGE, offset: 0 }), []);
   const data = state.data;

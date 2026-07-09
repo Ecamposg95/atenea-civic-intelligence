@@ -2,14 +2,9 @@ import { JSX, Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { ComingSoonPage } from "@/components/modules/ComingSoonPage";
-import { MINUTAS_READ, MODULES } from "@/modules/registry";
+import { MINUTAS_READ, MINUTAS_WRITE, MODULES } from "@/modules/registry";
 import { useAuthStore } from "@/store/authStore";
 import type { UserRole } from "@/types/auth";
-
-// Minutas & Acuerdos write tier (crear/editar) — mirrors CONSOLE_COORD in
-// modules/registry.ts (registry doesn't export it, so it's redeclared here;
-// see registry.ts's MINUTAS_READ for the read-tier counterpart).
-const MINUTAS_WRITE: UserRole[] = ["superadmin", "admin", "coordinador", "lider"];
 
 // Route-level code splitting: heavy deps (MapLibre, Recharts) load only on the
 // routes that need them, keeping the initial bundle small.

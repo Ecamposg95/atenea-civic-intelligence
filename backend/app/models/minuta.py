@@ -37,7 +37,6 @@ class Minuta(UUIDMixin, TenantMixin, CampaignMixin, AuditMixin, Base):
 class Acuerdo(UUIDMixin, TenantMixin, CampaignMixin, AuditMixin, Base):
     __tablename__ = "acuerdos"
     __table_args__ = (
-        Index("ix_acuerdos_minuta", "minuta_id"),
         Index("ix_acuerdos_campaign_responsable_estado",
               "campaign_id", "responsable_id", "estado"),
     )
