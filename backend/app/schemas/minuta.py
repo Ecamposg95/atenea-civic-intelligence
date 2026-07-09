@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 MINUTA_TIPO = "^(REUNION|PLANNING|DAILY|REVIEW|RETRO|OTRO)$"
 MINUTA_ESTADO = "^(BORRADOR|PUBLICADA)$"
@@ -31,6 +31,8 @@ class AcuerdoUpdate(BaseModel):
 
 
 class AcuerdoRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     minuta_id: str
     texto: str
@@ -44,6 +46,8 @@ class AcuerdoRead(BaseModel):
 
 
 class AcuerdoList(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     items: list[AcuerdoRead]
     total: int
     limit: int
@@ -74,6 +78,8 @@ class MinutaUpdate(BaseModel):
 
 
 class MinutaRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     titulo: str
     fecha: date
@@ -90,6 +96,8 @@ class MinutaRead(BaseModel):
 
 
 class MinutaList(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     items: list[MinutaRead]
     total: int
     limit: int
