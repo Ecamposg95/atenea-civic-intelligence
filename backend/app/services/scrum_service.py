@@ -8,13 +8,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.scoping import scoped_query
 from app.dependencies import CampaignContext
-from app.models.scrum import Sprint, WorkItem, WorkItemTask
-from app.models.user import User, UserRole
+from app.models.scrum import Sprint
+from app.models.user import UserRole
 from app.schemas.scrum import SprintCreate, SprintUpdate
 from app.services.audit_service import record_audit
 
@@ -34,6 +34,10 @@ def active_sprint(db: Session, ctx: CampaignContext) -> Optional[Sprint]:
 
 
 def create_sprint(db: Session, ctx: CampaignContext, data: SprintCreate) -> Sprint:
+    if data.estado == "ACTIVO":
+        existing = active_sprint(db, ctx)
+        if existing is not None:
+            raise SprintActivoExiste()
     s = Sprint(organization_id=ctx.organization_id, campaign_id=ctx.campaign_id,
                nombre=data.nombre, objetivo=data.objetivo,
                fecha_inicio=data.fecha_inicio, fecha_fin=data.fecha_fin,
@@ -67,7 +71,12 @@ def update_sprint(db: Session, ctx: CampaignContext, sid: str,
     s = get_sprint(db, ctx, sid)
     if s is None:
         return None
-    for k, v in data.model_dump(exclude_unset=True).items():
+    updates = data.model_dump(exclude_unset=True)
+    if updates.get("estado") == "ACTIVO" and s.estado != "ACTIVO":
+        existing = active_sprint(db, ctx)
+        if existing is not None and existing.id != s.id:
+            raise SprintActivoExiste()
+    for k, v in updates.items():
         setattr(s, k, v)
     s.updated_by = ctx.user.id
     record_audit(db, action="sprint.update", actor_id=ctx.user.id,

@@ -2,7 +2,7 @@ import datetime as dt
 import pytest
 from pydantic import ValidationError
 from app.models.scrum import Sprint, WorkItem, WorkItemTask
-from app.schemas.scrum import WorkItemCreate, SprintCreate
+from app.schemas.scrum import WorkItemCreate, SprintCreate, SprintUpdate
 from app.services import scrum_service
 
 
@@ -45,3 +45,33 @@ def test_only_one_active_sprint(db_session, coordinador_ctx):
     assert scrum_service.active_sprint(db_session, coordinador_ctx).id == s1.id
     scrum_service.cerrar_sprint(db_session, coordinador_ctx, s1.id)
     assert scrum_service.active_sprint(db_session, coordinador_ctx) is None
+
+
+def test_create_sprint_rejects_second_activo(db_session, coordinador_ctx):
+    scrum_service.create_sprint(db_session, coordinador_ctx,
+        SprintCreate(nombre="S1", fecha_inicio="2026-07-08", fecha_fin="2026-07-22",
+                     estado="ACTIVO"))
+    with pytest.raises(scrum_service.SprintActivoExiste):
+        scrum_service.create_sprint(db_session, coordinador_ctx,
+            SprintCreate(nombre="S2", fecha_inicio="2026-07-23", fecha_fin="2026-08-06",
+                         estado="ACTIVO"))
+
+
+def test_update_sprint_rejects_second_activo(db_session, coordinador_ctx):
+    s1 = scrum_service.create_sprint(db_session, coordinador_ctx,
+        SprintCreate(nombre="S1", fecha_inicio="2026-07-08", fecha_fin="2026-07-22",
+                     estado="ACTIVO"))
+    s2 = scrum_service.create_sprint(db_session, coordinador_ctx,
+        SprintCreate(nombre="S2", fecha_inicio="2026-07-23", fecha_fin="2026-08-06"))
+    with pytest.raises(scrum_service.SprintActivoExiste):
+        scrum_service.update_sprint(db_session, coordinador_ctx, s2.id,
+            SprintUpdate(estado="ACTIVO"))
+    assert scrum_service.active_sprint(db_session, coordinador_ctx).id == s1.id
+
+
+def test_create_sprint_activo_succeeds_when_none_active(db_session, coordinador_ctx):
+    s = scrum_service.create_sprint(db_session, coordinador_ctx,
+        SprintCreate(nombre="S1", fecha_inicio="2026-07-08", fecha_fin="2026-07-22",
+                     estado="ACTIVO"))
+    assert s.estado == "ACTIVO"
+    assert scrum_service.active_sprint(db_session, coordinador_ctx).id == s.id
