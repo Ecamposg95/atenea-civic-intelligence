@@ -130,6 +130,15 @@ export async function revelarClave(id: string): Promise<RevelarClaveResponse> {
   return data;
 }
 
+/** Batch reveal — audited server-side per id. Only ids with a stored clave
+ * come back in the map (others are silently omitted, never a 404). */
+export async function revelarClaves(registroIds: string[]): Promise<Record<string, string>> {
+  const { data } = await apiClient.post("/admin/registros/revelar-claves", {
+    registro_ids: registroIds,
+  });
+  return data.claves as Record<string, string>;
+}
+
 export async function getAdminAuditoria(
   p: AdminAuditoriaParams = {},
 ): Promise<AuditPage> {

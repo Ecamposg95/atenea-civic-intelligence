@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Avatar } from "@/components/ui/Avatar";
@@ -9,7 +9,9 @@ import { DataState } from "@/components/ui/DataState";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { useAsync } from "@/hooks/useAsync";
+import { revelarClaves } from "@/api/admin";
 import { listPromovidos, type Promovido } from "@/api/promovidos";
+import { useAuthStore } from "@/store/authStore";
 import { PromovidoDetail } from "./components/PromovidoDetail";
 
 const PAGE = 50;
@@ -36,7 +38,7 @@ const formatFecha = (value: string | null | undefined): string => {
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("es-MX");
 };
 
-const COLUMNS: Column<Promovido>[] = [
+const BASE_COLUMNS: Column<Promovido>[] = [
   {
     key: "nombre_completo",
     header: "Nombre",
@@ -144,10 +146,18 @@ const COLUMNS: Column<Promovido>[] = [
 ];
 
 export function PromovidosPage() {
+  const role = useAuthStore((s) => s.user?.role);
+  const canReveal = role === "superadmin" || role === "admin" || role === "coordinador";
+
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<Promovido | null>(null);
+
+  // Batch reveal — audited server-side. Local-only state, never persisted.
+  const [revealed, setRevealed] = useState<Record<string, string>>({});
+  const [revealing, setRevealing] = useState(false);
+  const [revealError, setRevealError] = useState<string | null>(null);
 
   // Debounce raw search input → committed value, resetting to the first page.
   useEffect(() => {
@@ -160,11 +170,78 @@ export function PromovidosPage() {
 
   const state = useAsync(() => listPromovidos({ q, limit: PAGE, offset }), [q, offset]);
   const data = state.data;
+  const items = data?.items ?? [];
+
+  const shownRevealedCount = useMemo(
+    () => items.filter((p) => Boolean(revealed[p.id])).length,
+    [items, revealed],
+  );
+
+  const handleRevealBatch = useCallback(async () => {
+    const ids = items.map((p) => p.id);
+    if (ids.length === 0) return;
+    const confirmed = window.confirm(
+      `¿Confirma revelar la clave de elector de los ${ids.length} promovidos en pantalla?\nEsta acción queda registrada en la bitácora de auditoría.`,
+    );
+    if (!confirmed) return;
+
+    setRevealing(true);
+    setRevealError(null);
+    try {
+      const claves = await revelarClaves(ids);
+      setRevealed((prev) => ({ ...prev, ...claves }));
+    } catch (e) {
+      setRevealError(e instanceof Error ? e.message : "No se pudieron revelar las claves.");
+    } finally {
+      setRevealing(false);
+    }
+  }, [items]);
+
+  const columns = useMemo<Column<Promovido>[]>(() => {
+    if (!canReveal) return BASE_COLUMNS;
+    return [
+      ...BASE_COLUMNS,
+      {
+        key: "clave_elector",
+        header: "Clave de elector",
+        hideOnCard: true,
+        render: (p) =>
+          revealed[p.id] ? (
+            <span className="font-mono text-xs tabular-nums text-ink">{revealed[p.id]}</span>
+          ) : (
+            <span className="font-mono text-xs tabular-nums text-ink-faint">
+              {p.clave_masked ?? "—"}
+            </span>
+          ),
+      },
+    ];
+  }, [canReveal, revealed]);
 
   return (
     <AppLayout title="Promovidos" crumb="Ciudadanía">
       <PageHeader eyebrow="Ciudadanía" title="Tabla de" accent="Promovidos"
-        subtitle="Ciudadanos promovidos de tu campaña, con contexto electoral por sección. Clic en una fila para ver todo el detalle." />
+        subtitle="Ciudadanos promovidos de tu campaña, con contexto electoral por sección. Clic en una fila para ver todo el detalle."
+        actions={
+          canReveal ? (
+            <div className="flex flex-col items-end gap-1.5">
+              <button
+                type="button"
+                disabled={revealing || items.length === 0}
+                onClick={() => void handleRevealBatch()}
+                className="btn-primary focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {revealing ? "Revelando…" : "Revelar claves"}
+              </button>
+              {revealError ? (
+                <span className="font-mono text-[11px] text-state-critical">{revealError}</span>
+              ) : shownRevealedCount > 0 ? (
+                <span className="font-mono text-[11px] text-ink-faint">
+                  {shownRevealedCount} de {items.length} reveladas (auditado)
+                </span>
+              ) : null}
+            </div>
+          ) : undefined
+        } />
 
       {data && !data.has_territory ? (
         <div className="card-premium reveal px-5 py-12 text-center text-ink-muted">
@@ -209,8 +286,8 @@ export function PromovidosPage() {
                   value={qInput} onChange={(e) => setQInput(e.target.value)} />
               </div>
               <DataTable<Promovido>
-                columns={COLUMNS}
-                rows={data?.items ?? []}
+                columns={columns}
+                rows={items}
                 rowKey={(p) => p.id}
                 pageSize={PAGE}
                 defaultSortKey="nombre_completo"
