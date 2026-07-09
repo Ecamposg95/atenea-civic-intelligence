@@ -66,12 +66,12 @@ export function CapturaRapidaPage() {
       });
       setOkName(form.nombre_completo.trim());
       setCount((c) => c + 1);
-      // Keep sección + promotor for the next person in the same list.
+      // Keep sección + promotor for the next person in the same list, but
+      // NEVER carry consentimiento forward — each person must be re-affirmed.
       setForm((f) => ({
         ...EMPTY,
         seccion: f.seccion,
         promotor: f.promotor,
-        consentimiento: true,
       }));
       nombreRef.current?.focus();
     } catch {
@@ -105,7 +105,7 @@ export function CapturaRapidaPage() {
             />
           </label>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="flex flex-col gap-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Sección</span>
               <input
@@ -128,7 +128,7 @@ export function CapturaRapidaPage() {
             </label>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="flex flex-col gap-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Colonia</span>
               <input className="field-input h-11" value={form.colonia} onChange={(e) => set("colonia", e.target.value)} />

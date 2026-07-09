@@ -5,7 +5,9 @@ import { pageCount, pageRangeLabel, paginate, sortRows, type SortDir } from "@/l
 
 export interface Column<T> {
   key: string;
-  header: string;
+  /** Column header; usually a string, but accepts a ReactNode (e.g. to attach
+   * a "muestra" badge next to a fabricated-data column). */
+  header: ReactNode;
   /** Cell renderer; defaults to String(row[key]). */
   render?: (row: T) => ReactNode;
   /** Value used for sorting; enables the sortable header when present. */
