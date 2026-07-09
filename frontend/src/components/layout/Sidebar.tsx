@@ -12,7 +12,7 @@ import { useAuthStore } from "@/store/authStore";
 import type { UserRole } from "@/types/auth";
 
 const navItem =
-  "group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all focus-ring";
+  "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium transition-all focus-ring";
 const sectionLabel =
   "mt-5 mb-1.5 flex items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint";
 
@@ -40,16 +40,16 @@ export function Sidebar({
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-line bg-panel px-3 py-5 transition-transform duration-300 lg:static lg:z-10 lg:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col border-r border-line bg-panel px-3 py-5 transition-transform duration-300 lg:static lg:z-10 lg:translate-x-0 ${
         open ? "translate-x-0" : "-translate-x-full"
       }`}
     >
       <div className="flex items-center gap-3 px-2">
-        <div className="grid h-9 w-9 place-items-center rounded-lg bg-accent/15 text-accent shadow-glow-accent">
-          <LogoMark width={20} height={20} />
+        <div className="grid h-11 w-11 place-items-center rounded-lg bg-accent/15 text-accent shadow-glow-accent">
+          <LogoMark width={24} height={24} />
         </div>
         <div className="min-w-0">
-          <div className="font-display text-sm font-semibold tracking-tight text-ink">
+          <div className="font-display text-base font-semibold tracking-tight text-ink">
             Atenea
           </div>
           <div className="text-[11px] uppercase tracking-[0.16em] text-ink-faint">
@@ -67,16 +67,43 @@ export function Sidebar({
       </div>
 
       <div className="mt-2 flex-1 overflow-y-auto pr-1">
+        {(() => {
+          const dashboardModule = MODULES.find(
+            (m) => m.key === "dashboard" && visibleFor(role, m),
+          );
+          if (!dashboardModule) return null;
+          const Icon = dashboardModule.icon;
+          return (
+            <nav className="flex flex-col gap-0.5">
+              <NavLink
+                key={dashboardModule.key}
+                to={dashboardModule.path}
+                end={dashboardModule.end}
+                className={linkClass}
+                title={dashboardModule.label}
+                onClick={onClose}
+              >
+                <Icon width={20} height={20} className="shrink-0" />
+                <span className="min-w-0 flex-1 truncate">
+                  {dashboardModule.label}
+                </span>
+                <ModuleBadge state={dashboardModule.state} />
+              </NavLink>
+            </nav>
+          );
+        })()}
         {SECTION_ORDER.map((section) => {
           const items = MODULES.filter(
-            (m) => m.section === section && visibleFor(role, m),
+            (m) =>
+              m.section === section &&
+              m.key !== "dashboard" &&
+              visibleFor(role, m),
           );
           if (items.length === 0) return null;
           return (
             <div key={section}>
               <div className={sectionLabel}>
                 <span>{SECTION_LABELS[section]}</span>
-                <span className="text-ink-faint/60">{items.length}</span>
               </div>
               <nav className="flex flex-col gap-0.5">
                 {items.map((m) => {
@@ -90,7 +117,7 @@ export function Sidebar({
                       title={m.label}
                       onClick={onClose}
                     >
-                      <Icon width={17} height={17} className="shrink-0" />
+                      <Icon width={20} height={20} className="shrink-0" />
                       <span className="min-w-0 flex-1 truncate">{m.label}</span>
                       <ModuleBadge state={m.state} />
                     </NavLink>

@@ -17,12 +17,7 @@ import {
 } from "@/components/ui/icons";
 
 export type ModuleState = "active" | "preview" | "soon";
-export type ModuleSection =
-  | "plataforma"
-  | "inteligencia"
-  | "ciudadania"
-  | "gobernanza"
-  | "administracion";
+export type ModuleSection = "operacion" | "inteligencia" | "administracion";
 
 export interface SoonCopy {
   summary: string;
@@ -86,18 +81,14 @@ export const MINUTAS_WRITE: UserRole[] = [
 export const SCRUM_GOV: UserRole[] = ["superadmin", "admin", "coordinador"];
 
 export const SECTION_LABELS: Record<ModuleSection, string> = {
-  plataforma: "Plataforma",
+  operacion: "Operación",
   inteligencia: "Inteligencia Electoral",
-  ciudadania: "Ciudadanía",
-  gobernanza: "Gobernanza",
   administracion: "Administración",
 };
 
 export const SECTION_ORDER: ModuleSection[] = [
-  "plataforma",
+  "operacion",
   "inteligencia",
-  "ciudadania",
-  "gobernanza",
   "administracion",
 ];
 
@@ -270,16 +261,17 @@ const Backlog = lazy(() => import("@/modules/scrum/BacklogPage"));
 const Sprints = lazy(() => import("@/modules/scrum/SprintsPage"));
 
 export const MODULES: ModuleDef[] = [
-  // Plataforma (active)
-  { key: "dashboard", path: "/", label: "Command Center", section: "plataforma", icon: DashboardIcon, state: "active", element: Dashboard, end: true, roles: ALL },
-  { key: "maps", path: "/maps", label: "Map Explorer", section: "plataforma", icon: MapIcon, state: "active", element: MapExplorer, roles: INTEL_TERRITORY },
-  { key: "analytics", path: "/analytics", label: "Activity Analytics", section: "plataforma", icon: AnalyticsIcon, state: "active", element: Analytics, roles: INTEL },
-  { key: "sources", path: "/sources", label: "Fuentes de datos", section: "plataforma", icon: DatabaseIcon, state: "active", element: Sources, roles: ["superadmin", "admin", "analyst"] },
-  { key: "busqueda", path: "/busqueda", label: "Búsqueda global", section: "plataforma", icon: SearchIcon, state: "active", element: Busqueda, roles: INTEL },
+  // Inicio (rendered as a loose item above the sections in Sidebar.tsx —
+  // section value below is unused for grouping but must be a valid ModuleSection).
+  { key: "dashboard", path: "/", label: "Inicio", section: "operacion", icon: DashboardIcon, state: "active", element: Dashboard, end: true, roles: ALL },
 
-  // Inteligencia Electoral
-  { key: "resultados", path: "/resultados", label: "Resultados Electorales", section: "inteligencia", icon: AnalyticsIcon, state: "preview", element: Resultados, roles: INTEL },
-  { key: "padron", path: "/padron", label: "Padrón / Lista Nominal", section: "inteligencia", icon: VotersIcon, state: "preview", element: Padron, roles: ["superadmin", "admin", "analyst"] },
+  // Inteligencia Electoral (ex-plataforma data/analysis tools + existing intel datasets)
+  { key: "maps", path: "/maps", label: "Mapa", section: "inteligencia", icon: MapIcon, state: "active", element: MapExplorer, roles: INTEL_TERRITORY },
+  { key: "analytics", path: "/analytics", label: "Analítica", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Analytics, roles: INTEL },
+  { key: "sources", path: "/sources", label: "Fuentes", section: "inteligencia", icon: DatabaseIcon, state: "active", element: Sources, roles: ["superadmin", "admin", "analyst"] },
+  { key: "busqueda", path: "/busqueda", label: "Búsqueda", section: "inteligencia", icon: SearchIcon, state: "active", element: Busqueda, roles: INTEL },
+  { key: "resultados", path: "/resultados", label: "Resultados", section: "inteligencia", icon: AnalyticsIcon, state: "preview", element: Resultados, roles: INTEL },
+  { key: "padron", path: "/padron", label: "Padrón", section: "inteligencia", icon: VotersIcon, state: "preview", element: Padron, roles: ["superadmin", "admin", "analyst"] },
   {
     key: "candidaturas", path: "/candidaturas", label: "Candidaturas", section: "inteligencia", icon: UserIcon, state: "soon", roles: INTEL,
     soon: {
@@ -289,43 +281,43 @@ export const MODULES: ModuleDef[] = [
     },
   },
   { key: "municipio-panorama", path: "/municipio", label: "San Mateo Atenco", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: PanoramaMunicipio, roles: INTEL_TERRITORY },
-  { key: "territorios", path: "/territorios", label: "Territorios & Secciones", section: "inteligencia", icon: LayersIcon, state: "active", element: Territorios, roles: INTEL_TERRITORY },
-  { key: "ieem", path: "/ieem", label: "Estado de México (IEEM)", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Ieem, roles: INTEL },
-  { key: "worldbank", path: "/indicadores", label: "Indicadores Nacionales", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: WorldBank, roles: INTEL },
-  { key: "economia", path: "/economia", label: "Economía Territorial", section: "inteligencia", icon: DatabaseIcon, state: "preview", element: Economia, roles: INTEL },
-  { key: "denue", path: "/unidades-economicas", label: "Unidades Económicas", section: "inteligencia", icon: DatabaseIcon, state: "preview", element: Denue, roles: INTEL },
-  { key: "banxico", path: "/banxico", label: "Macro-financiero (Banxico)", section: "inteligencia", icon: AnalyticsIcon, state: "preview", element: Banxico, roles: INTEL },
+  { key: "territorios", path: "/territorios", label: "Territorios", section: "inteligencia", icon: LayersIcon, state: "active", element: Territorios, roles: INTEL_TERRITORY },
+  { key: "ieem", path: "/ieem", label: "IEEM", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Ieem, roles: INTEL },
+  { key: "worldbank", path: "/indicadores", label: "Indicadores", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: WorldBank, roles: INTEL },
+  { key: "economia", path: "/economia", label: "Economía", section: "inteligencia", icon: DatabaseIcon, state: "preview", element: Economia, roles: INTEL },
+  { key: "denue", path: "/unidades-economicas", label: "Denue", section: "inteligencia", icon: DatabaseIcon, state: "preview", element: Denue, roles: INTEL },
+  { key: "banxico", path: "/banxico", label: "Banxico", section: "inteligencia", icon: AnalyticsIcon, state: "preview", element: Banxico, roles: INTEL },
 
-  // Ciudadanía
-  { key: "captura-rapida", path: "/captura-rapida", label: "Captura rápida", section: "ciudadania", icon: VotersIcon, state: "active", element: CapturaRapida, roles: CONSOLE_CAPTURA },
-  { key: "promovidos-importar", path: "/promovidos/importar", label: "Importar promovidos", section: "ciudadania", icon: DatabaseIcon, state: "active", element: ImportarPromovidos, roles: ["superadmin", "admin", "coordinador"] },
-  { key: "captura", path: "/captura", label: "Captura de Activistas", section: "ciudadania", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "admin", "lider", "activista", "capturista"] },
-  { key: "plan-territorial", path: "/plan-territorial", label: "Plan Territorial", section: "ciudadania", icon: LayersIcon, state: "active", element: PlanTerritorial, roles: CONSOLE_COORD },
-  { key: "war-room", path: "/war-room", label: "War Room", section: "ciudadania", icon: AnalyticsIcon, state: "active", element: WarRoom, roles: CONSOLE_COORD },
+  // Operación (ex-ciudadanía)
+  { key: "captura-rapida", path: "/captura-rapida", label: "Captura rápida", section: "operacion", icon: VotersIcon, state: "active", element: CapturaRapida, roles: CONSOLE_CAPTURA },
+  { key: "promovidos-importar", path: "/promovidos/importar", label: "Importar", section: "operacion", icon: DatabaseIcon, state: "active", element: ImportarPromovidos, roles: ["superadmin", "admin", "coordinador"] },
+  { key: "captura", path: "/captura", label: "Activistas", section: "operacion", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "admin", "lider", "activista", "capturista"] },
+  { key: "plan-territorial", path: "/plan-territorial", label: "Plan Territorial", section: "operacion", icon: LayersIcon, state: "active", element: PlanTerritorial, roles: CONSOLE_COORD },
+  { key: "war-room", path: "/war-room", label: "War Room", section: "operacion", icon: AnalyticsIcon, state: "active", element: WarRoom, roles: CONSOLE_COORD },
   // Minutas & Acuerdos — only the two non-parameterized routes are nav items;
   // /minutas/nueva, /minutas/:id and /minutas/:id/editar are registered
   // directly in App.tsx (param routes must not appear as Sidebar links).
-  { key: "minutas", path: "/minutas", label: "Minutas", section: "ciudadania", icon: AnalyticsIcon, state: "active", element: MinutasList, roles: MINUTAS_READ },
-  { key: "acuerdos", path: "/acuerdos", label: "Acuerdos", section: "ciudadania", icon: UserIcon, state: "active", element: MisAcuerdos, roles: MINUTAS_READ },
+  { key: "minutas", path: "/minutas", label: "Minutas", section: "operacion", icon: AnalyticsIcon, state: "active", element: MinutasList, roles: MINUTAS_READ },
+  { key: "acuerdos", path: "/acuerdos", label: "Acuerdos", section: "operacion", icon: UserIcon, state: "active", element: MisAcuerdos, roles: MINUTAS_READ },
   // Scrum/PM — tablero/backlog/sprints. Read tier mirrors minutas (activista/
   // capturista can view); create/estimate/assign/activar/cerrar is gated
   // in-page to SCRUM_GOV (coordinador/admin), mover-tarjeta is open to the
   // whole read tier with ownership enforced server-side.
-  { key: "scrum-tablero", path: "/tablero", label: "Tablero", section: "ciudadania", icon: LayersIcon, state: "active", element: Tablero, roles: MINUTAS_READ },
-  { key: "scrum-backlog", path: "/backlog", label: "Backlog", section: "ciudadania", icon: DatabaseIcon, state: "active", element: Backlog, roles: MINUTAS_READ },
-  { key: "scrum-sprints", path: "/sprints", label: "Sprints", section: "ciudadania", icon: AnalyticsIcon, state: "active", element: Sprints, roles: MINUTAS_READ },
-  { key: "promovidos", path: "/promovidos", label: "Promovidos", section: "ciudadania", icon: VotersIcon, state: "active", element: Promovidos, roles: ["superadmin", "admin", "coordinador", "lider"] },
-  { key: "militantes-captura", path: "/militantes/captura", label: "Afiliar militante", section: "ciudadania", icon: VotersIcon, state: "active", element: CapturaMilitante, roles: CONSOLE_CAPTURA },
-  { key: "militantes", path: "/militantes", label: "Panorama afiliación", section: "ciudadania", icon: VotersIcon, state: "active", element: PanoramaMilitantes, roles: ["superadmin", "admin", "coordinador"], end: true },
-  { key: "militantes-lista", path: "/militantes/lista", label: "Padrón de militantes", section: "ciudadania", icon: VotersIcon, state: "active", element: MilitantesList, roles: CONSOLE_COORD },
-  { key: "atencion", path: "/atencion", label: "Panorama ciudadano", section: "ciudadania", icon: UserIcon, state: "active", element: PanoramaAtencion, roles: ["superadmin", "admin", "coordinador"], end: true },
-  { key: "atencion-casos", path: "/atencion/casos", label: "Casos", section: "ciudadania", icon: UserIcon, state: "active", element: CasosAtencion, roles: CONSOLE_COORD },
-  { key: "atencion-captura", path: "/atencion/captura", label: "Atender ciudadano", section: "ciudadania", icon: UserIcon, state: "active", element: CapturaAtencion, roles: CONSOLE_CAPTURA },
-  { key: "atencion-formularios", path: "/atencion/formularios", label: "Formularios", section: "ciudadania", icon: SettingsIcon, state: "active", element: FormBuilder, roles: ["superadmin", "admin", "coordinador"] },
-  { key: "ai-analyst", path: "/ai-analyst", label: "AI Analyst / Copiloto", section: "ciudadania", icon: AiIcon, state: "preview", element: AiAnalyst, roles: ["superadmin", "admin", "coordinador", "analyst"] },
-  { key: "demografia", path: "/demografia", label: "Demografía & Censo", section: "ciudadania", icon: VotersIcon, state: "preview", element: Demografia, roles: INTEL },
+  { key: "scrum-tablero", path: "/tablero", label: "Tablero", section: "operacion", icon: LayersIcon, state: "active", element: Tablero, roles: MINUTAS_READ },
+  { key: "scrum-backlog", path: "/backlog", label: "Backlog", section: "operacion", icon: DatabaseIcon, state: "active", element: Backlog, roles: MINUTAS_READ },
+  { key: "scrum-sprints", path: "/sprints", label: "Sprints", section: "operacion", icon: AnalyticsIcon, state: "active", element: Sprints, roles: MINUTAS_READ },
+  { key: "promovidos", path: "/promovidos", label: "Promovidos", section: "operacion", icon: VotersIcon, state: "active", element: Promovidos, roles: ["superadmin", "admin", "coordinador", "lider"] },
+  { key: "militantes-captura", path: "/militantes/captura", label: "Afiliar militante", section: "operacion", icon: VotersIcon, state: "active", element: CapturaMilitante, roles: CONSOLE_CAPTURA },
+  { key: "militantes", path: "/militantes", label: "Afiliación", section: "operacion", icon: VotersIcon, state: "active", element: PanoramaMilitantes, roles: ["superadmin", "admin", "coordinador"], end: true },
+  { key: "militantes-lista", path: "/militantes/lista", label: "Militantes", section: "operacion", icon: VotersIcon, state: "active", element: MilitantesList, roles: CONSOLE_COORD },
+  { key: "atencion", path: "/atencion", label: "Panorama", section: "operacion", icon: UserIcon, state: "active", element: PanoramaAtencion, roles: ["superadmin", "admin", "coordinador"], end: true },
+  { key: "atencion-casos", path: "/atencion/casos", label: "Casos", section: "operacion", icon: UserIcon, state: "active", element: CasosAtencion, roles: CONSOLE_COORD },
+  { key: "atencion-captura", path: "/atencion/captura", label: "Atender", section: "operacion", icon: UserIcon, state: "active", element: CapturaAtencion, roles: CONSOLE_CAPTURA },
+  { key: "atencion-formularios", path: "/atencion/formularios", label: "Formularios", section: "operacion", icon: SettingsIcon, state: "active", element: FormBuilder, roles: ["superadmin", "admin", "coordinador"] },
+  { key: "ai-analyst", path: "/ai-analyst", label: "Copiloto", section: "operacion", icon: AiIcon, state: "preview", element: AiAnalyst, roles: ["superadmin", "admin", "coordinador", "analyst"] },
+  { key: "demografia", path: "/demografia", label: "Censo", section: "operacion", icon: VotersIcon, state: "preview", element: Demografia, roles: INTEL },
   {
-    key: "sentimiento", path: "/sentimiento", label: "Sentimiento Ciudadano", section: "ciudadania", icon: AnalyticsIcon, state: "soon", roles: INTEL,
+    key: "sentimiento", path: "/sentimiento", label: "Sentimiento", section: "operacion", icon: AnalyticsIcon, state: "soon", roles: INTEL,
     soon: {
       summary: "Escucha social y de medios sobre temas y actores cívicos.",
       features: ["Tendencias de conversación", "Análisis de sentimiento por tema", "Alertas de picos de actividad"],
@@ -333,7 +325,7 @@ export const MODULES: ModuleDef[] = [
     },
   },
   {
-    key: "participacion", path: "/participacion", label: "Participación Ciudadana", section: "ciudadania", icon: VotersIcon, state: "soon", roles: CONSOLE,
+    key: "participacion", path: "/participacion", label: "Participación", section: "operacion", icon: VotersIcon, state: "soon", roles: CONSOLE,
     soon: {
       summary: "Consultas, peticiones y encuestas ciudadanas gobernadas.",
       features: ["Consultas y peticiones", "Encuestas con resultados auditables", "Tablero de participación"],
@@ -341,7 +333,7 @@ export const MODULES: ModuleDef[] = [
     },
   },
   {
-    key: "riesgo", path: "/riesgo", label: "Alertas & Riesgo Electoral", section: "ciudadania", icon: AlertIcon, state: "soon", roles: INTEL,
+    key: "riesgo", path: "/riesgo", label: "Alertas", section: "operacion", icon: AlertIcon, state: "soon", roles: INTEL,
     soon: {
       summary: "Detección de anomalías y monitoreo de riesgo en territorio.",
       features: ["Anomalías estadísticas en resultados", "Mapa de zonas de riesgo", "Alertas configurables"],
@@ -349,15 +341,15 @@ export const MODULES: ModuleDef[] = [
     },
   },
 
-  // Gobernanza
-  { key: "auditoria", path: "/auditoria", label: "Auditoría & Cumplimiento", section: "gobernanza", icon: ShieldIcon, state: "active", element: Auditoria, roles: ADMINY },
-  { key: "indice", path: "/indice", label: "Índice Cívico-Territorial", section: "gobernanza", icon: AnalyticsIcon, state: "preview", element: Indice, roles: INTEL },
-  { key: "historial", path: "/historial", label: "Historial de ingestas", section: "gobernanza", icon: DatabaseIcon, state: "active", element: Historial, roles: ADMINY },
-  { key: "reportes", path: "/reportes", label: "Reportes Ejecutivos", section: "gobernanza", icon: DatabaseIcon, state: "active", element: Reportes, roles: REPORTS },
+  // Administración (ex-gobernanza + ex-administracion)
+  { key: "auditoria", path: "/auditoria", label: "Auditoría", section: "administracion", icon: ShieldIcon, state: "active", element: Auditoria, roles: ADMINY },
+  { key: "indice", path: "/indice", label: "Índice Cívico", section: "administracion", icon: AnalyticsIcon, state: "preview", element: Indice, roles: INTEL },
+  { key: "historial", path: "/historial", label: "Ingestas", section: "administracion", icon: DatabaseIcon, state: "active", element: Historial, roles: ADMINY },
+  { key: "reportes", path: "/reportes", label: "Reportes", section: "administracion", icon: DatabaseIcon, state: "active", element: Reportes, roles: REPORTS },
 
-  // Gobernanza — Admin console (role-gated, active)
-  { key: "admin-dashboard", path: "/admin", label: "Consola Activistas", section: "gobernanza", icon: AnalyticsIcon, state: "active", element: AdminDashboard, roles: CONSOLE_COORD },
-  { key: "admin-registros", path: "/admin/registros", label: "Registros (Admin)", section: "gobernanza", icon: VotersIcon, state: "active", element: AdminRegistros, roles: CONSOLE_COORD },
+  // Admin console (role-gated, active)
+  { key: "admin-dashboard", path: "/admin", label: "Consola", section: "administracion", icon: AnalyticsIcon, state: "active", element: AdminDashboard, roles: CONSOLE_COORD },
+  { key: "admin-registros", path: "/admin/registros", label: "Registros", section: "administracion", icon: VotersIcon, state: "active", element: AdminRegistros, roles: CONSOLE_COORD },
   { key: "admin-estructura", path: "/admin/estructura", label: "Estructura", section: "administracion", icon: UserIcon, state: "active", element: AdminEstructura, roles: ["superadmin", "admin", "coordinador"] },
 
   // Administración (role-gated, active)
