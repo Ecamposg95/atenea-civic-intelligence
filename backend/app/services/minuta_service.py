@@ -1,8 +1,10 @@
 """Minuta service — meeting minutes + action items.
 
 Mirrors caso_service for scoping/audit. COORDINADOR is campaign-wide;
-LIDER/ACTIVISTA are hierarchy/ownership scoped. A PUBLICADA minuta locks its
-narrative fields for non-coordinators (agreements can still change estado).
+LIDER/ACTIVISTA are hierarchy/ownership scoped. A PUBLICADA minuta is
+campaign-wide READABLE by everyone, but frozen for non-coordinators on
+mutation — see ``_minuta_role_scoped`` (reads) vs ``_minuta_mutate_scoped``
+(update/delete row-fetch) below.
 """
 from __future__ import annotations
 
@@ -20,11 +22,9 @@ from app.models.user import User, UserRole
 from app.schemas.minuta import MinutaCreate, MinutaUpdate
 from app.services.audit_service import record_audit
 
-_NARRATIVE = ("titulo", "fecha", "lugar", "cuerpo", "tipo")
-
 
 class PublishedLockError(Exception):
-    """Raised when a non-coordinator edits narrative fields of a PUBLICADA minuta."""
+    """Raised when a non-coordinator edits a PUBLICADA minuta (any field)."""
 
 
 def _is_coordinator(ctx: CampaignContext) -> bool:
@@ -32,14 +32,18 @@ def _is_coordinator(ctx: CampaignContext) -> bool:
 
 
 def _minuta_role_scoped(ctx: CampaignContext):
-    """COORDINADOR/ADMIN → whole campaign. LIDER → own team's minutas
-    (created by self or a supervised activista). ACTIVISTA → own only.
+    """READ scope. COORDINADOR/ADMIN → whole campaign. LIDER → own team's
+    minutas (created by self or a supervised activista). ACTIVISTA → own only.
 
     A PUBLICADA minuta is additionally visible campaign-wide to everyone: once
     published it is the campaign's official record, not a private draft — the
-    publish-lock (narrative fields frozen for non-coordinators, see
-    ``update_minuta``) is exactly what keeps that campaign-wide visibility safe.
-    BORRADOR minutas stay hierarchy/ownership-scoped as private drafts.
+    publish-lock in ``update_minuta`` (all fields frozen for non-coordinators)
+    is what keeps that campaign-wide visibility safe. BORRADOR minutas stay
+    hierarchy/ownership-scoped as private drafts.
+
+    NOTE: this helper is READ-ONLY scope. It must never be used to fetch the
+    row for update/delete — use ``_minuta_mutate_scoped`` for those, which
+    does not carry the published-campaign-wide broadening.
     """
     if _is_coordinator(ctx):
         return scoped_query(Minuta, ctx)
@@ -51,6 +55,24 @@ def _minuta_role_scoped(ctx: CampaignContext):
     if ctx.role in (UserRole.ACTIVISTA, UserRole.CAPTURISTA):
         return scoped_query(Minuta, ctx).where(
             or_(Minuta.created_by == ctx.user.id, published))
+    return scoped_query(Minuta, ctx).where(sa.false())
+
+
+def _minuta_mutate_scoped(ctx: CampaignContext):
+    """MUTATE scope, used only by ``update_minuta``/``delete_minuta`` to fetch
+    the row. Deliberately narrower than ``_minuta_role_scoped``: no
+    published-campaign-wide broadening, so a non-owner/non-coordinator can
+    never reach another user's minuta to edit or delete it — regardless of
+    its estado. COORDINADOR/ADMIN keep whole-campaign scope.
+    """
+    if _is_coordinator(ctx):
+        return scoped_query(Minuta, ctx)
+    if ctx.role == UserRole.LIDER:
+        activistas = select(User.id).where(User.lider_id == ctx.user.id)
+        own = or_(Minuta.created_by == ctx.user.id, Minuta.created_by.in_(activistas))
+        return scoped_query(Minuta, ctx).where(own)
+    if ctx.role in (UserRole.ACTIVISTA, UserRole.CAPTURISTA):
+        return scoped_query(Minuta, ctx).where(Minuta.created_by == ctx.user.id)
     return scoped_query(Minuta, ctx).where(sa.false())
 
 
@@ -128,14 +150,14 @@ def get_minuta(db: Session, ctx: CampaignContext, mid: str) -> Optional[Minuta]:
 
 def update_minuta(db: Session, ctx: CampaignContext, mid: str,
                   data: MinutaUpdate) -> Optional[Minuta]:
-    m = db.execute(_minuta_role_scoped(ctx).where(Minuta.id == mid)).scalar_one_or_none()
+    m = db.execute(_minuta_mutate_scoped(ctx).where(Minuta.id == mid)).scalar_one_or_none()
     if m is None:
         return None
     fields = data.model_dump(exclude_unset=True)
-    # PUBLICADA locks narrative fields for non-coordinators.
-    if m.estado == "PUBLICADA" and not _is_coordinator(ctx):
-        if any(f in fields for f in _NARRATIVE):
-            raise PublishedLockError()
+    # PUBLICADA freezes ALL fields for non-coordinators — including reverting
+    # estado back to BORRADOR. Coordinador/admin may still edit freely.
+    if m.estado == "PUBLICADA" and not _is_coordinator(ctx) and fields:
+        raise PublishedLockError()
     for k, v in fields.items():
         setattr(m, k, v)
     m.updated_by = ctx.user.id
@@ -148,7 +170,7 @@ def update_minuta(db: Session, ctx: CampaignContext, mid: str,
 
 
 def delete_minuta(db: Session, ctx: CampaignContext, mid: str) -> bool:
-    m = db.execute(_minuta_role_scoped(ctx).where(Minuta.id == mid)).scalar_one_or_none()
+    m = db.execute(_minuta_mutate_scoped(ctx).where(Minuta.id == mid)).scalar_one_or_none()
     if m is None:
         return False
     m.deleted_at = datetime.now(timezone.utc)

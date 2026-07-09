@@ -1,10 +1,13 @@
 import datetime as dt
 import pytest
 from pydantic import ValidationError
+from sqlalchemy import select
+from app.dependencies import CampaignContext
 from app.models.minuta import Minuta, Acuerdo
+from app.models.user import User
 from app.schemas.minuta import MinutaCreate, AcuerdoUpdate, MinutaRead, MinutaUpdate
 from app.services import minuta_service
-from tests.conftest import _militante_ctx, TestingSessionLocal
+from tests.conftest import _militante_ctx, TestingSessionLocal, BETA_CAMPAIGN_ID
 
 
 # ── Service fixtures ───────────────────────────────────────────────────────────
@@ -15,6 +18,17 @@ from tests.conftest import _militante_ctx, TestingSessionLocal
 @pytest.fixture
 def lider_ctx(db_session):
     return _militante_ctx(db_session, "lider@alpha.gov")
+
+
+@pytest.fixture
+def beta_ctx(db_session):
+    """A Beta-org context (admin@beta.gov) for cross-org isolation checks."""
+    user = db_session.execute(
+        select(User).where(User.email == "admin@beta.gov")).scalar_one()
+    return CampaignContext(
+        user=user, organization_id=user.organization_id,
+        role=user.role, campaign_id=BETA_CAMPAIGN_ID,
+    )
 
 
 def _purge_minutas():
@@ -107,38 +121,44 @@ def test_create_minuta_with_acuerdos_inherits_scope(db_session, coordinador_ctx)
 
 
 def test_publish_locks_body_for_non_coordinator(db_session, coordinador_ctx, lider_ctx):
-    # coordinador crea y publica
+    # lider crea su propia minuta; coordinador la publica.
     m = minuta_service.create_minuta(
-        db_session, coordinador_ctx,
+        db_session, lider_ctx,
         MinutaCreate(titulo="Acta", fecha="2026-07-08"))
     minuta_service.update_minuta(db_session, coordinador_ctx, m.id,
                                  MinutaUpdate(estado="PUBLICADA"))
-    # lider intenta editar cuerpo de acta publicada → bloqueado
+    # lider (owner) intenta editar cuerpo de su propia acta publicada →
+    # bloqueado — solo coordinador/admin pueden editar una PUBLICADA.
     with pytest.raises(minuta_service.PublishedLockError):
         minuta_service.update_minuta(db_session, lider_ctx, m.id,
                                      MinutaUpdate(cuerpo="cambio ilegal"))
 
 
-def test_publish_lock_allows_coordinator_and_allows_estado_change_for_others(
+def test_publish_lock_allows_coordinator_but_freezes_owner_including_estado(
         db_session, coordinador_ctx, lider_ctx):
     m = minuta_service.create_minuta(
         db_session, coordinador_ctx,
         MinutaCreate(titulo="Acta", fecha="2026-07-08"))
     minuta_service.update_minuta(db_session, coordinador_ctx, m.id,
                                  MinutaUpdate(estado="PUBLICADA"))
-    # coordinador can still edit narrative fields after publishing
+    # coordinador can still edit narrative fields — and revert estado — after
+    # publishing.
     updated = minuta_service.update_minuta(db_session, coordinador_ctx, m.id,
                                            MinutaUpdate(titulo="Acta editada"))
     assert updated.titulo == "Acta editada"
-    # non-coordinator editing a NON-narrative field (estado) on a PUBLICADA
-    # minuta is not locked — only titulo/fecha/lugar/cuerpo/tipo are.
+    reverted = minuta_service.update_minuta(db_session, coordinador_ctx, m.id,
+                                            MinutaUpdate(estado="BORRADOR"))
+    assert reverted.estado == "BORRADOR"
+
+    # A non-coordinator OWNER cannot revert (or touch any field of) their own
+    # PUBLICADA minuta — only COORDINADOR/ADMIN may. estado is not exempt.
     lider_owned = minuta_service.create_minuta(
         db_session, lider_ctx, MinutaCreate(titulo="Junta líder", fecha="2026-07-08"))
     minuta_service.update_minuta(db_session, coordinador_ctx, lider_owned.id,
                                  MinutaUpdate(estado="PUBLICADA"))
-    reopened = minuta_service.update_minuta(db_session, lider_ctx, lider_owned.id,
-                                            MinutaUpdate(estado="BORRADOR"))
-    assert reopened.estado == "BORRADOR"
+    with pytest.raises(minuta_service.PublishedLockError):
+        minuta_service.update_minuta(db_session, lider_ctx, lider_owned.id,
+                                     MinutaUpdate(estado="BORRADOR"))
 
 
 def test_list_and_get_scoped_by_role(db_session, coordinador_ctx, lider_ctx, activista_ctx):
@@ -188,3 +208,67 @@ def test_enrich_acuerdos_sets_responsable_nombre_and_pendientes_count(
     assert m.acuerdos_pendientes == 2
     names = {a.responsable_nombre for a in m.acuerdos if a.responsable_id}
     assert coordinador_ctx.user.full_name in names
+
+
+# ── Regression: mutate-scope must be strictly narrower than read-scope ───────
+# Previously update_minuta/delete_minuta reused _minuta_role_scoped, whose
+# published-campaign-wide broadening let ANY non-owner reach another user's
+# PUBLICADA minuta to edit or delete it. _minuta_mutate_scoped must close that
+# for every non-coordinator role, while leaving read access (get/list) intact.
+
+def test_non_owner_lider_cannot_update_or_delete_others_published_minuta(
+        db_session, coordinador_ctx, lider_ctx):
+    m = minuta_service.create_minuta(
+        db_session, coordinador_ctx,
+        MinutaCreate(titulo="Acta coordinador", fecha="2026-07-08"))
+    minuta_service.update_minuta(db_session, coordinador_ctx, m.id,
+                                 MinutaUpdate(estado="PUBLICADA"))
+    # lider is neither the owner nor coordinador's supervisor — read still
+    # works (published is campaign-wide readable)...
+    assert minuta_service.get_minuta(db_session, lider_ctx, m.id) is not None
+    # ...but mutate must be out of scope: None / False, not a mutation.
+    assert minuta_service.update_minuta(
+        db_session, lider_ctx, m.id, MinutaUpdate(cuerpo="cambio ilegal")) is None
+    assert minuta_service.delete_minuta(db_session, lider_ctx, m.id) is False
+    db_session.refresh(m)
+    assert m.deleted_at is None
+    assert m.cuerpo != "cambio ilegal"
+
+
+def test_non_owner_activista_cannot_update_or_delete_teammates_published_minuta(
+        db_session, coordinador_ctx, activista_ctx, otro_activista_ctx):
+    m = minuta_service.create_minuta(
+        db_session, activista_ctx,
+        MinutaCreate(titulo="Nota activista 1", fecha="2026-07-08"))
+    minuta_service.update_minuta(db_session, coordinador_ctx, m.id,
+                                 MinutaUpdate(estado="PUBLICADA"))
+    # activista2 is a different activista under the same lider — not the
+    # owner. Read (published, campaign-wide) still succeeds...
+    assert minuta_service.get_minuta(db_session, otro_activista_ctx, m.id) is not None
+    # ...but mutate must be out of scope.
+    assert minuta_service.update_minuta(
+        db_session, otro_activista_ctx, m.id,
+        MinutaUpdate(cuerpo="cambio ilegal")) is None
+    assert minuta_service.delete_minuta(db_session, otro_activista_ctx, m.id) is False
+    db_session.refresh(m)
+    assert m.deleted_at is None
+    assert m.cuerpo != "cambio ilegal"
+
+
+def test_beta_org_cannot_get_update_or_delete_alpha_minuta(
+        db_session, coordinador_ctx, beta_ctx):
+    m = minuta_service.create_minuta(
+        db_session, coordinador_ctx,
+        MinutaCreate(titulo="Acta alpha", fecha="2026-07-08"))
+    minuta_service.update_minuta(db_session, coordinador_ctx, m.id,
+                                 MinutaUpdate(estado="PUBLICADA"))
+    # Cross-org isolation trumps the published-campaign-wide read broadening:
+    # a Beta-org admin (even with a coordinator-equivalent role) cannot see,
+    # update, or delete an Alpha campaign's minuta.
+    assert minuta_service.get_minuta(db_session, beta_ctx, m.id) is None
+    assert minuta_service.update_minuta(
+        db_session, beta_ctx, m.id, MinutaUpdate(cuerpo="cambio ilegal")) is None
+    assert minuta_service.delete_minuta(db_session, beta_ctx, m.id) is False
+    db_session.refresh(m)
+    assert m.deleted_at is None
+    assert m.cuerpo != "cambio ilegal"
