@@ -53,7 +53,6 @@ class WorkItem(UUIDMixin, TenantMixin, CampaignMixin, AuditMixin, Base):
 
 class WorkItemTask(UUIDMixin, TenantMixin, CampaignMixin, AuditMixin, Base):
     __tablename__ = "work_item_tasks"
-    __table_args__ = (Index("ix_work_item_tasks_work_item", "work_item_id"),)
     work_item_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("work_items.id", ondelete="CASCADE"), nullable=False, index=True)
     texto: Mapped[str] = mapped_column(String(500), nullable=False)
