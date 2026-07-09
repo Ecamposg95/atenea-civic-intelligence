@@ -148,3 +148,39 @@ class Board(BaseModel):
     POR_HACER: list[WorkItemRead] = Field(default_factory=list)
     EN_CURSO: list[WorkItemRead] = Field(default_factory=list)
     HECHO: list[WorkItemRead] = Field(default_factory=list)
+
+
+# ── Metrics + ceremonias ──
+class SprintMetrics(BaseModel):
+    comprometido: int
+    completado: int
+    historias_total: int
+    historias_hechas: int
+    por_estado: dict[str, int]
+    sin_estimar: int
+
+
+class VelocidadPunto(BaseModel):
+    sprint_id: str
+    nombre: str
+    fecha_fin: date
+    velocidad: int
+
+
+class BurndownDia(BaseModel):
+    fecha: date
+    restante: int
+    ideal: int
+
+
+class Burndown(BaseModel):
+    total_puntos: int
+    dias: list[BurndownDia]
+
+
+class CeremoniaCreate(BaseModel):
+    titulo: str = Field(min_length=1, max_length=255)
+    fecha: date
+    tipo: str = Field(pattern="^(PLANNING|DAILY|REVIEW|RETRO)$")
+    lugar: Optional[str] = Field(default=None, max_length=255)
+    cuerpo: Optional[str] = None

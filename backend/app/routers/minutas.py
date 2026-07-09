@@ -55,11 +55,12 @@ def list_minutas(db: DbSession, ctx: CampaignCtx, _p: _READ,
                  estado: Annotated[Optional[str], Query()] = None,
                  desde: Annotated[Optional[date], Query()] = None,
                  hasta: Annotated[Optional[date], Query()] = None,
+                 sprint_id: Annotated[Optional[str], Query()] = None,
                  limit: Annotated[int, Query(ge=1, le=200)] = 50,
                  offset: Annotated[int, Query(ge=0)] = 0):
     rows, total = minuta_service.list_minutas(
         db, ctx, tipo=tipo, estado=estado, desde=desde, hasta=hasta,
-        limit=limit, offset=offset)
+        sprint_id=sprint_id, limit=limit, offset=offset)
     return MinutaList(items=[MinutaRead.model_validate(m, from_attributes=True) for m in rows],
                       total=total, limit=limit, offset=offset)
 

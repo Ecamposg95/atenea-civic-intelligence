@@ -13,11 +13,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.dependencies import CampaignCtx, DbSession, require_roles
 from app.models.user import UserRole
 from app.schemas.scrum import (
-    Board, SprintCreate, SprintList, SprintRead, SprintUpdate,
-    TaskCreate, TaskRead, TaskUpdate,
+    Board, Burndown, CeremoniaCreate, SprintCreate, SprintList, SprintMetrics,
+    SprintRead, SprintUpdate, TaskCreate, TaskRead, TaskUpdate, VelocidadPunto,
     WorkItemCreate, WorkItemEstadoUpdate, WorkItemList, WorkItemRead, WorkItemUpdate,
 )
-from app.services import scrum_service
+from app.schemas.minuta import MinutaCreate, MinutaList, MinutaRead
+from app.services import minuta_service, scrum_service
 
 router = APIRouter(tags=["scrum"])
 
@@ -210,3 +211,48 @@ def convertir_acuerdo(mid: str, aid: str, db: DbSession, ctx: CampaignCtx, _p: _
         raise HTTPException(404, "Acuerdo no encontrado")
     db.commit()
     return WorkItemRead.model_validate(wi, from_attributes=True)
+
+
+# ── Métricas + ceremonias (lectura sin commit; crear ceremonia sí commitea) ──
+@router.get("/scrum/velocidad", response_model=list[VelocidadPunto])
+def velocidad(db: DbSession, ctx: CampaignCtx, _p: _READ,
+              n: Annotated[int, Query(ge=1, le=24)] = 6):
+    return [VelocidadPunto(**v) for v in scrum_service.velocidad(db, ctx, n=n)]
+
+
+@router.get("/sprints/{sid}/metrics", response_model=SprintMetrics)
+def sprint_metrics(sid: str, db: DbSession, ctx: CampaignCtx, _p: _READ):
+    m = scrum_service.sprint_metrics(db, ctx, sid)
+    if m is None:
+        raise HTTPException(404, "Sprint no encontrado")
+    return SprintMetrics(**m)
+
+
+@router.get("/sprints/{sid}/burndown", response_model=Burndown)
+def burndown(sid: str, db: DbSession, ctx: CampaignCtx, _p: _READ):
+    bd = scrum_service.burndown(db, ctx, sid)
+    if bd is None:
+        raise HTTPException(404, "Sprint no encontrado")
+    return Burndown(**bd)
+
+
+@router.post("/sprints/{sid}/ceremonias", response_model=MinutaRead, status_code=201)
+def crear_ceremonia(sid: str, data: CeremoniaCreate, db: DbSession, ctx: CampaignCtx, _p: _CONVERT):
+    # _CONVERT = ADMIN/COORDINADOR/LIDER (minuta write tier). Validate the sprint
+    # belongs to the caller's campaign before linking (B owns this check).
+    if scrum_service.get_sprint(db, ctx, sid) is None:
+        raise HTTPException(404, "Sprint no encontrado")
+    m = minuta_service.create_minuta(db, ctx, MinutaCreate(
+        titulo=data.titulo, fecha=data.fecha, tipo=data.tipo,
+        lugar=data.lugar, cuerpo=data.cuerpo, sprint_id=sid))
+    db.commit()
+    return MinutaRead.model_validate(m, from_attributes=True)
+
+
+@router.get("/sprints/{sid}/ceremonias", response_model=MinutaList)
+def listar_ceremonias(sid: str, db: DbSession, ctx: CampaignCtx, _p: _READ,
+                      limit: Annotated[int, Query(ge=1, le=200)] = 50,
+                      offset: Annotated[int, Query(ge=0)] = 0):
+    rows, total = minuta_service.list_minutas(db, ctx, sprint_id=sid, limit=limit, offset=offset)
+    return MinutaList(items=[MinutaRead.model_validate(m, from_attributes=True) for m in rows],
+                      total=total, limit=limit, offset=offset)

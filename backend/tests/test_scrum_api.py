@@ -142,3 +142,22 @@ def test_create_sprint_with_estado_activo_returns_409_if_active_exists(client):
                      headers=coordinador_headers)
     assert r2.status_code == 409, f"Expected 409, got {r2.status_code}: {r2.text}"
     assert "activo" in r2.json()["error"]["message"].lower()
+
+
+def test_metrics_and_ceremonias(client):
+    coordinador_headers = _hdr(client, "coord@alpha.gov")
+
+    sid = client.post("/api/sprints", json={"nombre": "S", "fecha_inicio": "2026-07-08", "fecha_fin": "2026-07-22"},
+                      headers=coordinador_headers).json()["id"]
+    client.post("/api/workitems", json={"titulo": "h", "story_points": 5, "sprint_id": sid}, headers=coordinador_headers)
+    m = client.get(f"/api/sprints/{sid}/metrics", headers=coordinador_headers)
+    assert m.status_code == 200 and m.json()["comprometido"] == 5
+    bd = client.get(f"/api/sprints/{sid}/burndown", headers=coordinador_headers)
+    assert bd.status_code == 200 and bd.json()["total_puntos"] == 5
+    # create a PLANNING ceremony linked to the sprint
+    cer = client.post(f"/api/sprints/{sid}/ceremonias",
+                      json={"titulo": "Planning", "fecha": "2026-07-08", "tipo": "PLANNING"},
+                      headers=coordinador_headers)
+    assert cer.status_code == 201, cer.text
+    lst = client.get(f"/api/sprints/{sid}/ceremonias", headers=coordinador_headers)
+    assert lst.status_code == 200 and lst.json()["total"] == 1
