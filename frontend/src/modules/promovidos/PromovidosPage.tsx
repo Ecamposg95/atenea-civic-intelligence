@@ -168,6 +168,12 @@ export function PromovidosPage() {
     return () => clearTimeout(t);
   }, [qInput]);
 
+  // Clear revealed claves and errors when pagination or search changes (PII hygiene).
+  useEffect(() => {
+    setRevealed({});
+    setRevealError(null);
+  }, [offset, q]);
+
   const state = useAsync(() => listPromovidos({ q, limit: PAGE, offset }), [q, offset]);
   const data = state.data;
   const items = data?.items ?? [];
@@ -178,7 +184,7 @@ export function PromovidosPage() {
   );
 
   const handleRevealBatch = useCallback(async () => {
-    const ids = items.map((p) => p.id);
+    const ids = items.map((p) => p.id).filter((id) => !(id in revealed));
     if (ids.length === 0) return;
     const confirmed = window.confirm(
       `¿Confirma revelar la clave de elector de los ${ids.length} promovidos en pantalla?\nEsta acción queda registrada en la bitácora de auditoría.`,
@@ -195,7 +201,7 @@ export function PromovidosPage() {
     } finally {
       setRevealing(false);
     }
-  }, [items]);
+  }, [items, revealed]);
 
   const columns = useMemo<Column<Promovido>[]>(() => {
     if (!canReveal) return BASE_COLUMNS;
