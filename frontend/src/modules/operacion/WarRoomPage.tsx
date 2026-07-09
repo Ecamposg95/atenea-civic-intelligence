@@ -1,3 +1,5 @@
+import { Link, useNavigate } from "react-router-dom";
+
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -19,7 +21,7 @@ const DEFAULT_STATUS = { dot: "rgb(var(--c-ink-faint))", label: "Sin estado" };
 const prio = (p: string | null) =>
   (p ?? "—").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
-function Semaforo({ rows }: { rows: SemaforoRow[] }) {
+function Semaforo({ rows, onRowClick }: { rows: SemaforoRow[]; onRowClick: (seccion: string) => void }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -36,7 +38,20 @@ function Semaforo({ rows }: { rows: SemaforoRow[] }) {
           {rows.map((r) => {
             const st = STATUS[r.status] ?? DEFAULT_STATUS;
             return (
-              <tr key={r.seccion} className="border-t border-line/70 hover:bg-panel-hover">
+              <tr
+                key={r.seccion}
+                onClick={() => onRowClick(r.seccion)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onRowClick(r.seccion);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                aria-label={`Ver plan territorial de la sección ${r.seccion}`}
+                className="cursor-pointer border-t border-line/70 transition-colors hover:bg-panel-hover focus-ring"
+              >
                 <td className="px-3 py-2">
                   <span className="inline-flex items-center gap-1.5 text-xs font-medium">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ background: st.dot }} />
@@ -62,6 +77,8 @@ function Semaforo({ rows }: { rows: SemaforoRow[] }) {
 export default function WarRoomPage() {
   const state = useAsync(() => getSeguimiento(), []);
   const d = state.data;
+  const nav = useNavigate();
+  const goToPlan = () => nav("/plan-territorial");
 
   return (
     <AppLayout title="War Room" crumb="Seguimiento territorial">
@@ -69,6 +86,11 @@ export default function WarRoomPage() {
         eyebrow="Operación · Seguimiento"
         title="War Room"
         subtitle="Avance de la operación territorial en vivo: cumplimiento de metas, tendencia semanal y secciones que necesitan atención."
+        actions={
+          <Link to="/plan-territorial" className="btn-primary focus-ring">
+            Ver Plan Territorial
+          </Link>
+        }
       />
 
       <DataState loading={state.loading} error={state.error} onRetry={state.reload}>
@@ -97,7 +119,12 @@ export default function WarRoomPage() {
                 <SectionHeading eyebrow="Alertas" title="Secciones que necesitan refuerzo" note={`${d.alertas.length} en riesgo`} />
                 <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {d.alertas.map((a) => (
-                    <div key={a.seccion} className="card-premium p-4">
+                    <Link
+                      key={a.seccion}
+                      to="/plan-territorial"
+                      className="card-premium focus-ring block p-4"
+                      aria-label={`Ver plan territorial de la sección ${a.seccion}`}
+                    >
                       <div className="flex items-center justify-between">
                         <span className="font-display text-lg font-bold tabular-nums text-ink">Sec. {a.seccion}</span>
                         <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATUS.rojo.dot }} />
@@ -107,7 +134,7 @@ export default function WarRoomPage() {
                         <span className="font-semibold text-state-critical tabular-nums">Faltan {a.faltan}</span>
                         <span className="text-ink-faint"> · {a.promovidos}/{a.meta}</span>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </section>
@@ -117,7 +144,7 @@ export default function WarRoomPage() {
               <SectionHeading eyebrow="Semáforo" title="Todas las secciones" note="ordenadas por avance (rezagadas primero)" />
               <div className="mt-4 card-premium p-2">
                 {d.semaforo.length > 0 ? (
-                  <Semaforo rows={d.semaforo} />
+                  <Semaforo rows={d.semaforo} onRowClick={goToPlan} />
                 ) : (
                   <p className="p-4 text-sm text-ink-faint">Sin secciones registradas.</p>
                 )}

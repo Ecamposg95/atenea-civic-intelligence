@@ -101,7 +101,7 @@ function RevealFlash({ reveal, onDismiss }: RevealFlashProps) {
 
 export function AdminRegistrosPage() {
   const role = useAuthStore((s) => s.user?.role);
-  const canReveal = role === "admin" || role === "superadmin";
+  const canReveal = role === "superadmin" || role === "admin" || role === "coordinador";
   const activeId = useCampaignStore((s) => s.activeId);
 
   const [data, setData] = useState<AdminRegistroList | null>(null);

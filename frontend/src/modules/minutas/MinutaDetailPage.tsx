@@ -1,4 +1,5 @@
 // frontend/src/modules/minutas/MinutaDetailPage.tsx
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -49,16 +50,38 @@ export function MinutaDetailPage() {
   }, [id]);
   const m = state.data;
 
+  const [error, setError] = useState<string | null>(null);
+  // Track the acuerdo currently being PATCHed so its <select> can't be
+  // double-fired while the request is in flight.
+  const [busyAcuerdoId, setBusyAcuerdoId] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+
   async function cambiarEstadoAcuerdo(aid: string, estado: string) {
     if (!id) return;
-    await updateAcuerdo(id, aid, { estado });
-    state.reload();
+    setBusyAcuerdoId(aid);
+    setError(null);
+    try {
+      await updateAcuerdo(id, aid, { estado });
+      state.reload();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "No se pudo actualizar el acuerdo.");
+    } finally {
+      setBusyAcuerdoId(null);
+    }
   }
 
   async function publicar() {
     if (!id) return;
-    await updateMinuta(id, { estado: "PUBLICADA" });
-    state.reload();
+    setPublishing(true);
+    setError(null);
+    try {
+      await updateMinuta(id, { estado: "PUBLICADA" });
+      state.reload();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "No se pudo publicar la minuta.");
+    } finally {
+      setPublishing(false);
+    }
   }
 
   return (
@@ -81,13 +104,22 @@ export function MinutaDetailPage() {
               >
                 Editar
               </button>
-              <button type="button" className="btn-primary focus-ring" onClick={publicar}>
-                Publicar
+              <button
+                type="button"
+                className="btn-primary focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={publicar}
+                disabled={publishing}
+              >
+                {publishing ? "Publicando…" : "Publicar"}
               </button>
             </div>
           ) : undefined
         }
       />
+
+      {error && (
+        <div className="card-premium mb-4 px-3.5 py-2.5 text-sm text-state-critical">{error}</div>
+      )}
 
       <DataState
         loading={state.loading}
@@ -172,7 +204,8 @@ export function MinutaDetailPage() {
                         <select
                           value={a.estado}
                           onChange={(e) => cambiarEstadoAcuerdo(a.id, e.target.value)}
-                          className="field-input focus-ring mt-2 h-9 w-full text-xs"
+                          disabled={busyAcuerdoId === a.id}
+                          className="field-input focus-ring mt-2 h-9 w-full text-xs disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {ACUERDO_ESTADOS.map((s) => (
                             <option key={s} value={s}>

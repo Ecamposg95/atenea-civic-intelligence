@@ -35,6 +35,20 @@ const EMPTY_FC: AreasResponse = { type: "FeatureCollection", features: [] };
 
 const pct = (m: number) => `${(Math.max(0, Math.min(1, m)) * 100).toFixed(1)}%`;
 
+/** Column header for a metric derived from sampleMetric() — unobtrusive
+ * "muestra" pill so a non-technical operator can tell it's placeholder data,
+ * not a real coverage figure. Mirrors the pill used in Legend.tsx. */
+function SampleHeader({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {label}
+      <span className="pill border-teal/30 bg-teal/10 !px-1.5 !py-0.5 text-[9px] normal-case tracking-normal text-teal">
+        muestra
+      </span>
+    </span>
+  );
+}
+
 // ---- Column definitions (memoised outside component to be stable) ----
 
 const STATE_COLUMNS: Column<StateGroup>[] = [
@@ -57,7 +71,7 @@ const STATE_COLUMNS: Column<StateGroup>[] = [
   },
   {
     key: "metric",
-    header: "Cobertura",
+    header: <SampleHeader label="Cobertura" />,
     align: "right",
     hideOnCard: true,
     sortValue: (r) => r.metric,
@@ -86,7 +100,7 @@ function makeMuniColumns(): Column<AreaFeature>[] {
     },
     {
       key: "metric",
-      header: "Cobertura",
+      header: <SampleHeader label="Cobertura" />,
       align: "right",
       sortValue: (f) => sampleMetric(f.properties.id),
       render: (f) => <CellBar value={sampleMetric(f.properties.id) * 100} />,

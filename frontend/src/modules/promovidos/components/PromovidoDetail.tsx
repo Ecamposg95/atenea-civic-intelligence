@@ -4,6 +4,7 @@ import { DataState } from "@/components/ui/DataState";
 import { useAsync } from "@/hooks/useAsync";
 import { getRegistroDetalle, type Promovido } from "@/api/promovidos";
 import { revelarClave } from "@/api/admin";
+import { useAuthStore } from "@/store/authStore";
 
 interface Props {
   promovido: Promovido;
@@ -46,6 +47,9 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 export function PromovidoDetail({ promovido: p, onClose }: Props) {
   const state = useAsync(() => getRegistroDetalle(p.id), [p.id]);
   const d = state.data;
+
+  const role = useAuthStore((s) => s.user?.role);
+  const canReveal = role === "superadmin" || role === "admin" || role === "coordinador";
 
   const [clave, setClave] = useState<string | null>(null);
   const [revealing, setRevealing] = useState(false);
@@ -130,7 +134,7 @@ export function PromovidoDetail({ promovido: p, onClose }: Props) {
                   ) : (
                     <span className="font-mono">
                       {d.clave_masked ?? "—"}
-                      {d.clave_masked && (
+                      {d.clave_masked && canReveal && (
                         <button type="button" onClick={reveal} disabled={revealing}
                           className="ml-2 rounded px-1.5 py-0.5 text-[11px] font-sans font-semibold text-accent hover:bg-accent/10 disabled:opacity-50">
                           {revealing ? "Revelando…" : "Revelar"}

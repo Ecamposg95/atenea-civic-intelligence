@@ -1,3 +1,5 @@
+import { Link, useNavigate } from "react-router-dom";
+
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { AreaTrend } from "@/components/charts/AreaTrend";
@@ -29,7 +31,7 @@ const PRIORIDAD_TONE: Record<string, string> = {
 const prioridadLabel = (p: string) =>
   p.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
-function SeccionesTabla({ secciones }: { secciones: SeccionRow[] }) {
+function SeccionesTabla({ secciones, onRowClick }: { secciones: SeccionRow[]; onRowClick: (seccion: string) => void }) {
   const maxPart = Math.max(1, ...secciones.map((s) => s.participacion ?? 0));
   return (
     <div className="overflow-x-auto">
@@ -46,7 +48,20 @@ function SeccionesTabla({ secciones }: { secciones: SeccionRow[] }) {
         </thead>
         <tbody>
           {secciones.map((s) => (
-            <tr key={s.seccion} className="border-t border-line/70 hover:bg-panel-hover">
+            <tr
+              key={s.seccion}
+              onClick={() => onRowClick(s.seccion)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onRowClick(s.seccion);
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label={`Ver plan territorial de la sección ${s.seccion}`}
+              className="cursor-pointer border-t border-line/70 transition-colors hover:bg-panel-hover focus-ring"
+            >
               <td className="px-3 py-2 font-medium tabular-nums">{s.seccion}</td>
               <td className="px-3 py-2" style={{ minWidth: 130 }}>
                 <CellBar value={Math.round(((s.participacion ?? 0) / maxPart) * 100)} />
@@ -75,6 +90,7 @@ function SeccionesTabla({ secciones }: { secciones: SeccionRow[] }) {
 export default function PanoramaMunicipioPage() {
   const state = useAsync(() => getMunicipioPanorama(CODE), []);
   const d = state.data;
+  const nav = useNavigate();
 
   return (
     <AppLayout title="San Mateo Atenco" crumb="Inteligencia municipal">
@@ -155,14 +171,19 @@ export default function PanoramaMunicipioPage() {
 
             {/* Geografía seccional */}
             <section>
-              <SectionHeading
-                eyebrow="Territorio"
-                title="Geografía seccional 2024"
-                note={`${num(d.secciones_resumen.morena)} Morena · ${num(d.secciones_resumen.coalicion)} coalición`}
-              />
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <SectionHeading
+                  eyebrow="Territorio"
+                  title="Geografía seccional 2024"
+                  note={`${num(d.secciones_resumen.morena)} Morena · ${num(d.secciones_resumen.coalicion)} coalición`}
+                />
+                <Link to="/plan-territorial" className="btn-primary focus-ring shrink-0">
+                  Ver Plan Territorial
+                </Link>
+              </div>
               <div className="mt-4 card-premium p-2">
                 {d.secciones.length > 0 ? (
-                  <SeccionesTabla secciones={d.secciones} />
+                  <SeccionesTabla secciones={d.secciones} onRowClick={() => nav("/plan-territorial")} />
                 ) : (
                   <p className="p-4 text-sm text-ink-faint">Sin matriz seccional cargada.</p>
                 )}
