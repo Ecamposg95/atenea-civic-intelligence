@@ -5,7 +5,7 @@ responsable (or a coordinator). Mirrors minuta_service scoping/audit.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import func, select
@@ -356,3 +356,66 @@ def convertir_acuerdo(db: Session, ctx: CampaignContext, mid: str, aid: str) -> 
     db.flush()
     enrich_workitem(db, wi)
     return wi
+
+
+def _sprint_items(db: Session, ctx: CampaignContext, sid: str) -> list[WorkItem]:
+    return list(db.execute(
+        scoped_query(WorkItem, ctx).where(WorkItem.sprint_id == sid)
+    ).scalars().all())
+
+
+def sprint_metrics(db: Session, ctx: CampaignContext, sid: str) -> Optional[dict]:
+    s = db.execute(scoped_query(Sprint, ctx).where(Sprint.id == sid)).scalar_one_or_none()
+    if s is None:
+        return None
+    items = _sprint_items(db, ctx, sid)
+    def pts(i):
+        return i.story_points or 0
+    por_estado = {"POR_HACER": 0, "EN_CURSO": 0, "HECHO": 0}
+    for i in items:
+        if i.estado in por_estado:
+            por_estado[i.estado] += 1
+    return {
+        "comprometido": sum(pts(i) for i in items),
+        "completado": sum(pts(i) for i in items if i.estado == "HECHO"),
+        "historias_total": len(items),
+        "historias_hechas": sum(1 for i in items if i.estado == "HECHO"),
+        "por_estado": por_estado,
+        "sin_estimar": sum(1 for i in items if i.story_points is None),
+    }
+
+
+def velocidad(db: Session, ctx: CampaignContext, n: int = 6) -> list[dict]:
+    sprints = list(db.execute(
+        scoped_query(Sprint, ctx).where(Sprint.estado == "CERRADO")
+        .order_by(Sprint.fecha_fin.desc()).limit(n)
+    ).scalars().all())
+    out = []
+    for s in sprints:
+        items = _sprint_items(db, ctx, s.id)
+        out.append({
+            "sprint_id": s.id, "nombre": s.nombre, "fecha_fin": s.fecha_fin,
+            "velocidad": sum((i.story_points or 0) for i in items if i.estado == "HECHO"),
+        })
+    return out
+
+
+def burndown(db: Session, ctx: CampaignContext, sid: str) -> Optional[dict]:
+    s = db.execute(scoped_query(Sprint, ctx).where(Sprint.id == sid)).scalar_one_or_none()
+    if s is None:
+        return None
+    items = _sprint_items(db, ctx, sid)
+    total = sum((i.story_points or 0) for i in items)
+    dias = (s.fecha_fin - s.fecha_inicio).days
+    n = max(dias, 0) + 1                      # inclusive
+    serie = []
+    for k in range(n):
+        d = s.fecha_inicio + timedelta(days=k)
+        completado = sum(
+            (i.story_points or 0) for i in items
+            if i.estado == "HECHO" and i.completed_at is not None
+            and i.completed_at.date() <= d
+        )
+        ideal = round(total * (1 - k / (n - 1))) if n > 1 else 0
+        serie.append({"fecha": d, "restante": total - completado, "ideal": ideal})
+    return {"total_puntos": total, "dias": serie}

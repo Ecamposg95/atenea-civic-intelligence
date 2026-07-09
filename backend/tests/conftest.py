@@ -290,6 +290,9 @@ def db_session():
         db.rollback()
         db.query(Militante).delete()
         db.query(PrivacyAcceptance).delete()
+        db.query(WorkItemTask).delete()
+        db.query(WorkItem).delete()
+        db.query(Sprint).delete()
         db.commit()
         db.close()
 
