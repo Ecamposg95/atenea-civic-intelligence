@@ -35,7 +35,19 @@ export const listWorkitems = async (params?: Record<string, string | number>) =>
   (await apiClient.get<Page<WorkItem>>("/workitems", { params })).data;
 export const getWorkitem = async (id: string) => (await apiClient.get<WorkItem>(`/workitems/${id}`)).data;
 export const createWorkitem = async (p: Partial<WorkItem>) => (await apiClient.post<WorkItem>("/workitems", p)).data;
-export const updateWorkitem = async (id: string, p: Partial<WorkItem>) => (await apiClient.patch<WorkItem>(`/workitems/${id}`, p)).data;
+
+export interface WorkItemPatch {
+  titulo?: string;
+  descripcion?: string | null;
+  tipo?: string;
+  story_points?: number | null;
+  prioridad?: string;
+  orden?: number;
+  sprint_id?: string | null;
+  responsable_id?: string | null;
+  estado?: string;
+}
+export const updateWorkitem = async (id: string, p: WorkItemPatch) => (await apiClient.patch<WorkItem>(`/workitems/${id}`, p)).data;
 export const moverEstado = async (id: string, estado: string) => (await apiClient.patch<WorkItem>(`/workitems/${id}/estado`, { estado })).data;
 export const deleteWorkitem = async (id: string) => { await apiClient.delete(`/workitems/${id}`); };
 export const addTask = async (wid: string, p: { texto: string; responsable_id?: string; orden?: number }) =>

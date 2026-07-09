@@ -13,6 +13,7 @@ import {
   updateWorkitem,
   type Task,
   type WorkItem,
+  type WorkItemPatch,
 } from "@/api/scrum";
 
 interface Props {
@@ -77,7 +78,7 @@ export function WorkItemDetail({ id, onClose, onChanged }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  async function patchField(patch: Partial<WorkItem>) {
+  async function patchField(patch: WorkItemPatch) {
     setSavingField(true);
     setFieldError(null);
     try {
@@ -190,7 +191,7 @@ export function WorkItemDetail({ id, onClose, onChanged }: Props) {
                       value={wi.story_points ?? ""}
                       disabled={savingField}
                       onChange={(e) =>
-                        patchField({ story_points: e.target.value === "" ? undefined : Number(e.target.value) })
+                        patchField({ story_points: e.target.value === "" ? null : Number(e.target.value) })
                       }
                     >
                       <option value="">Sin estimar</option>
@@ -212,7 +213,7 @@ export function WorkItemDetail({ id, onClose, onChanged }: Props) {
                       className="field-input focus-ring h-9 w-44 text-sm"
                       value={wi.responsable_id ?? ""}
                       disabled={savingField}
-                      onChange={(e) => patchField({ responsable_id: e.target.value || undefined })}
+                      onChange={(e) => patchField({ responsable_id: e.target.value || null })}
                     >
                       <option value="">Sin asignar</option>
                       {assignableUsers.map((u) => (
@@ -233,7 +234,7 @@ export function WorkItemDetail({ id, onClose, onChanged }: Props) {
                       className="field-input focus-ring h-9 w-44 text-sm"
                       value={wi.sprint_id ?? ""}
                       disabled={savingField}
-                      onChange={(e) => patchField({ sprint_id: e.target.value || undefined })}
+                      onChange={(e) => patchField({ sprint_id: e.target.value || null })}
                     >
                       <option value="">Backlog</option>
                       {sprints.map((s) => (
