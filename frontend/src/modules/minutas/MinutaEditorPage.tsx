@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { DataState } from "@/components/ui/DataState";
 import {
   addAcuerdo,
   createMinuta,
@@ -42,6 +43,11 @@ export function MinutaEditorPage() {
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Load failure in EDIT mode — distinct from `error` (save/publish/acuerdo
+  // failures) so a save error after a successful load never re-hides the
+  // already-loaded form. See loadFailed gate below.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [asistenteInput, setAsistenteInput] = useState("");
   const [acuerdoTexto, setAcuerdoTexto] = useState("");
@@ -55,6 +61,7 @@ export function MinutaEditorPage() {
     }
     let cancelled = false;
     setLoading(true);
+    setLoadError(null);
     getMinuta(id)
       .then((m) => {
         if (cancelled) return;
@@ -71,7 +78,7 @@ export function MinutaEditorPage() {
         });
       })
       .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : "No se pudo cargar la minuta.");
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : "No se pudo cargar la minuta.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -79,7 +86,12 @@ export function MinutaEditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, reloadKey]);
+
+  // EDIT mode only becomes safe to render (and save) once the existing
+  // minuta has actually loaded — otherwise "Guardar cambios" would submit
+  // the EMPTY defaults and overwrite the real record. See Fix 1.
+  const editLoadFailed = editing && !loading && (Boolean(loadError) || !minuta);
 
   const set = <K extends keyof MinutaCreate>(k: K, v: MinutaCreate[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -159,10 +171,28 @@ export function MinutaEditorPage() {
     }
   }
 
-  if (loading) {
+  // Gate the entire form in EDIT mode until the real minuta has loaded —
+  // never render (or allow saving) the EMPTY-default form over a load
+  // failure. Create mode (`editing === false`) is unaffected: `loading` is
+  // initialized to `false` there, so it falls straight through.
+  if (editing && (loading || editLoadFailed)) {
     return (
-      <AppLayout title={editing ? "Editar minuta" : "Nueva minuta"} crumb="Ciudadanía">
-        <div className="card-premium p-6 text-ink-muted">Cargando…</div>
+      <AppLayout title="Editar minuta" crumb="Ciudadanía">
+        <PageHeader
+          eyebrow="Ciudadanía"
+          title="Editar"
+          accent="minuta"
+          subtitle="Registra el acta de la reunión: asistentes, notas y los acuerdos con su fecha límite."
+        />
+        <DataState
+          loading={loading}
+          error={editLoadFailed ? (loadError ?? "No se pudo cargar la minuta.") : null}
+          onRetry={() => setReloadKey((k) => k + 1)}
+          isEmpty={false}
+          skeleton={<div className="card-premium p-6 text-ink-muted">Cargando…</div>}
+        >
+          <div className="card-premium p-6 text-ink-muted">Cargando…</div>
+        </DataState>
       </AppLayout>
     );
   }

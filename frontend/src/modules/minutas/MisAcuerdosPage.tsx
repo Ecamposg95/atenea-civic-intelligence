@@ -8,7 +8,7 @@ import { DataState } from "@/components/ui/DataState";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SkeletonRows } from "@/components/ui/SkeletonCard";
-import type { StatusKind } from "@/components/ui/StatusPill";
+import { StatusPill, type StatusKind } from "@/components/ui/StatusPill";
 import { useAsync } from "@/hooks/useAsync";
 import { listAcuerdos, type Acuerdo } from "@/api/minutas";
 
@@ -33,11 +33,15 @@ function bucketOf(a: Acuerdo): Bucket {
   return "proximo";
 }
 
-const BUCKET_META: Record<Bucket, { title: string; kind: StatusKind; empty: string }> = {
+// `kind` drives the color-coded StatusPill rendered next to each section
+// heading below — vencido=crit, hoy=warn, próximos=ok, cerrado=ok. "sin-fecha"
+// has no urgency kind (`null`) since there's nothing to be urgent about, so it
+// renders as a neutral/muted pill instead of a StatusPill.
+const BUCKET_META: Record<Bucket, { title: string; kind: StatusKind | null; empty: string }> = {
   vencido: { title: "Vencidos", kind: "crit", empty: "Sin acuerdos vencidos." },
   hoy: { title: "Vencen hoy", kind: "warn", empty: "Nada vence hoy." },
-  proximo: { title: "Próximos", kind: "warn", empty: "Sin acuerdos próximos." },
-  "sin-fecha": { title: "Sin fecha límite", kind: "ok", empty: "Todos los acuerdos tienen fecha límite." },
+  proximo: { title: "Próximos", kind: "ok", empty: "Sin acuerdos próximos." },
+  "sin-fecha": { title: "Sin fecha límite", kind: null, empty: "Todos los acuerdos tienen fecha límite." },
   cerrado: { title: "Cerrados", kind: "ok", empty: "Sin acuerdos cerrados." },
 };
 
@@ -144,8 +148,13 @@ export function MisAcuerdosPage() {
               const rows = grouped[bucket];
               return (
                 <div key={bucket}>
-                  <div className="mb-2 flex items-center gap-2">
-                    <SectionHeading title={meta.title} note={`${rows.length}`} />
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <SectionHeading title={meta.title} />
+                    {meta.kind ? (
+                      <StatusPill kind={meta.kind}>{rows.length}</StatusPill>
+                    ) : (
+                      <span className="pill border-line bg-panel-hover text-ink-faint">{rows.length}</span>
+                    )}
                   </div>
                   {rows.length === 0 ? (
                     <p className="text-sm text-ink-faint">{meta.empty}</p>

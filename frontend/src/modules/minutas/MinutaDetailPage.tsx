@@ -47,7 +47,10 @@ export function MinutaDetailPage() {
   const role = useAuthStore((s) => s.user?.role);
   const canWrite = role ? WRITE_ROLES.includes(role) : false;
 
-  const state = useAsync<Minuta>(() => getMinuta(id as string), [id]);
+  const state = useAsync<Minuta>(() => {
+    if (!id) return Promise.reject(new Error("Falta el id de la minuta."));
+    return getMinuta(id);
+  }, [id]);
   const m = state.data;
 
   async function cambiarEstadoAcuerdo(aid: string, estado: string) {
