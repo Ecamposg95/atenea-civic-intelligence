@@ -1,3 +1,5 @@
+import { Link, useNavigate } from "react-router-dom";
+
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Bars } from "@/components/charts/Bars";
@@ -131,6 +133,8 @@ const ACTIVISTA_COLUMNS: Column<PorActivista>[] = [
 export default function PanoramaMilitantesPage() {
   const state = useAsync(getPanorama, []);
   const data = state.data;
+  const nav = useNavigate();
+  const goToPadron = () => nav("/militantes/lista");
   const isEmpty = !state.loading && !state.error && (data?.kpis?.total ?? 0) === 0;
 
   const kpis = data?.kpis;
@@ -157,6 +161,11 @@ export default function PanoramaMilitantesPage() {
         title="Panorama de"
         accent="Militantes"
         subtitle="Avance de afiliación, cobertura por sección y desempeño por activista."
+        actions={
+          <Link to="/militantes/lista" className="btn-primary focus-ring">
+            Ver padrón
+          </Link>
+        }
       />
 
       <DataState
@@ -245,6 +254,7 @@ export default function PanoramaMilitantesPage() {
               defaultSortKey="militantes"
               defaultSortDir="desc"
               emptyMessage="Aún no hay militantes registrados"
+              onRowClick={goToPadron}
             />
           </section>
 
@@ -258,6 +268,7 @@ export default function PanoramaMilitantesPage() {
               defaultSortKey="militantes"
               defaultSortDir="desc"
               emptyMessage="Aún no hay militantes registrados"
+              onRowClick={goToPadron}
             />
           </section>
 

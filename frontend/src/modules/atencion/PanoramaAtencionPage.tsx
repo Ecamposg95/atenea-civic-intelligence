@@ -1,4 +1,6 @@
 // frontend/src/modules/atencion/PanoramaAtencionPage.tsx
+import { Link, useNavigate } from "react-router-dom";
+
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ChartFrame } from "@/components/charts/ChartFrame";
@@ -95,6 +97,8 @@ const RESPONSABLE_COLUMNS: Column<PorResponsable>[] = [
 export default function PanoramaAtencionPage() {
   const state = useAsync(getCasoPanorama, []);
   const data = state.data;
+  const nav = useNavigate();
+  const goToCasos = () => nav("/atencion/casos");
   const isEmpty = !state.loading && !state.error && (data?.kpis?.total ?? 0) === 0;
 
   const kpis = data?.kpis;
@@ -116,6 +120,11 @@ export default function PanoramaAtencionPage() {
         title="Panorama de"
         accent="Casos"
         subtitle="Volumen, cumplimiento de SLA y distribución territorial de los casos ciudadanos."
+        actions={
+          <Link to="/atencion/casos" className="btn-primary focus-ring">
+            Ver casos
+          </Link>
+        }
       />
 
       <DataState
@@ -214,6 +223,7 @@ export default function PanoramaAtencionPage() {
               defaultSortKey="casos"
               defaultSortDir="desc"
               emptyMessage="Aún no hay casos"
+              onRowClick={goToCasos}
             />
           </section>
 
@@ -227,6 +237,7 @@ export default function PanoramaAtencionPage() {
               defaultSortKey="casos"
               defaultSortDir="desc"
               emptyMessage="Aún no hay casos"
+              onRowClick={goToCasos}
             />
           </section>
         </div>
