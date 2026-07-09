@@ -155,3 +155,83 @@ def test_import_rows_audit_entity_id_is_not_pii(tmp_path):
         assert row.meta["duplicadas"] == 0
     finally:
         db.close()
+
+
+def _make_xlsx_clave(path, sheet="PROMOTOR CLAVE", con_clave=True):
+    """Workbook with an optional 'CLAVE DE ELECTOR' column at col 13."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = sheet
+    ws.cell(1, 2, "PRIMER APELLIDO"); ws.cell(1, 3, "SEGUNDO APELLIDO")
+    ws.cell(1, 4, "NOMBRE"); ws.cell(1, 11, "SECCIÓN")
+    ws.cell(1, 13, "CLAVE DE ELECTOR")
+    ws.cell(2, 11, "SECCIÓN")
+    ws.cell(3, 2, "PEREZ"); ws.cell(3, 3, "LOPEZ"); ws.cell(3, 4, "ANA"); ws.cell(3, 11, 4121)
+    if con_clave:
+        ws.cell(3, 13, "PRLPAN80010112M400")  # 18 alphanumeric
+    wb.save(path)
+
+
+def test_parse_reads_clave_de_elector_column(tmp_path):
+    p = tmp_path / "CON CLAVE_Mayus.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "PROMOTOR X"
+    ws.cell(1, 2, "PRIMER APELLIDO"); ws.cell(1, 4, "NOMBRE")
+    ws.cell(1, 11, "SECCIÓN"); ws.cell(1, 13, "CLAVE DE ELECTOR")
+    ws.cell(2, 11, "SECCIÓN")
+    ws.cell(3, 2, "PEREZ"); ws.cell(3, 4, "ANA"); ws.cell(3, 11, 4121)
+    ws.cell(3, 13, "PRLPAN80010112M400")           # valid 18-char clave
+    ws.cell(4, 2, "GOMEZ"); ws.cell(4, 4, "LUIS"); ws.cell(4, 11, 4122)
+    ws.cell(4, 13, "ABC123")                        # too short → None
+    wb.save(str(p))
+    rows = import_service.parse_workbook(str(p))
+    assert len(rows) == 2
+    assert rows[0]["clave"] == "PRLPAN80010112M400"
+    assert rows[1]["clave"] is None
+
+
+def test_parse_without_clave_column_yields_none(tmp_path):
+    """Backward compat: templates without a clave column set clave=None."""
+    p = tmp_path / "SIN CLAVE_Mayus.xlsx"
+    _make_xlsx(str(p), header_row=1)
+    rows = import_service.parse_workbook(str(p))
+    assert all(r["clave"] is None for r in rows)
+
+
+def test_import_encrypts_clave_and_backfills_existing(tmp_path):
+    from app.core import crypto
+    from app.models.user import User
+    db = TestingSessionLocal()
+    try:
+        org_id = db.execute(select(User.organization_id).where(
+            User.email == "coord@alpha.gov")).scalar_one()
+
+        # 1) First import WITHOUT clave → row created, no ciphertext.
+        p_no = tmp_path / "PROMO SIN_Mayus.xlsx"
+        _make_xlsx_clave(str(p_no), con_clave=False)
+        res0 = import_service.import_rows(db, organization_id=org_id,
+                                          campaign_id=ALPHA_CAMPAIGN_ID, path=str(p_no))
+        assert res0["importadas"] == 1
+        reg = db.execute(select(Registro).where(
+            Registro.campaign_id == ALPHA_CAMPAIGN_ID,
+            Registro.nombre_completo == "ANA PEREZ LOPEZ")).scalar_one()
+        assert reg.clave_elector_enc is None and reg.clave_masked is None
+
+        # 2) Re-import SAME file (same basename/sheet/row → same client_uuid) WITH
+        #    clave → existing row is backfilled (not duplicated), decrypts back.
+        p_yes = tmp_path / "PROMO SIN_Mayus.xlsx"  # same name → same client_uuid
+        _make_xlsx_clave(str(p_yes), con_clave=True)
+        res1 = import_service.import_rows(db, organization_id=org_id,
+                                          campaign_id=ALPHA_CAMPAIGN_ID, path=str(p_yes))
+        assert res1["actualizadas"] == 1 and res1["importadas"] == 0
+        db.refresh(reg)
+        assert reg.clave_elector_enc is not None
+        assert crypto.decrypt_clave(bytes(reg.clave_elector_enc)) == "PRLPAN80010112M400"
+
+        # 3) Re-import again → already has clave → duplicada, not re-updated.
+        res2 = import_service.import_rows(db, organization_id=org_id,
+                                          campaign_id=ALPHA_CAMPAIGN_ID, path=str(p_yes))
+        assert res2["actualizadas"] == 0 and res2["duplicadas"] == 1
+    finally:
+        db.close()

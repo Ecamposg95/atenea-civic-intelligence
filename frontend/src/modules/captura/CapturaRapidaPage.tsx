@@ -14,6 +14,7 @@ interface QuickForm {
   colonia: string;
   direccion: string;
   promotor: string;
+  clave_elector: string;
   consentimiento: boolean;
 }
 
@@ -24,6 +25,7 @@ const EMPTY: QuickForm = {
   colonia: "",
   direccion: "",
   promotor: "",
+  clave_elector: "",
   consentimiento: false,
 };
 
@@ -38,8 +40,12 @@ export function CapturaRapidaPage() {
   const set = <K extends keyof QuickForm>(k: K, v: QuickForm[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  // Clave de elector is optional; when typed it must be exactly 18 alphanumeric.
+  const claveDigits = form.clave_elector.trim();
+  const claveInvalid = claveDigits.length > 0 && !/^[A-Za-z0-9]{18}$/.test(claveDigits);
+
   const canSave =
-    form.nombre_completo.trim().length >= 2 && form.consentimiento && !saving;
+    form.nombre_completo.trim().length >= 2 && form.consentimiento && !claveInvalid && !saving;
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -55,6 +61,7 @@ export function CapturaRapidaPage() {
         colonia: form.colonia.trim() || undefined,
         direccion: form.direccion.trim() || undefined,
         promotor: form.promotor.trim() || undefined,
+        clave_elector: claveDigits ? claveDigits.toUpperCase() : undefined,
         consentimiento: true,
       });
       setOkName(form.nombre_completo.trim());
@@ -135,6 +142,20 @@ export function CapturaRapidaPage() {
           <label className="flex flex-col gap-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Dirección</span>
             <input className="field-input h-11" value={form.direccion} onChange={(e) => set("direccion", e.target.value)} placeholder="Calle y número" />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Clave de elector <span className="font-normal normal-case text-ink-subtle">(opcional)</span></span>
+            <input
+              className="field-input h-11 font-mono uppercase"
+              value={form.clave_elector}
+              onChange={(e) => set("clave_elector", e.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 18))}
+              placeholder="18 caracteres del INE"
+              autoComplete="off"
+            />
+            {claveInvalid && (
+              <span className="text-[10px] font-sans text-state-critical">La clave debe tener 18 caracteres alfanuméricos.</span>
+            )}
           </label>
 
           <label className="flex items-start gap-2.5 rounded-card bg-panel-hover px-3.5 py-3">

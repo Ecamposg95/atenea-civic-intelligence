@@ -10,6 +10,7 @@ import openpyxl
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import crypto
 from app.models.registro import Registro
 from app.services.audit_service import record_audit
 
@@ -23,10 +24,40 @@ _MAXLEN = {
     "telefono": 40, "estructura": 120, "promotor": 160, "observacion": 1000,
 }
 _SECCION_RE = re.compile(r"\d{1,6}")
+# Clave de elector INE: exactly 18 alphanumeric characters.
+_CLAVE_RE = re.compile(r"[A-Za-z0-9]{18}")
 
 
 def _clean(v) -> str:
     return re.sub(r"\s+", " ", str(v).strip()) if v is not None else ""
+
+
+def _norm_clave(v) -> Optional[str]:
+    """Normalize a clave de elector cell: strip all whitespace, upper-case, and
+    accept only exactly-18 alphanumeric chars. Anything else → None (absent or
+    garbage), so a bad cell never stores an invalid clave."""
+    s = re.sub(r"\s+", "", _clean(v)).upper()
+    return s if _CLAVE_RE.fullmatch(s) else None
+
+
+def _find_clave_col(ws, hdr: int) -> Optional[int]:
+    """0-based column index of a 'CLAVE DE ELECTOR' header, or None.
+
+    Detected by NAME (not fixed position) because the clave column is optional
+    and appears in varying positions across promotor templates. Scans the two
+    header rows (label may span both) and returns the first column whose joined
+    label contains 'CLAVE'. Index aligns with the ``values_only`` row tuples.
+    """
+    labels: dict[int, str] = {}
+    for row in ws.iter_rows(min_row=hdr, max_row=hdr + 1):
+        for idx, cell in enumerate(row):
+            txt = _clean(cell.value).upper()
+            if txt:
+                labels[idx] = f"{labels.get(idx, '')} {txt}".strip()
+    for idx in sorted(labels):
+        if "CLAVE" in labels[idx]:
+            return idx
+    return None
 
 
 def _fit(v: Optional[str], key: str) -> Optional[str]:
@@ -89,6 +120,8 @@ def parse_workbook(path: str) -> list[dict]:
         # columns are fixed by the standard template (see spec §5):
         # 2 ap1, 3 ap2, 4 nombre, 5 dia, 6 mes, 7 anio, 8 calle, 9 num,
         # 10 colonia, 11 seccion, 12 telefono
+        # clave de elector is OPTIONAL and position-variable → detected by name.
+        clave_idx = _find_clave_col(ws, hdr)
         for row in ws.iter_rows(min_row=hdr + 2, values_only=True):
             row = list(row) + [None] * (12 - len(row))
             ap1, ap2, nombre = _clean(row[1]), _clean(row[2]), _clean(row[3])
@@ -100,6 +133,8 @@ def parse_workbook(path: str) -> list[dict]:
             # cell). Skip it rather than importing garbage / crashing the batch.
             if seccion is not None and not _SECCION_RE.fullmatch(seccion):
                 continue
+            clave = (_norm_clave(row[clave_idx])
+                     if clave_idx is not None and clave_idx < len(row) else None)
             nombre_completo = _clean(f"{nombre} {ap1} {ap2}")
             calle, num = _clean(row[7]), _clean(row[8])
             direccion = _clean(f"{calle} {num}") or None
@@ -118,6 +153,7 @@ def parse_workbook(path: str) -> list[dict]:
                 "observacion": _fit(observacion, "observacion"),
                 "promotor": _fit(promotor, "promotor"),
                 "estructura": _fit(estructura, "estructura"),
+                "clave": clave,
                 "_sheet": ws.title,
                 "_row": None,  # row index attached by caller for client_uuid
             })
@@ -141,6 +177,7 @@ def import_rows(db: Session, *, organization_id: str, campaign_id: str, path: st
     leidas = len(rows)
     importadas = 0
     duplicadas = 0
+    actualizadas = 0  # existing rows backfilled with a clave they were missing
     # stable per-sheet counter for deterministic client_uuid
     per_sheet: dict[str, int] = {}
     for r in rows:
@@ -148,14 +185,22 @@ def import_rows(db: Session, *, organization_id: str, campaign_id: str, path: st
         idx = per_sheet.get(sheet, 0)
         per_sheet[sheet] = idx + 1
         cuid = _client_uuid(path, sheet, idx)
-        exists = db.execute(
-            select(Registro.id).where(
+        clave = r.get("clave")
+        existing = db.execute(
+            select(Registro).where(
                 Registro.campaign_id == campaign_id,
                 Registro.client_uuid == cuid,
             )
         ).scalar_one_or_none()
-        if exists:
-            duplicadas += 1
+        if existing is not None:
+            # Backfill a clave onto an already-imported row that lacks one; never
+            # overwrite an existing clave. Everything else is an idempotent dupe.
+            if clave and not existing.clave_elector_enc:
+                existing.clave_elector_enc = crypto.encrypt_clave(clave)
+                existing.clave_masked = crypto.mask_clave(clave)
+                actualizadas += 1
+            else:
+                duplicadas += 1
             continue
         db.add(Registro(
             organization_id=organization_id,
@@ -170,6 +215,8 @@ def import_rows(db: Session, *, organization_id: str, campaign_id: str, path: st
             estructura=r["estructura"],
             promotor=r["promotor"],
             observacion=r["observacion"],
+            clave_elector_enc=crypto.encrypt_clave(clave) if clave else None,
+            clave_masked=crypto.mask_clave(clave) if clave else None,
             consentimiento=True,
             aviso_version="import-papel-2024",
             client_uuid=cuid,
@@ -180,7 +227,9 @@ def import_rows(db: Session, *, organization_id: str, campaign_id: str, path: st
         db, action="registro.import", actor_id=actor_id,
         organization_id=organization_id, entity_type="registro_batch",
         entity_id=file_ref,
-        meta={"leidas": leidas, "importadas": importadas, "duplicadas": duplicadas},
+        meta={"leidas": leidas, "importadas": importadas,
+              "duplicadas": duplicadas, "actualizadas": actualizadas},
     )
     db.commit()
-    return {"leidas": leidas, "importadas": importadas, "duplicadas": duplicadas}
+    return {"leidas": leidas, "importadas": importadas,
+            "duplicadas": duplicadas, "actualizadas": actualizadas}
