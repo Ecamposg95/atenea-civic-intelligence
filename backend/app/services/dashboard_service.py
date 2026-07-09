@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import CampaignContext
 from app.models.campaign import Contest
-from app.services import caso_service, militante_service, operacion_service
+from app.services import caso_service, militante_service, operacion_service, scrum_service
 
 
 def _election_date(db: Session, ctx: CampaignContext):
@@ -59,4 +59,5 @@ def executive(db: Session, ctx: CampaignContext) -> dict:
         "por_seccion_top": [{"seccion": s["seccion"], "promovidos": s["promovidos"]} for s in top],
         "casos_por_estado": [{"estado": e, "n": n} for e, n in por_estado.items()],
         "alertas": [{"seccion": a["seccion"], "faltan": a["faltan"]} for a in seg["alertas"]],
+        "scrum": scrum_service.scrum_summary(db, ctx),
     }

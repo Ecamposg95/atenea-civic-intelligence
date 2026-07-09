@@ -419,3 +419,33 @@ def burndown(db: Session, ctx: CampaignContext, sid: str) -> Optional[dict]:
         ideal = round(total * (1 - k / (n - 1))) if n > 1 else 0
         serie.append({"fecha": d, "restante": total - completado, "ideal": ideal})
     return {"total_puntos": total, "dias": serie}
+
+
+def scrum_summary(db: Session, ctx: CampaignContext) -> dict:
+    from datetime import date as _date
+    s = active_sprint(db, ctx)
+    sprint_activo = None
+    por_columna = {"POR_HACER": 0, "EN_CURSO": 0, "HECHO": 0}
+    atrasados = 0
+    sin_estimar = 0
+    if s is not None:
+        m = sprint_metrics(db, ctx, s.id)
+        por_columna = m["por_estado"]
+        sin_estimar = m["sin_estimar"]
+        pct = round(100 * m["completado"] / m["comprometido"]) if m["comprometido"] else 0
+        sprint_activo = {
+            "id": s.id, "nombre": s.nombre,
+            "fecha_inicio": s.fecha_inicio, "fecha_fin": s.fecha_fin,
+            "comprometido": m["comprometido"], "completado": m["completado"], "pct": pct,
+        }
+        if s.fecha_fin < _date.today():
+            atrasados = por_columna["POR_HACER"] + por_columna["EN_CURSO"]
+    vel = velocidad(db, ctx, n=6)
+    return {
+        "sprint_activo": sprint_activo,
+        "por_columna": por_columna,
+        "velocidad_ultima": vel[0]["velocidad"] if vel else None,
+        "velocidad_tendencia": [v["velocidad"] for v in reversed(vel)],
+        "sin_estimar": sin_estimar,
+        "atrasados": atrasados,
+    }

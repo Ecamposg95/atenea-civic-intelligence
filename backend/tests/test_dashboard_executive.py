@@ -49,3 +49,18 @@ def test_election_date_seed_idempotent(monkeypatch):
         db.execute(delete(Contest).where(Contest.campaign_id == cid))
         db.execute(delete(Campaign).where(Campaign.id == cid))
         db.commit(); db.close()
+
+
+def test_executive_has_scrum_block(db_session, coordinador_ctx):
+    from app.services import dashboard_service, scrum_service
+    from app.schemas.scrum import SprintCreate, WorkItemCreate
+    s = scrum_service.create_sprint(db_session, coordinador_ctx,
+        SprintCreate(nombre="S", fecha_inicio="2026-07-08", fecha_fin="2026-07-22"))
+    scrum_service.activar_sprint(db_session, coordinador_ctx, s.id)
+    scrum_service.create_workitem(db_session, coordinador_ctx,
+        WorkItemCreate(titulo="h", story_points=5, sprint_id=s.id))
+    ex = dashboard_service.executive(db_session, coordinador_ctx)
+    assert "scrum" in ex
+    assert ex["scrum"]["sprint_activo"]["nombre"] == "S"
+    assert ex["scrum"]["sprint_activo"]["comprometido"] == 5
+    assert ex["scrum"]["por_columna"]["POR_HACER"] == 1
