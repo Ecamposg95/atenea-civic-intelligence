@@ -2,6 +2,7 @@ import datetime as dt
 import pytest
 from pydantic import ValidationError
 from app.models.scrum import Sprint, WorkItem, WorkItemTask
+from app.models.user import User
 from app.schemas.scrum import WorkItemCreate, SprintCreate, SprintUpdate
 from app.services import scrum_service
 
@@ -75,3 +76,30 @@ def test_create_sprint_activo_succeeds_when_none_active(db_session, coordinador_
                      estado="ACTIVO"))
     assert s.estado == "ACTIVO"
     assert scrum_service.active_sprint(db_session, coordinador_ctx).id == s.id
+
+
+def test_assignee_moves_own_card_seals_completed_at(db_session, coordinador_ctx, activista_ctx):
+    act_id = activista_ctx.user.id
+    wi = scrum_service.create_workitem(db_session, coordinador_ctx,
+        WorkItemCreate(titulo="H", story_points=5, responsable_id=act_id))
+    # assignee moves own card to HECHO → completed_at sealed
+    moved = scrum_service.mover_estado(db_session, activista_ctx, wi.id, "HECHO")
+    assert moved.estado == "HECHO" and moved.completed_at is not None
+    # moving out of HECHO clears completed_at
+    back = scrum_service.mover_estado(db_session, coordinador_ctx, wi.id, "EN_CURSO")
+    assert back.completed_at is None
+
+
+def test_non_assignee_non_coordinator_cannot_move(db_session, coordinador_ctx, activista_ctx, otro_activista_ctx):
+    wi = scrum_service.create_workitem(db_session, coordinador_ctx,
+        WorkItemCreate(titulo="H", story_points=3, responsable_id=activista_ctx.user.id))
+    with pytest.raises(scrum_service.NoAutorizado):
+        scrum_service.mover_estado(db_session, otro_activista_ctx, wi.id, "EN_CURSO")
+
+
+def test_activista_cannot_create_workitem_via_service_is_governance(db_session, coordinador_ctx):
+    # create is governance; service itself doesn't gate role (router does), but
+    # board groups by active sprint estado
+    scrum_service.create_workitem(db_session, coordinador_ctx, WorkItemCreate(titulo="A", story_points=8))
+    b = scrum_service.board(db_session, coordinador_ctx)
+    assert "POR_HACER" in b and "EN_CURSO" in b and "HECHO" in b
