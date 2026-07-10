@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import type { AxiosRequestConfig } from "axios";
 
 export type MilitanteEstado = "REGISTRADO" | "VALIDADO" | "OBSERVADO";
 
@@ -41,16 +42,23 @@ export interface Panorama {
   trend: number[];
 }
 
-export async function createMilitante(payload: MilitanteCreate): Promise<Militante> {
-  return (await apiClient.post("/militantes", payload)).data;
+export async function createMilitante(payload: MilitanteCreate, config?: AxiosRequestConfig): Promise<Militante> {
+  return (await apiClient.post("/militantes", payload, config)).data;
 }
 
-export async function uploadDocumento(id: string, tipo: "frente" | "reverso" | "firma", blob: Blob): Promise<Militante> {
+export async function uploadDocumento(
+  id: string,
+  tipo: "frente" | "reverso" | "firma",
+  blob: Blob,
+  config?: AxiosRequestConfig,
+): Promise<Militante> {
   const fd = new FormData();
   fd.append("tipo", tipo);
   fd.append("file", blob, `${tipo}.jpg`);
-  return (await apiClient.post(`/militantes/${id}/documento`, fd,
-    { headers: { "Content-Type": "multipart/form-data" } })).data;
+  return (await apiClient.post(`/militantes/${id}/documento`, fd, {
+    ...config,
+    headers: { ...config?.headers, "Content-Type": "multipart/form-data" },
+  })).data;
 }
 
 export async function listMilitantes(params: Record<string, string | number | undefined> = {}): Promise<MilitanteList> {

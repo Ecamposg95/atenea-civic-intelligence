@@ -20,12 +20,18 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Attach active campaign id on every request.
+// Attach active campaign id on every request — but only when the caller
+// didn't already pin an explicit X-Campaign-Id on the request config. This
+// lets callers (e.g. the offline drain) override the header per-request to
+// pin a job to the campaign it was captured under, instead of always
+// getting whatever campaign happens to be active right now.
 apiClient.interceptors.request.use((config) => {
   try {
-    const campaignId = localStorage.getItem(CAMPAIGN_KEY);
-    if (campaignId) {
-      config.headers["X-Campaign-Id"] = campaignId;
+    if (!config.headers["X-Campaign-Id"]) {
+      const campaignId = localStorage.getItem(CAMPAIGN_KEY);
+      if (campaignId) {
+        config.headers["X-Campaign-Id"] = campaignId;
+      }
     }
   } catch {
     /* ignore – localStorage may be unavailable */

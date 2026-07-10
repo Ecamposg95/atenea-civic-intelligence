@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import type { AxiosRequestConfig } from "axios";
 
 // FormField: individual form input definition
 export interface FormField {
@@ -124,8 +125,11 @@ export async function updateForm(id: string, payload: Partial<FormDefinition>): 
   return (await apiClient.patch(`/forms/${id}`, payload)).data;
 }
 
-export async function submitResponse(payload: Record<string, unknown>): Promise<FormResponsePayload> {
-  return (await apiClient.post("/responses", payload)).data;
+export async function submitResponse(
+  payload: Record<string, unknown>,
+  config?: AxiosRequestConfig,
+): Promise<FormResponsePayload> {
+  return (await apiClient.post("/responses", payload, config)).data;
 }
 
 // ============================================================================

@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { DataState } from "@/components/ui/DataState";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { StatusPill } from "@/components/ui/StatusPill";
 import { AlertIcon } from "@/components/ui/icons";
 import { useAsync } from "@/hooks/useAsync";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -17,6 +18,9 @@ import {
   type FormDefinition,
 } from "@/api/atencion";
 import { PhotoCapture } from "@/modules/militantes/components/PhotoCapture";
+import { enqueueJob } from "@/offline/queue";
+import { isNetworkError } from "@/offline/sync";
+import { usePendingSyncStore } from "@/store/pendingSyncStore";
 
 import { DynamicForm, isVisible, validate } from "./components/DynamicForm";
 import { scanIne, type IneFields } from "./lib/ocr";
@@ -73,10 +77,16 @@ function CheckIcon() {
 interface SubmitResult {
   casoId?: string;
   folio?: string;
+  /** True when the response was queued for background sync rather than
+   * confirmed by the server — no folio/caso exists yet at this point. */
+  offline?: boolean;
 }
 
 export default function CapturaAtencionPage() {
   const isOnline = useOnlineStatus();
+  const { refresh: refreshPending } = usePendingSyncStore();
+  const campaignId = localStorage.getItem("agora-campaign") ?? "";
+
   const formsState = useAsync(() => listForms(), []);
   const eligibleForms = (formsState.data ?? []).filter(isEligible);
 
@@ -94,6 +104,13 @@ export default function CapturaAtencionPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<SubmitResult | null>(null);
 
+  // Stable per form instance so an online submit that falls back to the
+  // offline queue (network error mid-request) and a genuinely offline submit
+  // both carry the same id — the backend dedupes `/responses` by
+  // `client_uuid`, so a retried/queued submit can never create a duplicate
+  // response. Regenerated whenever capture resets for the next person.
+  const [clientUuid, setClientUuid] = useState<string>(() => crypto.randomUUID());
+
   function resetCapture() {
     setAnswers({});
     setErrors({});
@@ -102,6 +119,7 @@ export default function CapturaAtencionPage() {
     setScanning(false);
     setScanMessage(null);
     setSubmitError(null);
+    setClientUuid(crypto.randomUUID());
   }
 
   function handleSelectForm(id: string) {
@@ -202,21 +220,48 @@ export default function CapturaAtencionPage() {
       Object.entries(answers).filter(([key]) => !fotoKeys.has(key) && visibleKeys.has(key)),
     );
 
-    try {
-      const resp = await submitResponse({
-        form_definition_id: form.id,
-        answers: payloadAnswers,
-      });
+    // `client_uuid` makes a queued/retried submit idempotent server-side —
+    // harmless when submitted online, required for the offline fallback.
+    const payload = {
+      form_definition_id: form.id,
+      answers: payloadAnswers,
+      client_uuid: clientUuid,
+    };
 
-      let folio: string | undefined;
-      if (resp.caso_id) {
+    const queueOffline = async () => {
+      await enqueueJob("response", payload, campaignId, []);
+      setResult({ offline: true });
+      await refreshPending();
+    };
+
+    try {
+      if (!navigator.onLine) {
+        // No connectivity at all — skip the network attempt entirely.
+        await queueOffline();
+      } else {
         try {
-          folio = (await getCaso(resp.caso_id)).folio;
-        } catch {
-          /* best-effort — fall back to showing the caso id below */
+          const resp = await submitResponse(payload);
+
+          let folio: string | undefined;
+          if (resp.caso_id) {
+            try {
+              folio = (await getCaso(resp.caso_id)).folio;
+            } catch {
+              /* best-effort — fall back to showing the caso id below */
+            }
+          }
+          setResult({ casoId: resp.caso_id, folio });
+        } catch (err) {
+          // Connectivity dropped mid-submit — fall back to the offline queue
+          // instead of surfacing a hard error. Any other error (validation,
+          // auth, server) is a real failure and must not be swallowed.
+          if (isNetworkError(err)) {
+            await queueOffline();
+          } else {
+            throw err;
+          }
         }
       }
-      setResult({ casoId: resp.caso_id, folio });
     } catch (err) {
       setSubmitError(
         err instanceof Error ? err.message : "No se pudo enviar la captura.",
@@ -232,30 +277,30 @@ export default function CapturaAtencionPage() {
     setResult(null);
   }
 
-  /* ------------------------------------------------------------ offline */
+  /* ------------------------------------------------------------ success */
 
-  if (!isOnline) {
+  if (result?.offline) {
     return (
       <AppLayout title="Atención Ciudadana" crumb="Atención Ciudadana">
         <PageHeader eyebrow="Atención Ciudadana" title="Captura" accent="Interna" />
-        <div className="card-premium flex flex-col items-center gap-4 px-5 py-12 text-center">
-          <span className="metric-chip h-12 w-12 text-state-warning">
+        <div className="reveal flex flex-col items-center gap-5 py-10 text-center">
+          <span className="metric-chip h-14 w-14 text-state-warning">
             <AlertIcon width={20} height={20} />
           </span>
           <div>
-            <p className="font-semibold text-ink">Necesitas conexión para capturar</p>
+            <p className="font-semibold text-ink">Guardado sin conexión</p>
             <p className="mt-1 max-w-sm text-sm text-ink-muted">
-              La captura de atención ciudadana requiere conexión a internet
-              para cargar el formulario y enviar tu registro. Vuelve a
-              intentarlo cuando tengas señal.
+              Se registrará al reconectar — no necesitas hacer nada más. El
+              folio se asignará una vez que el servidor confirme la captura.
             </p>
           </div>
+          <button type="button" className="btn-primary" onClick={resetAll}>
+            Capturar otro
+          </button>
         </div>
       </AppLayout>
     );
   }
-
-  /* ------------------------------------------------------------ success */
 
   if (result) {
     return (
@@ -329,6 +374,15 @@ export default function CapturaAtencionPage() {
           ) : undefined
         }
       />
+
+      {!isOnline && (
+        <div className="reveal mb-2">
+          <StatusPill kind="warn">
+            Sin conexión — se guardará en este dispositivo y se sincronizará
+            al reconectar
+          </StatusPill>
+        </div>
+      )}
 
       <div className="flex flex-col gap-4">
         <section className="reveal flex flex-col gap-3" style={{ animationDelay: "100ms" }}>

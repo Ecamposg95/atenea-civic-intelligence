@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 
 import { CampaignSwitcher } from "@/components/layout/CampaignSwitcher";
+import { PendingSyncIndicator } from "@/components/captura/PendingSyncIndicator";
 import { LogoutIcon } from "@/components/ui/icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useAuthStore } from "@/store/authStore";
@@ -54,6 +55,7 @@ export function Topbar({ title, crumb, onMenu }: TopbarProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <PendingSyncIndicator />
         <CampaignSwitcher />
         <ThemeToggle />
         <span className="pill hidden border-teal/30 bg-teal/10 text-teal md:inline-flex">

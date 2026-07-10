@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ComingSoonPage } from "@/components/modules/ComingSoonPage";
 import { MINUTAS_READ, MINUTAS_WRITE, MODULES } from "@/modules/registry";
 import { useAuthStore } from "@/store/authStore";
+import { usePendingSyncStore } from "@/store/pendingSyncStore";
 import type { UserRole } from "@/types/auth";
 
 // Route-level code splitting: heavy deps (MapLibre, Recharts) load only on the
@@ -75,7 +76,53 @@ function RouteFallback() {
   );
 }
 
+/**
+ * Module-level guard: ensures the `online` drain listener is attached at most
+ * once for the lifetime of the page, even if this effect re-runs (React
+ * StrictMode's dev double-invoke, HMR, etc.). Without it, each extra mount
+ * cycle would stack another listener on `window`.
+ */
+let globalOnlineDrainWired = false;
+
+/**
+ * Wires the offline queue to the app's lifecycle, independent of whichever
+ * page happens to be mounted — so a reconnect drains the queue even when the
+ * user isn't on the legacy CapturaPage (which keeps its own page-scoped
+ * drain-on-reconnect effect; both are safe to run together because
+ * `drainQueue` is guarded against concurrent runs).
+ *
+ * Gated on `isAuthenticated`: draining while logged out would send requests
+ * with no auth header, which the queue's handlers would read back as a
+ * permanent 401 and mark rows "failed" for no good reason.
+ */
+function useGlobalOfflineSync() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    void usePendingSyncStore.getState().refresh();
+    if (navigator.onLine) void usePendingSyncStore.getState().triggerSync();
+
+    if (globalOnlineDrainWired) return;
+    globalOnlineDrainWired = true;
+
+    const handleOnline = () => {
+      if (!useAuthStore.getState().isAuthenticated) return;
+      void usePendingSyncStore.getState().triggerSync();
+    };
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      globalOnlineDrainWired = false;
+    };
+  }, [isAuthenticated]);
+}
+
 export default function App() {
+  useGlobalOfflineSync();
+
   return (
     <BrowserRouter>
       <Suspense fallback={<RouteFallback />}>

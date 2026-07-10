@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import type { AxiosRequestConfig } from "axios";
 import type { UserRole } from "@/types/auth";
 
 export interface Registro {
@@ -69,8 +70,11 @@ export async function listMisRegistros(
   return data;
 }
 
-export async function createRegistro(payload: RegistroCreate): Promise<Registro> {
-  const { data } = await apiClient.post<Registro>("/registros", payload);
+export async function createRegistro(
+  payload: RegistroCreate,
+  config?: AxiosRequestConfig,
+): Promise<Registro> {
+  const { data } = await apiClient.post<Registro>("/registros", payload, config);
   return data;
 }
 

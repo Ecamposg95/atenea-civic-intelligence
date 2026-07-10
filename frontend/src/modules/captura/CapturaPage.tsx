@@ -17,7 +17,6 @@ import {
 import { enqueue } from "@/offline/queue";
 import { isNetworkError } from "@/offline/sync";
 import { usePendingSyncStore } from "@/store/pendingSyncStore";
-import { PendingSyncIndicator } from "@/components/captura/PendingSyncIndicator";
 
 /* ------------------------------------------------------------------ types */
 
@@ -214,7 +213,6 @@ export function CapturaPage() {
         subtitle="Registra personas captadas en campo con consentimiento y datos verificados."
         actions={
           <div className="flex items-center gap-2">
-            <PendingSyncIndicator />
             <div className="metric-chip flex h-14 w-16 flex-col items-center justify-center gap-0.5 text-accent">
               <span className="font-display text-xl font-bold leading-none tabular-nums">
                 {registros.length}

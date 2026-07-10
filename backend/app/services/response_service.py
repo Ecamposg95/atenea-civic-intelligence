@@ -13,6 +13,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core import crypto
+from app.core.scoping import scoped_query
 from app.dependencies import CampaignContext
 from app.models.atencion import FormResponse
 from app.services import caso_service, form_service
@@ -42,6 +43,14 @@ def crear_response(db: Session, ctx: CampaignContext, data, *,
     - Delegates Caso creation to caso_service.crear_desde_respuesta, which
       links both directions (Caso.origin_response_id / response.caso_id).
     """
+    if data.client_uuid:
+        existing = db.execute(
+            scoped_query(FormResponse, ctx)
+            .where(FormResponse.client_uuid == data.client_uuid)
+        ).scalar_one_or_none()
+        if existing is not None:
+            return existing  # idempotente: no re-crea (ni abre otro caso)
+
     form = form_service.get_form(db, ctx, data.form_definition_id)
     if form is None:
         raise FormNotFound()
