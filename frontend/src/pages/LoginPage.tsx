@@ -3,31 +3,20 @@ import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/Button";
 import {
-  AnalyticsIcon,
-  LayersIcon,
+  AlertIcon,
+  EyeIcon,
+  EyeOffIcon,
   LogoMark,
-  MapIcon,
   ShieldIcon,
 } from "@/components/ui/icons";
 import { useAuthStore } from "@/store/authStore";
-
-const FEATURES = [
-  { icon: MapIcon, label: "Mapas electorales y territoriales" },
-  { icon: AnalyticsIcon, label: "Analítica de participación" },
-  { icon: LayersIcon, label: "Gobernanza de datos electorales" },
-];
-
-const CAPABILITIES = [
-  "API-first · Multi-tenant",
-  "PostGIS · Geoespacial",
-  "Auditoría integral",
-];
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { login, loading, error } = useAuthStore();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -54,79 +43,41 @@ export function LoginPage() {
       />
 
       <div className="relative grid min-h-screen grid-cols-1 lg:grid-cols-2">
-        {/* Left — brand showcase */}
-        <aside className="relative hidden flex-col justify-between overflow-hidden p-12 lg:flex xl:p-16">
-          <div
-            className="reveal flex items-center gap-3"
-            style={{ animationDelay: "0ms" }}
-          >
-            <div className="metric-chip relative h-11 w-11 text-accent shadow-glow">
-              <LogoMark width={24} height={24} />
-            </div>
-            <div>
-              <div className="font-display text-base font-semibold tracking-tight text-ink">
-                Atenea
-              </div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-ink-faint">
-                Civic Intelligence
-              </div>
-            </div>
-          </div>
-
-          <div className="relative max-w-lg">
-            <div className="reveal eyebrow" style={{ animationDelay: "80ms" }}>
-              GovTech Command Center
-            </div>
-            <h1
-              className="reveal mt-4 font-display text-4xl font-bold leading-[1.05] tracking-tight text-ink xl:text-5xl"
-              style={{ animationDelay: "140ms" }}
-            >
-              <span className="text-gradient">Inteligencia cívica</span>,
-              <br />
-              electoral y territorial.
-            </h1>
-            <p
-              className="reveal mt-5 max-w-md text-sm leading-relaxed text-ink-muted"
-              style={{ animationDelay: "200ms" }}
-            >
-              Plataforma privacy-by-design para instituciones: mapas unificados,
-              dashboards ejecutivos, gobernanza de datos electorales y analítica
-              de participación, con auditabilidad total.
-            </p>
-
-            <ul className="mt-8 space-y-3.5">
-              {FEATURES.map(({ icon: Icon, label }, i) => (
-                <li
-                  key={label}
-                  className="reveal flex items-center gap-3 text-sm text-ink-muted"
-                  style={{ animationDelay: `${260 + i * 70}ms` }}
-                >
-                  <span className="metric-chip h-9 w-9 text-accent">
-                    <Icon width={16} height={16} />
-                  </span>
-                  {label}
-                </li>
-              ))}
-            </ul>
-
+        {/* Left — brand */}
+        <aside className="relative hidden flex-col items-start justify-center overflow-hidden p-12 lg:flex xl:p-20">
+          <div className="relative">
             <div
-              className="reveal mt-9 flex flex-wrap gap-2.5"
-              style={{ animationDelay: "480ms" }}
+              className="reveal flex items-center gap-3.5"
+              style={{ animationDelay: "0ms" }}
             >
-              {CAPABILITIES.map((cap) => (
-                <span
-                  key={cap}
-                  className="pill border-line-strong font-mono uppercase tracking-wider text-ink-muted"
-                >
-                  {cap}
-                </span>
-              ))}
+              <div className="metric-chip relative h-14 w-14 text-accent shadow-glow">
+                <LogoMark width={30} height={30} />
+              </div>
+              <div>
+                <div className="font-display text-2xl font-bold tracking-tight text-ink">
+                  Atenea
+                </div>
+                <div className="text-[11px] uppercase tracking-[0.18em] text-ink-faint">
+                  Civic Intelligence
+                </div>
+              </div>
             </div>
+
+            <h1
+              className="reveal mt-10 max-w-md font-display text-4xl font-bold leading-[1.08] tracking-tight text-ink xl:text-5xl"
+              style={{ animationDelay: "120ms" }}
+            >
+              <span className="text-gradient">Inteligencia</span>
+              <br />
+              que se convierte
+              <br />
+              en acción.
+            </h1>
           </div>
 
           <div
-            className="reveal flex items-center gap-2 text-xs text-ink-faint"
-            style={{ animationDelay: "560ms" }}
+            className="reveal absolute bottom-12 left-12 flex items-center gap-2 text-xs text-ink-faint xl:left-20"
+            style={{ animationDelay: "260ms" }}
           >
             <ShieldIcon width={15} height={15} /> Privacy-by-design · Audit-logged
             · Multi-tenant ready
@@ -165,6 +116,9 @@ export function LoginPage() {
                   <input
                     id="identifier"
                     type="text"
+                    inputMode="text"
+                    autoComplete="username"
+                    autoFocus
                     className="field-input"
                     placeholder="Teléfono o correo electrónico"
                     value={identifier}
@@ -176,20 +130,46 @@ export function LoginPage() {
                   <label htmlFor="password" className="field-label">
                     Contraseña
                   </label>
-                  <input
-                    id="password"
-                    type="password"
-                    className="field-input"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      className="field-input pr-11"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={
+                        showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                      }
+                      aria-pressed={showPassword}
+                      className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-ink-faint transition-colors hover:text-ink-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                    >
+                      {showPassword ? (
+                        <EyeOffIcon width={17} height={17} />
+                      ) : (
+                        <EyeIcon width={17} height={17} />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {error && (
-                  <div className="reveal rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical">
-                    {error}
+                  <div
+                    role="alert"
+                    className="reveal flex items-start gap-2 rounded-lg border border-state-critical/40 bg-state-critical/10 px-3 py-2 text-sm text-state-critical"
+                  >
+                    <AlertIcon
+                      width={16}
+                      height={16}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <span>{error}</span>
                   </div>
                 )}
 
@@ -202,10 +182,6 @@ export function LoginPage() {
                   {loading ? "Autenticando…" : "Iniciar sesión"}
                 </Button>
               </form>
-
-              <p className="mt-6 text-center text-[11px] text-ink-faint">
-                Conecta credenciales institucionales para continuar.
-              </p>
             </div>
           </div>
         </section>

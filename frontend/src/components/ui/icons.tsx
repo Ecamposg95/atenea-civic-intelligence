@@ -60,6 +60,21 @@ export const ShieldIcon = (p: IconProps) => (
   </svg>
 );
 
+export const EyeIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+export const EyeOffIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M10.7 6.2A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17.3 17.3 0 0 1-2.9 3.5M6.3 6.3A17.4 17.4 0 0 0 2 12s3.5 7 10 7a9.9 9.9 0 0 0 4-.8" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    <path d="M3 3l18 18" />
+  </svg>
+);
+
 export const SearchIcon = (p: IconProps) => (
   <svg {...base(p)} width={16} height={16}>
     <circle cx="11" cy="11" r="7" />
