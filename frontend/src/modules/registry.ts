@@ -50,8 +50,11 @@ const ALL: UserRole[] = [
 // COORDINADOR is a campaign/territory operator, NOT an intelligence viewer, so
 // she is intentionally excluded here.
 const INTEL: UserRole[] = ["superadmin", "admin", "lider", "analyst", "viewer"];
-// Territory/operational intel a coordinador DOES keep (Map Explorer, Territorios).
+// Territory/operational intel a coordinador DOES keep (San Mateo Atenco panorama).
 const INTEL_TERRITORY: UserRole[] = ["superadmin", "admin", "coordinador", "lider", "analyst", "viewer"];
+// Analyst-tier intelligence library (Mapa, Territorios) — national-scope GIS
+// tools misaimed for an operator; coordinador/lider are excluded (UX-4 A).
+const INTEL_ANALYST: UserRole[] = ["superadmin", "admin", "analyst", "viewer"];
 // Generic console tier (e.g. Participación) — coordinador excluded.
 const CONSOLE: UserRole[] = ["superadmin", "admin", "lider"];
 // Activist console a coordinador owns (dashboard, registros).
@@ -266,7 +269,7 @@ export const MODULES: ModuleDef[] = [
   { key: "dashboard", path: "/", label: "Inicio", section: "operacion", icon: DashboardIcon, state: "active", element: Dashboard, end: true, roles: ALL },
 
   // Inteligencia Electoral (ex-plataforma data/analysis tools + existing intel datasets)
-  { key: "maps", path: "/maps", label: "Mapa", section: "inteligencia", icon: MapIcon, state: "active", element: MapExplorer, roles: INTEL_TERRITORY },
+  { key: "maps", path: "/maps", label: "Mapa", section: "inteligencia", icon: MapIcon, state: "active", element: MapExplorer, roles: INTEL_ANALYST },
   { key: "analytics", path: "/analytics", label: "Analítica", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Analytics, roles: INTEL },
   { key: "sources", path: "/sources", label: "Fuentes", section: "inteligencia", icon: DatabaseIcon, state: "active", element: Sources, roles: ["superadmin", "admin", "analyst"] },
   { key: "busqueda", path: "/busqueda", label: "Búsqueda", section: "inteligencia", icon: SearchIcon, state: "active", element: Busqueda, roles: INTEL },
@@ -281,7 +284,7 @@ export const MODULES: ModuleDef[] = [
     },
   },
   { key: "municipio-panorama", path: "/municipio", label: "San Mateo Atenco", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: PanoramaMunicipio, roles: INTEL_TERRITORY },
-  { key: "territorios", path: "/territorios", label: "Territorios", section: "inteligencia", icon: LayersIcon, state: "active", element: Territorios, roles: INTEL_TERRITORY },
+  { key: "territorios", path: "/territorios", label: "Territorios", section: "inteligencia", icon: LayersIcon, state: "active", element: Territorios, roles: INTEL_ANALYST },
   { key: "ieem", path: "/ieem", label: "IEEM", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Ieem, roles: INTEL },
   { key: "worldbank", path: "/indicadores", label: "Indicadores", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: WorldBank, roles: INTEL },
   { key: "economia", path: "/economia", label: "Economía", section: "inteligencia", icon: DatabaseIcon, state: "preview", element: Economia, roles: INTEL },
@@ -304,8 +307,8 @@ export const MODULES: ModuleDef[] = [
   // in-page to SCRUM_GOV (coordinador/admin), mover-tarjeta is open to the
   // whole read tier with ownership enforced server-side.
   { key: "scrum-tablero", path: "/tablero", label: "Tablero", section: "operacion", icon: LayersIcon, state: "active", element: Tablero, roles: MINUTAS_READ },
-  { key: "scrum-backlog", path: "/backlog", label: "Backlog", section: "operacion", icon: DatabaseIcon, state: "active", element: Backlog, roles: MINUTAS_READ },
-  { key: "scrum-sprints", path: "/sprints", label: "Sprints", section: "operacion", icon: AnalyticsIcon, state: "active", element: Sprints, roles: MINUTAS_READ },
+  { key: "scrum-backlog", path: "/backlog", label: "Pendientes", section: "operacion", icon: DatabaseIcon, state: "active", element: Backlog, roles: MINUTAS_READ },
+  { key: "scrum-sprints", path: "/sprints", label: "Ciclos", section: "operacion", icon: AnalyticsIcon, state: "active", element: Sprints, roles: MINUTAS_READ },
   { key: "promovidos", path: "/promovidos", label: "Promovidos", section: "operacion", icon: VotersIcon, state: "active", element: Promovidos, roles: ["superadmin", "admin", "coordinador", "lider"] },
   { key: "militantes-captura", path: "/militantes/captura", label: "Afiliar militante", section: "operacion", icon: VotersIcon, state: "active", element: CapturaMilitante, roles: CONSOLE_CAPTURA },
   { key: "militantes", path: "/militantes", label: "Afiliación", section: "operacion", icon: VotersIcon, state: "active", element: PanoramaMilitantes, roles: ["superadmin", "admin", "coordinador"], end: true },

@@ -23,7 +23,7 @@ interface Props {
   onChanged: () => void;
 }
 
-const TIPO_LABEL: Record<string, string> = { HISTORIA: "Historia", TAREA: "Tarea", BUG: "Bug" };
+const TIPO_LABEL: Record<string, string> = { HISTORIA: "Historia", TAREA: "Tarea", BUG: "Incidencia" };
 const ESTADO_LABEL: Record<string, string> = { POR_HACER: "Por hacer", EN_CURSO: "En curso", HECHO: "Hecho" };
 const PRIORIDAD_LABEL: Record<string, string> = { ALTA: "Alta", MEDIA: "Media", BAJA: "Baja" };
 const PRIORIDAD_CLASS: Record<string, string> = {
@@ -184,12 +184,18 @@ export function WorkItemDetail({ id, onClose, onChanged }: Props) {
 
               <dl className="divide-y divide-line/60">
                 <div className="flex items-center justify-between gap-3 py-2 text-sm">
-                  <span className="text-ink-faint">Puntos</span>
+                  <span className="text-ink-faint">
+                    Esfuerzo{" "}
+                    {canGovern && (
+                      <span className="text-[11px] font-normal normal-case text-ink-faint/70">(dificultad 1-21)</span>
+                    )}
+                  </span>
                   {canGovern ? (
                     <select
                       className="field-input focus-ring h-9 w-28 text-sm"
                       value={wi.story_points ?? ""}
                       disabled={savingField}
+                      title="Esfuerzo (dificultad 1-21)"
                       onChange={(e) =>
                         patchField({ story_points: e.target.value === "" ? null : Number(e.target.value) })
                       }
@@ -228,7 +234,7 @@ export function WorkItemDetail({ id, onClose, onChanged }: Props) {
                 </div>
 
                 <div className="flex items-center justify-between gap-3 py-2 text-sm">
-                  <span className="text-ink-faint">Sprint</span>
+                  <span className="text-ink-faint">Ciclo</span>
                   {canGovern ? (
                     <select
                       className="field-input focus-ring h-9 w-44 text-sm"
@@ -236,7 +242,7 @@ export function WorkItemDetail({ id, onClose, onChanged }: Props) {
                       disabled={savingField}
                       onChange={(e) => patchField({ sprint_id: e.target.value || null })}
                     >
-                      <option value="">Backlog</option>
+                      <option value="">Pendientes</option>
                       {sprints.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.nombre}
@@ -245,7 +251,7 @@ export function WorkItemDetail({ id, onClose, onChanged }: Props) {
                     </select>
                   ) : (
                     <span className="text-ink">
-                      {sprints.find((s) => s.id === wi.sprint_id)?.nombre ?? (wi.sprint_id ? "—" : "Backlog")}
+                      {sprints.find((s) => s.id === wi.sprint_id)?.nombre ?? (wi.sprint_id ? "—" : "Pendientes")}
                     </span>
                   )}
                 </div>

@@ -18,7 +18,7 @@ const PAGE = 20;
 // and filter/sort/paginate client-side, same convention as MisAcuerdosPage.
 const FETCH_LIMIT = 200;
 
-const TIPO_LABEL: Record<string, string> = { HISTORIA: "Historia", TAREA: "Tarea", BUG: "Bug" };
+const TIPO_LABEL: Record<string, string> = { HISTORIA: "Historia", TAREA: "Tarea", BUG: "Incidencia" };
 const PRIORIDAD_LABEL: Record<string, string> = { ALTA: "Alta", MEDIA: "Media", BAJA: "Baja" };
 const ESTADO_LABEL: Record<string, string> = { POR_HACER: "Por hacer", EN_CURSO: "En curso", HECHO: "Hecho" };
 const FIBONACCI = [1, 2, 3, 5, 8, 13, 21];
@@ -101,7 +101,7 @@ export function BacklogPage() {
     },
     {
       key: "story_points",
-      header: "Puntos",
+      header: "Esfuerzo",
       align: "right",
       sortValue: (w) => w.story_points ?? -1,
       render: (w) => <span className="font-mono text-ink-muted">{w.story_points ?? "–"}</span>,
@@ -113,10 +113,10 @@ export function BacklogPage() {
     },
     {
       key: "sprint",
-      header: "Sprint",
+      header: "Ciclo",
       hideOnCard: true,
       render: (w) => (
-        <span className="text-ink-muted">{w.sprint_id ? sprintName.get(w.sprint_id) ?? "—" : "Backlog"}</span>
+        <span className="text-ink-muted">{w.sprint_id ? sprintName.get(w.sprint_id) ?? "—" : "Pendientes"}</span>
       ),
     },
     {
@@ -135,12 +135,12 @@ export function BacklogPage() {
   ];
 
   return (
-    <AppLayout title="Backlog" crumb="Ciudadanía">
+    <AppLayout title="Pendientes" crumb="Ciudadanía">
       <PageHeader
         eyebrow="Ciudadanía"
-        title="Backlog"
+        title="Pendientes"
         accent="Scrum"
-        subtitle="Historias, tareas y bugs de la campaña — estímalas, asígnalas y muévelas a un sprint."
+        subtitle="Historias, tareas e incidencias de la campaña — estímalas, asígnalas y muévelas a un ciclo."
         actions={
           canGovern ? (
             <button type="button" className="btn-primary focus-ring" onClick={() => setShowForm((v) => !v)}>
@@ -172,7 +172,7 @@ export function BacklogPage() {
               >
                 <option value="HISTORIA">Historia</option>
                 <option value="TAREA">Tarea</option>
-                <option value="BUG">Bug</option>
+                <option value="BUG">Incidencia</option>
               </select>
             </label>
             <label className="flex flex-col gap-1">
@@ -188,7 +188,9 @@ export function BacklogPage() {
               </select>
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Puntos</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                Esfuerzo <span className="normal-case tracking-normal text-ink-faint">(dificultad 1-21)</span>
+              </span>
               <select
                 className="field-input h-10"
                 value={form.story_points}
@@ -203,13 +205,13 @@ export function BacklogPage() {
               </select>
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Sprint</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Ciclo</span>
               <select
                 className="field-input h-10"
                 value={form.sprint_id}
                 onChange={(e) => setForm((f) => ({ ...f, sprint_id: e.target.value }))}
               >
-                <option value="">Backlog (sin sprint)</option>
+                <option value="">Pendientes (sin ciclo)</option>
                 {sprints.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.nombre}
@@ -233,14 +235,14 @@ export function BacklogPage() {
 
       <div className="reveal mb-4 flex items-center gap-3" style={{ animationDelay: "60ms" }}>
         <label className="flex items-center gap-2 text-sm text-ink-muted">
-          Sprint
+          Ciclo
           <select
             className="field-input h-9 text-sm"
             value={sprintFilter}
             onChange={(e) => setSprintFilter(e.target.value)}
           >
             <option value="">Todos</option>
-            <option value="__backlog__">Backlog (sin sprint)</option>
+            <option value="__backlog__">Pendientes (sin ciclo)</option>
             {sprints.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.nombre}

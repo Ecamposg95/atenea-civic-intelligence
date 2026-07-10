@@ -41,10 +41,10 @@ const ESTADO_CLASS: Record<string, string> = {
 };
 
 const CEREMONIA_TIPO_LABEL: Record<string, string> = {
-  PLANNING: "Planning",
-  DAILY: "Daily",
-  REVIEW: "Review",
-  RETRO: "Retro",
+  PLANNING: "Planeación",
+  DAILY: "Diaria",
+  REVIEW: "Revisión",
+  RETRO: "Retrospectiva",
 };
 const COLUMNA_LABEL: Record<string, string> = {
   POR_HACER: "Por hacer",
@@ -107,10 +107,10 @@ export function SprintsPage() {
       const status = (e as Error & { status?: number }).status;
       setFormError(
         status === 409
-          ? "Ya hay un sprint activo en la campaña."
+          ? "Ya hay un ciclo activo en la campaña."
           : e instanceof Error
             ? e.message
-            : "No se pudo crear el sprint.",
+            : "No se pudo crear el ciclo.",
       );
     } finally {
       setSaving(false);
@@ -127,10 +127,10 @@ export function SprintsPage() {
       const status = (e as Error & { status?: number }).status;
       setActionError(
         status === 409
-          ? "Ya hay un sprint activo en la campaña."
+          ? "Ya hay un ciclo activo en la campaña."
           : e instanceof Error
             ? e.message
-            : "No se pudo activar el sprint.",
+            : "No se pudo activar el ciclo.",
       );
     } finally {
       setBusyId(null);
@@ -144,23 +144,23 @@ export function SprintsPage() {
       await cerrarSprint(id);
       state.reload();
     } catch (e: unknown) {
-      setActionError(e instanceof Error ? e.message : "No se pudo cerrar el sprint.");
+      setActionError(e instanceof Error ? e.message : "No se pudo cerrar el ciclo.");
     } finally {
       setBusyId(null);
     }
   }
 
   return (
-    <AppLayout title="Sprints" crumb="Ciudadanía">
+    <AppLayout title="Ciclos" crumb="Ciudadanía">
       <PageHeader
         eyebrow="Ciudadanía"
-        title="Sprints"
+        title="Ciclos"
         accent="Scrum"
-        subtitle="Planifica, activa y cierra los sprints de la campaña — solo uno puede estar activo a la vez."
+        subtitle="Planifica, activa y cierra los ciclos de la campaña — solo uno puede estar activo a la vez."
         actions={
           canGovern ? (
             <button type="button" className="btn-primary focus-ring" onClick={() => setShowForm((v) => !v)}>
-              {showForm ? "Cancelar" : "Nuevo sprint"}
+              {showForm ? "Cancelar" : "Nuevo ciclo"}
             </button>
           ) : undefined
         }
@@ -180,7 +180,7 @@ export function SprintsPage() {
                 className="field-input h-10"
                 value={form.nombre}
                 onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-                placeholder="Sprint 1 — semana 12"
+                placeholder="Ciclo 1 — semana 12"
               />
             </label>
             <label className="flex flex-col gap-1">
@@ -207,7 +207,7 @@ export function SprintsPage() {
                 className="field-input h-10"
                 value={form.objetivo}
                 onChange={(e) => setForm((f) => ({ ...f, objetivo: e.target.value }))}
-                placeholder="Qué se busca lograr en este sprint…"
+                placeholder="Qué se busca lograr en este ciclo…"
               />
             </label>
           </div>
@@ -218,7 +218,7 @@ export function SprintsPage() {
               disabled={saving || !form.nombre.trim()}
               onClick={submitCreate}
             >
-              {saving ? "Guardando…" : "Crear sprint"}
+              {saving ? "Guardando…" : "Crear ciclo"}
             </button>
           </div>
         </div>
@@ -229,7 +229,7 @@ export function SprintsPage() {
         error={state.error}
         onRetry={state.reload}
         isEmpty={!state.loading && !state.error && sprints.length === 0}
-        emptyMessage="Sin sprints registrados todavía."
+        emptyMessage="Sin ciclos registrados todavía."
         skeleton={
           <div className="card-premium p-4">
             <SkeletonRows rows={4} />
@@ -331,7 +331,7 @@ function SprintDetail({ sprintId, canCeremonia }: { sprintId: string; canCeremon
       setShowForm(false);
       ceremoniasState.reload();
     } catch (e: unknown) {
-      setFormError(e instanceof Error ? e.message : "No se pudo crear la ceremonia.");
+      setFormError(e instanceof Error ? e.message : "No se pudo crear la reunión.");
     } finally {
       setSaving(false);
     }
@@ -397,7 +397,7 @@ function SprintDetail({ sprintId, canCeremonia }: { sprintId: string; canCeremon
         {burndown && burndown.dias.length > 0 && (
           <div>
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
-              Burndown · {nf.format(burndown.total_puntos)} pts totales
+              Burndown · {nf.format(burndown.total_puntos)} de esfuerzo total
             </h4>
             <div style={{ width: "100%", height: 220 }}>
               <ResponsiveContainer>
@@ -426,10 +426,10 @@ function SprintDetail({ sprintId, canCeremonia }: { sprintId: string; canCeremon
       {/* ---- Ceremonias ---- */}
       <div>
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Ceremonias</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Reuniones</h4>
           {canCeremonia && (
             <button type="button" className="btn-ghost focus-ring text-xs" onClick={() => setShowForm((v) => !v)}>
-              {showForm ? "Cancelar" : "Nueva ceremonia"}
+              {showForm ? "Cancelar" : "Nueva reunión"}
             </button>
           )}
         </div>
@@ -444,7 +444,7 @@ function SprintDetail({ sprintId, canCeremonia }: { sprintId: string; canCeremon
                   className="field-input h-10"
                   value={form.titulo}
                   onChange={(e) => setForm((f) => ({ ...f, titulo: e.target.value }))}
-                  placeholder="Retro sprint 3"
+                  placeholder="Retrospectiva ciclo 3"
                 />
               </label>
               <label className="flex flex-col gap-1">
@@ -463,10 +463,10 @@ function SprintDetail({ sprintId, canCeremonia }: { sprintId: string; canCeremon
                   value={form.tipo}
                   onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value }))}
                 >
-                  <option value="PLANNING">Planning</option>
-                  <option value="DAILY">Daily</option>
-                  <option value="REVIEW">Review</option>
-                  <option value="RETRO">Retro</option>
+                  <option value="PLANNING">Planeación</option>
+                  <option value="DAILY">Diaria</option>
+                  <option value="REVIEW">Revisión</option>
+                  <option value="RETRO">Retrospectiva</option>
                 </select>
               </label>
               <label className="flex flex-col gap-1 lg:col-span-4">
@@ -486,7 +486,7 @@ function SprintDetail({ sprintId, canCeremonia }: { sprintId: string; canCeremon
                 disabled={saving || !form.titulo.trim() || !form.fecha}
                 onClick={submitCeremonia}
               >
-                {saving ? "Guardando…" : "Crear ceremonia"}
+                {saving ? "Guardando…" : "Crear reunión"}
               </button>
             </div>
           </div>
@@ -497,7 +497,7 @@ function SprintDetail({ sprintId, canCeremonia }: { sprintId: string; canCeremon
           error={ceremoniasState.error}
           onRetry={ceremoniasState.reload}
           isEmpty={!ceremoniasState.loading && !ceremoniasState.error && ceremonias.length === 0}
-          emptyMessage="Sin ceremonias registradas para este sprint."
+          emptyMessage="Sin reuniones registradas para este ciclo."
           skeleton={<SkeletonRows rows={2} />}
         >
           <ul className="mt-3 flex flex-col gap-2">

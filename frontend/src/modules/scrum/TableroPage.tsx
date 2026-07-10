@@ -18,7 +18,7 @@ const COLS: { key: ColKey; label: string }[] = [
   { key: "HECHO", label: "Hecho" },
 ];
 
-const TIPO_LABEL: Record<string, string> = { HISTORIA: "Historia", TAREA: "Tarea", BUG: "Bug" };
+const TIPO_LABEL: Record<string, string> = { HISTORIA: "Historia", TAREA: "Tarea", BUG: "Incidencia" };
 const PRIORIDAD_CLASS: Record<string, string> = {
   ALTA: "border-state-critical/30 bg-state-critical/10 text-state-critical",
   MEDIA: "border-amber/30 bg-amber/10 text-amber",
@@ -49,7 +49,7 @@ function WorkItemCard({
           <span className="pill border-line bg-panel-raised text-ink-muted">
             {TIPO_LABEL[wi.tipo] ?? wi.tipo}
           </span>
-          <span>{wi.story_points ?? "–"} pts</span>
+          <span>{wi.story_points ?? "–"} esf.</span>
           <span>{wi.responsable_nombre ?? "Sin asignar"}</span>
           <span className="font-mono">
             {wi.tareas_hechas}/{wi.tareas_total} tareas
@@ -111,8 +111,8 @@ export function TableroPage() {
         accent="Scrum"
         subtitle={
           board?.sprint
-            ? `Sprint activo: ${board.sprint.nombre}`
-            : "Sigue el avance del sprint activo, columna por columna."
+            ? `Ciclo activo: ${board.sprint.nombre}`
+            : "Sigue el avance del ciclo activo, columna por columna."
         }
       />
 
@@ -125,7 +125,7 @@ export function TableroPage() {
         error={state.error}
         onRetry={state.reload}
         isEmpty={!state.loading && !state.error && !board?.sprint}
-        emptyMessage="No hay sprint activo."
+        emptyMessage="No hay ciclo activo."
         skeleton={
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {[0, 1, 2].map((i) => (
