@@ -14,6 +14,10 @@ import {
   uploadDocumento,
   type MilitanteCreate,
 } from "@/api/militantes";
+import { enqueueJob } from "@/offline/queue";
+import { isNetworkError } from "@/offline/sync";
+import type { QueuedBlob } from "@/offline/types";
+import { usePendingSyncStore } from "@/store/pendingSyncStore";
 import { PhotoCapture } from "./components/PhotoCapture";
 import { SignaturePad } from "./components/SignaturePad";
 
@@ -188,6 +192,8 @@ function StepIndicator({ step }: { step: Step }) {
 
 export default function CapturaMilitantePage() {
   const isOnline = useOnlineStatus();
+  const { refresh: refreshPending } = usePendingSyncStore();
+  const campaignId = localStorage.getItem("agora-campaign") ?? "";
 
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -207,6 +213,18 @@ export default function CapturaMilitantePage() {
   // Kept across retries so a failed photo upload doesn't re-create the militante.
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [folio, setFolio] = useState<string | null>(null);
+
+  // Guards against duplicate creates: generated once per form instance (not
+  // per buildPayload() call) so that an online create followed by an
+  // offline-fallback enqueue reuses the same client_uuid — the backend
+  // dedupes on it, so the queued drain's createMilitante() call resolves to
+  // the same record instead of creating a second militante.
+  const [clientUuid, setClientUuid] = useState<string>(() => safeRandomUUID());
+
+  // Set once a submit was queued for later sync (no connectivity, or a
+  // network error mid-submit). Distinct from `folio`, which only appears
+  // once the server has actually confirmed the create.
+  const [offlineQueued, setOfflineQueued] = useState(false);
 
   // Prefill promotor/seccion from the logged-in profile, without
   // clobbering anything the user may have already typed.
@@ -248,6 +266,8 @@ export default function CapturaMilitantePage() {
     setCreatedId(null);
     setFolio(null);
     setSubmitError(null);
+    setOfflineQueued(false);
+    setClientUuid(safeRandomUUID());
     setDocStatus({ frente: "idle", reverso: "idle", firma: "idle" });
     setStep(1);
     applyPerfilDefaults();
@@ -275,14 +295,58 @@ export default function CapturaMilitantePage() {
       es_activista: form.es_activista,
       ...(form.estructura.trim() && { estructura: form.estructura.trim() }),
       ...(form.promotor.trim() && { promotor: form.promotor.trim() }),
-      client_uuid: safeRandomUUID(),
+      client_uuid: clientUuid,
     };
-  }, [form]);
+  }, [form, clientUuid]);
+
+  // Builds the queued-blob list from whichever photos/signature were
+  // captured, enqueues the militante create + those blobs for background
+  // sync, and flips the UI into the offline-success state. Reused both for
+  // the "never had connectivity" path and the "lost connectivity mid-submit"
+  // fallback below.
+  const queueOffline = useCallback(async () => {
+    const docs: [DocTipo, Blob | null][] = [
+      ["frente", frente],
+      ["reverso", reverso],
+      ["firma", firma],
+    ];
+    const blobs: QueuedBlob[] = docs
+      .filter((entry): entry is [DocTipo, Blob] => entry[1] !== null)
+      .map(([slot, blob]) => ({
+        slot,
+        mime: blob.type || "image/jpeg",
+        filename: `${slot}.jpg`,
+        data: blob,
+      }));
+
+    await enqueueJob(
+      "militante",
+      buildPayload() as unknown as Record<string, unknown>,
+      campaignId,
+      blobs,
+    );
+    setOfflineQueued(true);
+    await refreshPending();
+  }, [frente, reverso, firma, buildPayload, campaignId, refreshPending]);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
     setSubmitting(true);
     setSubmitError(null);
+
+    // No connectivity at all — skip the network attempt entirely and queue.
+    if (!navigator.onLine) {
+      try {
+        await queueOffline();
+      } catch (err) {
+        setSubmitError(
+          err instanceof Error ? err.message : "No se pudo guardar sin conexión",
+        );
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
 
     try {
       let id = createdId;
@@ -312,6 +376,26 @@ export default function CapturaMilitantePage() {
         }
       }
     } catch (err) {
+      // Connectivity dropped mid-submit (before or after the create call) —
+      // fall back to the offline queue instead of surfacing a hard error.
+      // `clientUuid` is stable across this fallback, so if createMilitante
+      // above already succeeded, the queued drain's create call dedupes
+      // against the same record instead of creating a duplicate.
+      if (isNetworkError(err)) {
+        try {
+          await queueOffline();
+        } catch (queueErr) {
+          setSubmitError(
+            queueErr instanceof Error
+              ? queueErr.message
+              : "No se pudo guardar sin conexión",
+          );
+        } finally {
+          setSubmitting(false);
+        }
+        return;
+      }
+
       setSubmitError(
         err instanceof Error ? err.message : "Error al registrar al militante",
       );
@@ -320,30 +404,34 @@ export default function CapturaMilitantePage() {
     }
 
     setSubmitting(false);
-  }, [canSubmit, createdId, buildPayload, frente, reverso, firma, docStatus]);
+  }, [canSubmit, createdId, buildPayload, frente, reverso, firma, docStatus, queueOffline]);
 
-  /* ------------------------------------------------------------ offline */
+  /* ---------------------------------------------------- offline success */
 
-  // If the registration already succeeded (folio issued), keep showing the
-  // success screen even if connectivity drops right after — don't bounce
-  // the user to a "necesitas conexión" wall for a request that already went
-  // through.
-  if (!isOnline && !folio) {
+  // Submitted without connectivity (or connectivity dropped mid-submit) —
+  // the militante + its photos are queued in IndexedDB and will sync
+  // automatically. Distinct from the online success screen below because no
+  // folio exists yet (it's only assigned once the server confirms create).
+  if (offlineQueued) {
     return (
       <AppLayout title="Afiliación de Militantes" crumb="Militantes">
         <PageHeader eyebrow="Afiliación" title="Registro de" accent="Militante" />
-        <div className="card-premium reveal flex flex-col items-center gap-4 px-5 py-12 text-center">
-          <span className="metric-chip h-12 w-12 text-state-warning">
+        <div className="reveal mx-auto flex max-w-sm flex-col items-center gap-5 py-8 text-center">
+          <span className="metric-chip h-14 w-14 text-state-warning">
             <AlertIcon width={20} height={20} />
           </span>
           <div>
-            <p className="font-semibold text-ink">Necesitas conexión para afiliar</p>
-            <p className="mt-1 max-w-sm text-sm text-ink-muted">
-              La afiliación de militantes requiere conexión a internet para
-              validar y subir la documentación. Vuelve a intentarlo cuando
-              tengas señal.
+            <p className="font-display text-lg font-bold text-ink">
+              Guardado sin conexión
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+              Se sincronizará (fotos incluidas) en cuanto vuelva la conexión.
+              No necesitas hacer nada más.
             </p>
           </div>
+          <button type="button" className="btn-primary" onClick={resetAll}>
+            Afiliar otro
+          </button>
         </div>
       </AppLayout>
     );
@@ -405,6 +493,15 @@ export default function CapturaMilitantePage() {
         subtitle="Captura la afiliación de un militante en tres pasos: identidad, contacto y documentación."
         actions={<StepIndicator step={step} />}
       />
+
+      {!isOnline && (
+        <div className="reveal mb-2">
+          <StatusPill kind="warn">
+            Sin conexión — se guardará en este dispositivo y se sincronizará
+            (fotos incluidas) al reconectar
+          </StatusPill>
+        </div>
+      )}
 
       <div className="reveal" style={{ animationDelay: "80ms" }}>
         <SectionHeading eyebrow={`Paso ${step} de 3`} title={STEP_LABELS[step]} />
