@@ -160,6 +160,7 @@ const BASE_COLUMNS: Column<Promovido>[] = [
 export function PromovidosPage() {
   const role = useAuthStore((s) => s.user?.role);
   const canReveal = role === "superadmin" || role === "admin" || role === "coordinador";
+  const canImport = canReveal;
 
   // Raw inputs (debounced) vs. committed filter values.
   const [qInput, setQInput] = useState("");
@@ -172,7 +173,7 @@ export function PromovidosPage() {
   const [prioridad, setPrioridad] = useState("");
 
   // Server-side sort — reflects the FULL dataset, not just the visible page.
-  const [sortKey, setSortKey] = useState("created_at");
+  const [sortKey, setSortKey] = useState<"nombre" | "seccion" | "created_at" | "edad">("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const [offset, setOffset] = useState(0);
@@ -380,7 +381,7 @@ export function PromovidosPage() {
                       Ordenar por
                     </span>
                     <select className="field-input focus-ring w-44" value={sortKey}
-                      onChange={(e) => { setSortKey(e.target.value); setOffset(0); }}>
+                      onChange={(e) => { setSortKey(e.target.value as "nombre" | "seccion" | "created_at" | "edad"); setOffset(0); }}>
                       {SORT_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>{o.label}</option>
                       ))}
@@ -394,6 +395,7 @@ export function PromovidosPage() {
                       setOffset(0);
                     }}
                     title={sortDir === "asc" ? "Ascendente" : "Descendente"}
+                    aria-label={sortDir === "asc" ? "Orden ascendente, cambiar a descendente" : "Orden descendente, cambiar a ascendente"}
                   >
                     {sortDir === "asc" ? "↑ Ascendente" : "↓ Descendente"}
                   </button>
@@ -417,9 +419,11 @@ export function PromovidosPage() {
                     <Link to="/captura-rapida" className="btn-primary focus-ring">
                       Capturar
                     </Link>
-                    <Link to="/promovidos/importar" className="btn-ghost focus-ring">
-                      Importar Excel
-                    </Link>
+                    {canImport && (
+                      <Link to="/promovidos/importar" className="btn-ghost focus-ring">
+                        Importar Excel
+                      </Link>
+                    )}
                   </div>
                 </div>
               ) : (
