@@ -4,6 +4,9 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { createRegistro } from "@/api/registros";
+import { enqueue } from "@/offline/queue";
+import { isNetworkError } from "@/offline/sync";
+import { usePendingSyncStore } from "@/store/pendingSyncStore";
 
 /** Fields kept between entries (digitizing one promoter's list → same sección
  * and promotor repeat), vs. cleared per person. */
@@ -30,12 +33,17 @@ const EMPTY: QuickForm = {
 };
 
 export function CapturaRapidaPage() {
+  const campaignId = localStorage.getItem("agora-campaign") ?? "";
+
   const [form, setForm] = useState<QuickForm>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [okName, setOkName] = useState<string | null>(null);
+  const [offlineName, setOfflineName] = useState<string | null>(null);
   const [count, setCount] = useState(0);
   const nombreRef = useRef<HTMLInputElement>(null);
+
+  const { refresh: refreshPending, triggerSync } = usePendingSyncStore();
 
   const set = <K extends keyof QuickForm>(k: K, v: QuickForm[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -53,18 +61,38 @@ export function CapturaRapidaPage() {
     setSaving(true);
     setError(null);
     setOkName(null);
+    setOfflineName(null);
+
+    const payload = {
+      nombre_completo: form.nombre_completo.trim(),
+      seccion: form.seccion.trim() || undefined,
+      telefono: form.telefono.trim() || undefined,
+      colonia: form.colonia.trim() || undefined,
+      direccion: form.direccion.trim() || undefined,
+      promotor: form.promotor.trim() || undefined,
+      clave_elector: claveDigits ? claveDigits.toUpperCase() : undefined,
+      consentimiento: true,
+      client_uuid: crypto.randomUUID(),
+    };
+
     try {
-      await createRegistro({
-        nombre_completo: form.nombre_completo.trim(),
-        seccion: form.seccion.trim() || undefined,
-        telefono: form.telefono.trim() || undefined,
-        colonia: form.colonia.trim() || undefined,
-        direccion: form.direccion.trim() || undefined,
-        promotor: form.promotor.trim() || undefined,
-        clave_elector: claveDigits ? claveDigits.toUpperCase() : undefined,
-        consentimiento: true,
-      });
-      setOkName(form.nombre_completo.trim());
+      if (navigator.onLine) {
+        try {
+          await createRegistro(payload);
+          setOkName(form.nombre_completo.trim());
+        } catch (e) {
+          if (isNetworkError(e)) {
+            await enqueue(payload, campaignId);
+            setOfflineName(form.nombre_completo.trim());
+          } else {
+            throw e;
+          }
+        }
+      } else {
+        await enqueue(payload, campaignId);
+        setOfflineName(form.nombre_completo.trim());
+      }
+
       setCount((c) => c + 1);
       // Keep sección + promotor for the next person in the same list, but
       // NEVER carry consentimiento forward — each person must be re-affirmed.
@@ -74,6 +102,8 @@ export function CapturaRapidaPage() {
         promotor: f.promotor,
       }));
       nombreRef.current?.focus();
+      await refreshPending();
+      if (navigator.onLine) void triggerSync();
     } catch {
       setError("No se pudo guardar. Revisa la conexión e intenta de nuevo.");
     } finally {
@@ -174,6 +204,11 @@ export function CapturaRapidaPage() {
           {okName && (
             <div className="rounded-card bg-state-ok/10 px-3.5 py-2.5 text-sm text-state-ok">
               ✓ Guardado: <span className="font-medium">{okName}</span>. Captura el siguiente.
+            </div>
+          )}
+          {offlineName && (
+            <div className="rounded-card bg-state-ok/10 px-3.5 py-2.5 text-sm text-state-ok">
+              ⏳ Guardado sin conexión — se sincronizará: <span className="font-medium">{offlineName}</span>. Captura el siguiente.
             </div>
           )}
 
