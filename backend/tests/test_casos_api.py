@@ -71,6 +71,34 @@ def test_response_opens_caso(client):
     assert caso["ciudadano_nombre"] == "Ana"
 
 
+def test_response_dedup_by_client_uuid(client):
+    """Offline replay: two POSTs with the same client_uuid must not duplicate
+    the FormResponse nor open a second Caso — same id returned both times."""
+    _ensure_coord_territory_4127()
+    h = _hdr(client, "coord@alpha.gov")
+    f = client.post("/api/forms", headers=h, json=_form_payload("pet-dedup-test")).json()
+    payload = {
+        "form_definition_id": f["id"],
+        "answers": {"nombre": "Ana", "descripcion": "bache", "seccion": "4127"},
+        "client_uuid": "offline-retry-uuid-1",
+    }
+    r1 = client.post("/api/responses", headers=h, json=payload)
+    assert r1.status_code == 201, r1.text
+    body1 = r1.json()
+
+    r2 = client.post("/api/responses", headers=h, json=payload)
+    assert r2.status_code == 201, r2.text
+    body2 = r2.json()
+
+    assert body1["id"] == body2["id"]
+    assert body1["caso_id"] == body2["caso_id"]
+
+    casos = client.get("/api/casos", headers=h)
+    assert casos.status_code == 200
+    matching = [c for c in casos.json()["items"] if c["id"] == body1["caso_id"]]
+    assert len(matching) == 1  # no duplicate caso opened on retry
+
+
 def test_response_requires_valid_form(client):
     h = _hdr(client, "coord@alpha.gov")
     r = client.post("/api/responses", headers=h, json={
