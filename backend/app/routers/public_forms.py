@@ -35,7 +35,11 @@ layers, all still behind the ``PUBLIC_FORMS_ENABLED`` gate:
      stripped on the public path (the internal authenticated channel keeps
      evidence support).
 """
-from __future__ import annotations
+# NOTE: no ``from __future__ import annotations`` here. Postponed (string)
+# annotations break the ``@limiter.limit``-decorated endpoint: FastAPI resolves
+# annotation strings against the *wrapper's* globals (slowapi.extension), where
+# DbSession/PublicFormResponseCreate don't exist, so they fall back to query
+# params and every request 422s.
 
 import json
 from dataclasses import dataclass
@@ -153,14 +157,14 @@ def _guard_payload_size(payload: PublicFormResponseCreate) -> None:
     blob = json.dumps(payload.answers, ensure_ascii=False)
     if len(blob.encode("utf-8")) > settings.PUBLIC_FORM_MAX_PAYLOAD_BYTES:
         raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="Payload demasiado grande",
         )
     max_len = settings.PUBLIC_FORM_MAX_ANSWER_LEN
     for value in payload.answers.values():
         if isinstance(value, str) and len(value) > max_len:
             raise HTTPException(
-                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail="Respuesta demasiado larga",
             )
 
