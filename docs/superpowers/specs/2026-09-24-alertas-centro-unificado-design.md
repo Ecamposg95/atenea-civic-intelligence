@@ -55,9 +55,11 @@ Estructura:
 
 - Una función pura por regla, `_t1_…(db, ctx) -> list[dict]` … `_o5_…(db, ctx)`. Todas usan
   `scoped_query` / servicios existentes, heredando aislamiento org + campaña.
-- `seguimiento` se calcula **una vez** en `evaluar` y se pasa a T1/O1/O2 (evita recomputar).
+- `operacion_service.list_planes` se calcula **una vez** en `evaluar` y alimenta T1/O1/T2 y la cuadrícula.
 - `evaluar(db, ctx) -> dict`: ejecuta las 7 reglas, deduplica (§3.3), ordena por severidad
-  (crítica > alta > media) y luego por magnitud (`umbral − valor`, desc), y arma el resumen.
+  (crítica > alta > media) y luego por un `peso` interno de cada regla (desc: faltantes en
+  T1/O1, |z| en T2, caída % en O2, conteo en O3/O5, días inactivo en O4), y arma el resumen.
+  `peso` no se expone en la respuesta.
 - Umbrales como constantes al inicio del módulo (sin configuración por UI en v1):
   `AVANCE_ROJO_PCT = 60`, `Z_PARTICIPACION = 1.5`, `MIN_SECCIONES_Z = 5`,
   `CAIDA_RITMO_PCT = 30`, `MIN_RITMO_BASE = 5`, `DIAS_INACTIVIDAD = 7`.
@@ -70,7 +72,7 @@ Estructura:
 | T1 | Sección persuadible rezagada | territorial | crítica | `semaforo[s].persuadible` y `pct < 60` | `seguimiento` | `/plan-territorial` |
 | T2 | Participación atípica | territorial | media | \|z\| > 1.5 de `participacion` 2024 frente a las secciones de la campaña; se omite si hay < 5 secciones con dato | `SeccionElectoral` (vía `list_planes`) | `/municipio` |
 | O1 | Sección en rojo | operativa | alta | `status == "rojo"` (pct < 60) y no persuadible | `seguimiento` | `/war-room` |
-| O2 | Caída de ritmo semanal | operativa | alta | promovidos de la última semana ISO completa < 70% del promedio de las 4 anteriores; se omite si ese promedio < 5 | deltas de `seguimiento.tendencia` (acumulada) | `/` |
+| O2 | Caída de ritmo semanal | operativa | alta | promovidos de la última semana ISO completa < 70% del promedio de las 4 anteriores; se omite si ese promedio < 5 | conteo semanal directo de `Registro.created_at` (la tendencia acumulada omite semanas sin capturas) | `/` |
 | O3 | Casos con SLA vencido | operativa | alta | `fecha_compromiso < hoy` y `estado ∉ ("ATENDIDO","CERRADO")`; **una** alerta con el conteo | `Caso` (`_TERMINAL_ESTADOS`) | `/atencion/casos` |
 | O4 | Activista inactivo | operativa | media | ACTIVISTA/CAPTURISTA activo con membresía en la campaña, dado de alta hace > 7 días y sin `Registro.created_at` en los últimos 7 días; una alerta por persona | `User` + `CampaignMembership` + `Registro` | `/admin/estructura` |
 | O5 | Acuerdos vencidos | operativa | media | `fecha_limite < hoy` y `estado ∈ ("PENDIENTE","EN_CURSO")`; **una** alerta con el conteo | `Acuerdo` | `/acuerdos` |
@@ -161,4 +163,4 @@ Frontend: `npm run build` (type-check) + Vitest del filtrado por categoría y po
   resuelve en una campaña "Demo" separada, sin contaminar la de Lucy.
 - **Costo por request**: `seguimiento` + 4 consultas agregadas; aceptable a escala de una
   campaña municipal. Si crece, cachear por campaña unos minutos (no en v1).
-- **Tendencia acumulada**: O2 depende de derivar deltas semanales; se prueba explícitamente.
+- **Zonas horarias**: `created_at` llega con tz en PostgreSQL y sin tz en SQLite; se normaliza a UTC naive antes de agrupar por semana.
