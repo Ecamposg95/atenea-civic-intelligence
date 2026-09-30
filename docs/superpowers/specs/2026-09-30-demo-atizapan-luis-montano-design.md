@@ -144,8 +144,9 @@ python3 scripts/build_municipio_dataset.py --region atizapan      # los 7 códig
   - `socio` 2020 desde ITER: `poblacion`, `pct_mujeres`, `pct_hombres`, `viviendas` (TVIVHAB),
     `pct_jefa_hogar` (HOGJEF_F / TOTHOG), `pob_18_mas`, `grado_escolaridad`,
     `pct_sin_derechohabiencia` (PSINDER / POBTOT), `pct_viviendas_internet` (VPH_INTER / TVIVHAB).
-  - `socio` 2020 desde CONEVAL si la descarga funciona: `pobreza_moderada_pct`,
-    `pobreza_extrema_pct`, `vulnerable_carencias_pct`. Si falla, se omiten y el script lo anota.
+  - `socio` 2020 desde CONEVAL **solo si se pasa `--coneval <xlsx local>`** (no hay URL de
+    descarga directa verificada): `pobreza_moderada_pct`, `pobreza_extrema_pct`,
+    `vulnerable_carencias_pct`. Sin el archivo, se omiten y el manifest lo anota.
   - No se generan `movilidad` ni `crecimiento_pct_2010_2020` ni `pct_pob_5_19` (no están en ITER
     básico). El panorama ya muestra "—" para indicadores ausentes.
 - Genera **`manifest.json`**: municipio, fecha, por fuente `{url, sha256, filas_leidas}`, umbrales
@@ -253,6 +254,9 @@ def secciones_query(ctx: CampaignContext, anio: int = 2024) -> Select:
 ### 5.5 Campaña: schema, API y seeds existentes
 
 - `CampaignOut` y `CampaignCreate` exponen `municipio_code`, `candidato`, `partido` (opcionales).
+- Folio de militantes: `militante_service._next_folio` usa hoy el prefijo fijo `SMA-<año>-`. Pasa a
+  `cfg.folio_prefix` del registro (`SMA` para 15076, `ATZ` para 15013; `SMA` si la campaña no
+  tiene municipio, para no cambiar folios existentes).
 - `bootstrap._seed_demo_activists` (campaña de Lucy) pone `municipio_code = "15076"` si está vacío
   (idempotente). `demo_election_date` deja de depender de un UUID fijo: itera las campañas con
   `municipio_code` en el registro y asegura `Contest` con fecha `2027-06-06` y
@@ -323,7 +327,7 @@ Idempotente por slug de org, correo, nombre de campaña y (seccion, anio).
 | Rol | Cantidad | Correo | Territorio |
 |---|---|---|---|
 | COORDINADOR | 1 | `coordinador@` | `area_id` = municipio 15013 |
-| LIDER | 8 | `lider01@`…`lider08@` | `coordinador_id` = coordinador; zona = bloque contiguo de secciones ordenadas por número (6 zonas del distrito 16 de ~22 secciones y 2 del distrito 26 de ~22) |
+| LIDER | 8 | `lider01@`…`lider08@` | `coordinador_id` = coordinador; zona = uno de 8 bloques contiguos (~22 secciones) de las secciones del municipio ordenadas por número (el CSV no guarda distrito; los rangos numéricos ya agrupan por zona) |
 | ACTIVISTA | 40 | `activista01@`…`activista40@` | `lider_id` = líder de su zona; `seccion` = una sección de la zona (5 por líder; se eligen primero las COMPETITIVA/ALTA_PERSUADIBLE de la zona) |
 | CAPTURISTA | 2 | `capturista01@`, `capturista02@` | sin jerarquía |
 
