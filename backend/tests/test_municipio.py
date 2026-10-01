@@ -102,3 +102,30 @@ def test_panorama_unknown_municipio_404(client):
     r = client.get("/api/municipio/99999/panorama",
                    headers=auth_headers(client, "coord@alpha.gov"))
     assert r.status_code == 404
+
+
+def test_panorama_incluye_bloques_y_busca_por_codigo():
+    _seed_study()
+    db = TestingSessionLocal()
+    try:
+        p = municipio_service.panorama(db, _MUNI)
+    finally:
+        db.close()
+    assert p["bloques"] == {"propio": "Coalición", "rival": "Morena"}
+
+
+def test_panorama_por_codigo_no_mezcla():
+    _seed_study()
+    db = TestingSessionLocal()
+    try:
+        db.add(SeccionElectoral(seccion="9993", municipio="Atizapán de Zaragoza", municipio_code="15013",
+                                anio=2024, lista_nominal=10, votos=5, participacion=50.0,
+                                coalicion=3, morena=2, margen=1, prioridad="ALTA_PERSUADIBLE"))
+        db.commit()
+        p = municipio_service.panorama(db, _MUNI)
+        codes = {s["seccion"] for s in p["secciones"]}
+        assert "9993" not in codes
+        db.execute(delete(SeccionElectoral).where(SeccionElectoral.seccion == "9993"))
+        db.commit()
+    finally:
+        db.close()

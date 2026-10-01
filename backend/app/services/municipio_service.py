@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.models.census import CensusMetric
 from app.models.electoral_area import AreaLevel, ElectoralArea
 from app.models.seccion_electoral import SeccionElectoral
+from app.seeds.municipios import REGIONES, config_de, municipios_de_region
 
 _ANIO_ACTUAL = 2024
 
@@ -73,7 +74,7 @@ def panorama(db: Session, code: str) -> Optional[dict]:
         "prioridad": s.prioridad,
     } for s in db.execute(
         select(SeccionElectoral)
-        .where(SeccionElectoral.municipio == (muni.name if muni else ""),
+        .where(SeccionElectoral.municipio_code == code,
                SeccionElectoral.anio == _ANIO_ACTUAL)
         .order_by(SeccionElectoral.margen)
     ).scalars()]
@@ -91,8 +92,11 @@ def panorama(db: Session, code: str) -> Optional[dict]:
         "participacion_2024": m.get((_ANIO_ACTUAL, "elec_participacion")),
     }
 
+    cfg = config_de(code)
     return {
-        "municipio": {"code": code, "name": muni.name if muni else "San Mateo Atenco"},
+        "municipio": {"code": code, "name": muni.name if muni else (cfg.name if cfg else code)},
+        "bloques": {"propio": cfg.bloque_propio if cfg else "Coalición",
+                    "rival": cfg.bloque_rival if cfg else "Morena"},
         "socio": socio,
         "historico": historico,
         "voto2024": voto2024,
@@ -100,6 +104,27 @@ def panorama(db: Session, code: str) -> Optional[dict]:
         "secciones_resumen": resumen,
         "secciones": secciones,
     }
+
+
+def region(db: Session, code: str) -> Optional[dict]:
+    cfg = config_de(code)
+    if cfg is None:
+        return None
+    out = []
+    for m in municipios_de_region(cfg.region):
+        mx = _metrics(db, m.code)
+        out.append({
+            "code": m.code, "name": m.name, "es_campana": m.code == code,
+            "lista_nominal_2024": _opt_int(mx.get((2024, "elec_lista_nominal"))),
+            "participacion_2024": mx.get((2024, "elec_participacion")),
+            "margen_votos_2024": _opt_int(mx.get((2024, "elec_margen_votos"))),
+            "margen_pp_2024": mx.get((2024, "elec_margen_pp")),
+            "secciones_total": _opt_int(mx.get((2024, "secciones_total"))),
+            "secciones_persuadibles": _opt_int(mx.get((2024, "secciones_persuadibles"))),
+            "poblacion": _opt_int(mx.get((2020, "poblacion"))),
+        })
+    out.sort(key=lambda x: (not x["es_campana"], -(x["lista_nominal_2024"] or 0)))
+    return {"region": REGIONES[cfg.region], "municipios": out}
 
 
 def _opt_int(v):
