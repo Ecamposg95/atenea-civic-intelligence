@@ -7,7 +7,10 @@ import pytest
 from sqlalchemy import func, select
 
 from app.core import crypto
+from app.models.atencion import Caso, CasoEvento
 from app.models.campaign import CampaignMembership
+from app.models.minuta import Acuerdo, Minuta
+from app.models.operacion import AgendaItem, SeccionPlan
 from app.models.militante import Militante
 from app.models.registro import Registro
 from app.models.user import User, UserRole
@@ -43,7 +46,10 @@ def campaign(monkeypatch):
         yield db, camp
     finally:
         db.rollback()
-        for model in (Militante, Registro):
+        caso_ids = [i for (i,) in db.execute(select(Caso.id).where(Caso.campaign_id == camp.id)).all()]
+        if caso_ids:
+            db.execute(CasoEvento.__table__.delete().where(CasoEvento.caso_id.in_(caso_ids)))
+        for model in (Militante, Registro, Caso, Acuerdo, Minuta, AgendaItem, SeccionPlan):
             db.execute(model.__table__.delete().where(model.campaign_id == camp.id))
         db.commit()
         _purgar_usuarios_demo(db)
@@ -110,3 +116,56 @@ def test_clave_unica_resuelve_colisiones():
     a = op.clave_unica(rng, "GARCIA HERNANDEZ", date(1985, 3, 9), "H", 7, seen)
     b = op.clave_unica(rng, "GARCIA HERNANDEZ", date(1985, 3, 9), "H", 1007, seen)  # mismo n % 1000
     assert a != b and len(b) == 18 and seen == {a, b}
+
+
+def test_casos_sla_vencidos_y_estados(campaign):
+    db, camp = campaign
+    hoy = date(2026, 9, 30)
+    casos = op.generar_casos(db, camp, random.Random(3), hoy)
+    db.commit()
+    assert len(casos) == op.N_CASOS
+    vencidos = [c for c in casos if c.fecha_compromiso and c.fecha_compromiso < hoy and c.estado not in ("ATENDIDO", "CERRADO")]
+    assert len(vencidos) >= op.N_CASOS * 0.35
+    assert len({c.folio for c in casos}) == len(casos)
+    assert all(c.tipo in ("PETICION", "QUEJA", "APOYO", "OTRO") and c.seccion and c.asignado_a for c in casos)
+    n_ev = db.execute(select(func.count()).select_from(CasoEvento).where(
+        CasoEvento.caso_id.in_([c.id for c in casos]))).scalar_one()
+    assert n_ev == len(casos)
+
+
+def test_minutas_acuerdos_vencidos(campaign):
+    db, camp = campaign
+    hoy = date(2026, 9, 30)
+    minutas, acuerdos = op.generar_minutas(db, camp, random.Random(5), hoy)
+    db.commit()
+    assert len(minutas) == op.N_MINUTAS and len(acuerdos) == op.N_ACUERDOS
+    assert all(m.estado == "PUBLICADA" and len(m.asistentes) >= 9 for m in minutas)
+    vencidos = [a for a in acuerdos if a.fecha_limite and a.fecha_limite < hoy and a.estado == "PENDIENTE"]
+    assert len(vencidos) >= op.N_ACUERDOS * 0.2
+    assert all(a.responsable_id for a in acuerdos)
+
+
+def test_agenda_y_planes(campaign):
+    db, camp = campaign
+    agenda = op.generar_agenda(db, camp, random.Random(9)); planes = op.generar_planes(db, camp)
+    db.commit()
+    assert Counter(a.fase for a in agenda) == {30: 10, 60: 10, 90: 10}
+    assert sum(1 for a in agenda if a.done) == 12
+    assert len(planes) == 174 and all(p.responsable_id and p.meta_semanal for p in planes)
+
+
+def test_orquestador_una_sola_vez_y_reset(campaign, monkeypatch):
+    db, camp = campaign
+    assert op.seed_atizapan_operacion(db, hoy=date(2026, 9, 30)) is True
+    assert op.seed_atizapan_operacion(db, hoy=date(2026, 9, 30)) is False
+    n_reg = db.execute(select(func.count()).select_from(Registro).where(Registro.campaign_id == camp.id)).scalar_one()
+    assert n_reg == op.N_PROMOVIDOS
+    # aislamiento: nada en la campaña Alpha
+    from tests.conftest import ALPHA_CAMPAIGN_ID
+    assert db.execute(select(func.count()).select_from(Registro).where(
+        Registro.campaign_id == ALPHA_CAMPAIGN_ID, Registro.promotor == op.MARCADOR)).scalar_one() == 0
+    borrado = op.reset_operacion(db, camp)
+    assert borrado["registros"] == op.N_PROMOVIDOS and borrado["casos"] == op.N_CASOS
+    assert op.ya_sembrado(db, camp) is False
+    for model in (Caso, Minuta, Acuerdo, AgendaItem, SeccionPlan, Militante):
+        assert db.execute(select(func.count()).select_from(model).where(model.campaign_id == camp.id)).scalar_one() == 0

@@ -104,6 +104,15 @@ async def lifespan(app: FastAPI):
             seed_atizapan_campaign(db)
     except Exception:
         logger.exception("Atizapán demo seed failed during startup")
+    # Atizapán synthetic operation (env-gated, one-time via marker).
+    try:
+        from app.database import SessionLocal
+        from app.seeds.demo_atizapan_operacion import seed_atizapan_operacion
+
+        with SessionLocal() as db:
+            seed_atizapan_operacion(db)
+    except Exception:
+        logger.exception("Atizapán operación seed failed during startup")
     # Election date (idempotent) so the Command Center countdown runs.
     try:
         from app.database import SessionLocal

@@ -172,3 +172,175 @@ def generar_militantes(db: Session, campaign: Campaign, registros: list[Registro
     db.add_all(out)
     db.flush()
     return out
+
+
+# --- Parte 2: casos, minutas/acuerdos, agenda, planes, orquestador ---------------------------
+from sqlalchemy import delete  # noqa: E402
+
+from app.models.atencion import Caso, CasoEvento  # noqa: E402
+from app.models.minuta import Acuerdo, Minuta  # noqa: E402
+from app.models.operacion import AgendaItem, SeccionPlan  # noqa: E402
+from app.services import caso_service  # noqa: E402
+from app.services.operacion_service import suggest_meta  # noqa: E402
+
+N_CASOS, N_MINUTAS, N_ACUERDOS, N_AGENDA_POR_FASE = 60, 12, 40, 10
+_TITULOS_CASO = ["Falta de agua en la colonia", "Bache en calle principal", "Luminaria fundida",
+                 "Solicitud de patrullaje", "Fuga de drenaje", "Poda de árbol peligroso",
+                 "Recolección de basura irregular", "Apoyo para despensa", "Gestión de acta de nacimiento",
+                 "Reparación de banqueta", "Semáforo descompuesto", "Apoyo médico para adulto mayor"]
+_PROBLEMAS = ["Agua", "Seguridad", "Baches", "Alumbrado", "Basura", "Transporte", "Drenaje"]
+_AGENDA = {30: ["Instalar casa de campaña", "Integrar comités seccionales", "Levantar diagnóstico por colonia",
+                "Capacitar activistas en captura", "Definir metas semanales", "Abrir canal de atención ciudadana",
+                "Mapear liderazgos vecinales", "Calendario de recorridos", "Kit de identidad de campaña", "Padrón de simpatizantes base"],
+           60: ["Recorridos en secciones competitivas", "Foros temáticos por zona", "Brigadas de servicios",
+                "Revisión de avance por líder", "Segunda ola de capacitación", "Alianzas con comerciantes",
+                "Jornadas de afiliación", "Control de calidad de captura", "Plan de redes por zona", "Encuesta interna"],
+           90: ["Consolidar estructura de casilla", "Simulacro de defensa del voto", "Cierre de brechas en rojo",
+                "Eventos masivos por zona", "Auditoría de padrón capturado", "Plan de movilización",
+                "Representantes generales", "Logística día D", "Mensaje de cierre", "Evaluación final de metas"]}
+
+
+def generar_casos(db: Session, campaign: Campaign, rng: random.Random, hoy: date) -> list[Caso]:
+    lideres, act_por_seccion = _estructura(db, campaign)
+    coord = db.execute(select(User).where(User.email == f"coordinador@{EMAIL_DOMAIN}")).scalar_one()
+    ctx = _ctx(db, campaign, coord)
+    primero = caso_service._next_folio(db, ctx)
+    prefix, base = primero.rsplit("-", 1)
+    secciones = sorted(act_por_seccion, key=int)
+    lider_de_seccion = {s: acts[0].lider_id for s, acts in act_por_seccion.items() if acts}
+    out = []
+    for k in range(N_CASOS):
+        sec = rng.choice(secciones)
+        u = rng.random()
+        if u < 0.40:
+            estado, fecha = rng.choice(["PENDIENTE", "EN_PROCESO"]), hoy - timedelta(days=rng.randint(1, 20))
+        elif u < 0.75:
+            estado, fecha = rng.choice(["ATENDIDO", "CERRADO"]), hoy - timedelta(days=rng.randint(1, 30))
+        else:
+            estado, fecha = "EN_PROCESO", hoy + timedelta(days=rng.randint(1, 10))
+        creado = datetime.combine(hoy - timedelta(days=rng.randint(5, 60)), time(10, 0), tzinfo=timezone.utc)
+        c = Caso(organization_id=campaign.organization_id, campaign_id=campaign.id,
+                 folio=f"{prefix}-{int(base) + k:05d}", tipo=rng.choice(["PETICION", "QUEJA", "APOYO", "OTRO"]),
+                 titulo=rng.choice(_TITULOS_CASO), descripcion="Reporte vecinal levantado en recorrido (demo).",
+                 ciudadano_nombre=f"{rng.choice(_NOMBRES)} {rng.choice(_APELLIDOS)}",
+                 seccion=sec, colonia=rng.choice(COLONIAS), asignado_a=lider_de_seccion.get(sec, lideres[0].id),
+                 estado=estado, prioridad=rng.choice(["ALTA", "MEDIA", "BAJA"]), fecha_compromiso=fecha,
+                 created_at=creado, created_by=coord.id)
+        db.add(c)
+        db.flush()
+        db.add(CasoEvento(organization_id=campaign.organization_id, caso_id=c.id, tipo="CAMBIO_ESTADO",
+                          estado_nuevo="PENDIENTE", actor_id=coord.id, created_at=creado))
+        out.append(c)
+    db.flush()
+    return out
+
+
+def generar_minutas(db: Session, campaign: Campaign, rng: random.Random, hoy: date) -> tuple[list[Minuta], list[Acuerdo]]:
+    lideres, _ = _estructura(db, campaign)
+    coord = db.execute(select(User).where(User.email == f"coordinador@{EMAIL_DOMAIN}")).scalar_one()
+    asistentes = [{"user_id": coord.id, "nombre": coord.full_name}] + [{"user_id": l.id, "nombre": l.full_name} for l in lideres]
+    minutas, acuerdos = [], []
+    lunes = hoy - timedelta(days=hoy.weekday())
+    for w in range(N_MINUTAS):
+        fecha = lunes - timedelta(weeks=N_MINUTAS - 1 - w)
+        m = Minuta(organization_id=campaign.organization_id, campaign_id=campaign.id,
+                   titulo=f"Coordinación semanal · semana {w + 1}", fecha=fecha, lugar="Casa de campaña",
+                   tipo="REUNION", asistentes=asistentes, estado="PUBLICADA",
+                   cuerpo="Revisión de avance por zona, casos abiertos y logística (demo).", created_by=coord.id)
+        db.add(m)
+        db.flush()
+        minutas.append(m)
+    por_minuta = distribuir(N_ACUERDOS, {m.id: 1.0 for m in minutas})
+    for m in minutas:
+        for i in range(por_minuta[m.id]):
+            limite = m.fecha + timedelta(days=rng.randint(3, 21))
+            vencido = limite < hoy
+            estado = "PENDIENTE" if (vencido and rng.random() < 0.45) else ("CUMPLIDO" if vencido else "EN_CURSO")
+            a = Acuerdo(organization_id=campaign.organization_id, campaign_id=campaign.id, minuta_id=m.id,
+                        texto=f"{rng.choice(['Entregar', 'Revisar', 'Convocar', 'Cerrar'])} {rng.choice(['padrón de zona', 'casos de agua', 'brigada', 'reporte de avance'])}",
+                        orden=i, responsable_id=rng.choice(lideres).id, fecha_limite=limite, estado=estado,
+                        created_by=coord.id)
+            db.add(a)
+            acuerdos.append(a)
+    db.flush()
+    return minutas, acuerdos
+
+
+def generar_agenda(db: Session, campaign: Campaign, rng: random.Random) -> list[AgendaItem]:
+    out = []
+    for fase, titulos in _AGENDA.items():
+        for i, t in enumerate(titulos):
+            out.append(AgendaItem(organization_id=campaign.organization_id, campaign_id=campaign.id, fase=fase,
+                                  titulo=t, orden=i, done=(fase == 30 and i < 8) or (fase == 60 and i < 4)))
+    db.add_all(out)
+    db.flush()
+    return out
+
+
+def generar_planes(db: Session, campaign: Campaign) -> list[SeccionPlan]:
+    _, act_por_seccion = _estructura(db, campaign)
+    facts = db.execute(select(SeccionElectoral).where(
+        SeccionElectoral.municipio_code == campaign.municipio_code, SeccionElectoral.anio == 2024)).scalars().all()
+    facts.sort(key=lambda f: int(f.seccion))
+    rng = random.Random(1)
+    out = []
+    for f in facts:
+        acts = act_por_seccion.get(f.seccion) or []
+        out.append(SeccionPlan(organization_id=campaign.organization_id, campaign_id=campaign.id, seccion=f.seccion,
+                               responsable_id=acts[0].lider_id if acts else None,
+                               problema_dominante=rng.choice(_PROBLEMAS), meta_semanal=suggest_meta(f.prioridad),
+                               prioridad_operativa=f.prioridad))
+    db.add_all(out)
+    db.flush()
+    return out
+
+
+def _campaign(db: Session) -> Optional[Campaign]:
+    from app.models.organization import Organization
+    from app.seeds.demo_atizapan import CAMPAIGN_NAME
+    slug = os.getenv("SEED_DEMO_ATIZAPAN_ORG_SLUG", "atizapan")
+    org = db.execute(select(Organization).where(Organization.slug == slug)).scalar_one_or_none()
+    if org is None:
+        return None
+    return db.execute(select(Campaign).where(Campaign.organization_id == org.id,
+                                             Campaign.name == CAMPAIGN_NAME)).scalar_one_or_none()
+
+
+def seed_atizapan_operacion(db: Session, hoy: Optional[date] = None) -> bool:
+    if os.getenv("SEED_DEMO_ATIZAPAN", "").lower() != "true":
+        return False
+    campaign = _campaign(db)
+    if campaign is None or ya_sembrado(db, campaign):
+        return False
+    hoy = hoy or date.today()
+    rng = random.Random(15013)
+    regs = generar_registros(db, campaign, rng, hoy)
+    generar_militantes(db, campaign, regs, rng)
+    generar_casos(db, campaign, rng, hoy)
+    generar_minutas(db, campaign, rng, hoy)
+    generar_agenda(db, campaign, rng)
+    generar_planes(db, campaign)
+    db.commit()
+    logger.info("Atizapán operación sintética sembrada: %d promovidos", len(regs))
+    return True
+
+
+def reset_operacion(db: Session, campaign: Campaign) -> dict[str, int]:
+    """Borra SOLO lo generado por este seed en esa campaña (marcador / tablas completas de la campaña
+    demo). Uso local o de rescate; nunca en el lifespan."""
+    cid = campaign.id
+    counts = {}
+    caso_ids = [i for (i,) in db.execute(select(Caso.id).where(Caso.campaign_id == cid)).all()]
+    db.execute(delete(CasoEvento).where(CasoEvento.caso_id.in_(caso_ids or ["-"])))
+    for name, model, cond in (
+        ("registros", Registro, (Registro.campaign_id == cid) & (Registro.promotor == MARCADOR)),
+        ("militantes", Militante, (Militante.campaign_id == cid) & (Militante.promotor == MARCADOR)),
+        ("casos", Caso, Caso.campaign_id == cid),
+        ("acuerdos", Acuerdo, Acuerdo.campaign_id == cid),
+        ("minutas", Minuta, Minuta.campaign_id == cid),
+        ("agenda", AgendaItem, AgendaItem.campaign_id == cid),
+        ("planes", SeccionPlan, SeccionPlan.campaign_id == cid),
+    ):
+        counts[name] = db.execute(delete(model).where(cond)).rowcount
+    db.commit()
+    return counts
