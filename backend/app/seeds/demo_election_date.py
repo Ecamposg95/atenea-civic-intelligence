@@ -1,9 +1,7 @@
-"""Idempotent seed: ensure the demo campaign has a Contest with
-``election_date = 2027-06-06`` (primer domingo de junio) so the Command Center
-countdown runs. No migration; reuses Cargo + Contest. Safe to run every boot."""
+"""Seed idempotente: toda campaña con ``municipio_code`` del registro tiene un Contest con
+``election_date = 2027-06-06`` y ``territory_id`` = área MUNICIPIO. Corre en cada arranque."""
 from __future__ import annotations
 
-import os
 from datetime import date
 
 from sqlalchemy import select
@@ -11,48 +9,39 @@ from sqlalchemy.orm import Session
 
 from app.models.campaign import Campaign, Contest
 from app.models.catalog import Ambito, Cargo
+from app.models.electoral_area import AreaLevel, ElectoralArea
+from app.seeds.municipios import MUNICIPIOS
 
-_CAMPAIGN_ID = os.environ.get("DEMO_CAMPAIGN_ID", "616b72dd-268a-42d9-8c66-008a0780cda8")
 _ELECTION_DATE = date(2027, 6, 6)
 _CARGO = ("presidencia_municipal", "Presidencia Municipal", Ambito.MUNICIPAL, "municipio")
 
 
-def seed_election_date(db: Session) -> None:
-    campaign = db.get(Campaign, _CAMPAIGN_ID)
-    if campaign is None:
-        return  # demo campaign not present in this environment — skip
-
-    # already has a dated contest? nothing to do.
-    dated = db.execute(
-        select(Contest).where(
-            Contest.campaign_id == _CAMPAIGN_ID,
-            Contest.deleted_at.is_(None),
-            Contest.election_date.is_not(None),
-        )
-    ).first()
-    if dated is not None:
-        return
-
+def _cargo(db: Session) -> Cargo:
     cargo = db.execute(select(Cargo).where(Cargo.key == _CARGO[0])).scalar_one_or_none()
     if cargo is None:
         cargo = Cargo(key=_CARGO[0], label=_CARGO[1], ambito=_CARGO[2], territory_level=_CARGO[3])
         db.add(cargo)
         db.flush()
+    return cargo
 
-    # reuse an existing undated contest if any, else create one.
-    contest = db.execute(
-        select(Contest).where(
-            Contest.campaign_id == _CAMPAIGN_ID, Contest.deleted_at.is_(None)
-        )
-    ).scalars().first()
-    if contest is None:
-        contest = Contest(
-            organization_id=campaign.organization_id,
-            campaign_id=_CAMPAIGN_ID,
-            cargo_id=cargo.id,
-            election_date=_ELECTION_DATE,
-        )
-        db.add(contest)
-    else:
-        contest.election_date = _ELECTION_DATE
+
+def seed_election_date(db: Session) -> None:
+    campaigns = db.execute(select(Campaign).where(
+        Campaign.deleted_at.is_(None), Campaign.municipio_code.in_(list(MUNICIPIOS)))).scalars().all()
+    if not campaigns:
+        return
+    cargo = _cargo(db)
+    for c in campaigns:
+        area = db.execute(select(ElectoralArea).where(
+            ElectoralArea.code == c.municipio_code, ElectoralArea.level == AreaLevel.MUNICIPIO)).scalar_one_or_none()
+        contest = db.execute(select(Contest).where(
+            Contest.campaign_id == c.id, Contest.deleted_at.is_(None))).scalars().first()
+        if contest is None:
+            contest = Contest(organization_id=c.organization_id, campaign_id=c.id, cargo_id=cargo.id,
+                              election_date=_ELECTION_DATE)
+            db.add(contest)
+        if contest.election_date is None:
+            contest.election_date = _ELECTION_DATE
+        if contest.territory_id is None and area is not None:
+            contest.territory_id = area.id
     db.commit()

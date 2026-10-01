@@ -26,16 +26,16 @@ def test_executive_endpoint_shape_and_gating(client):
     assert isinstance(body["tendencia"], list)
 
 
-def test_election_date_seed_idempotent(monkeypatch):
+def test_election_date_seed_idempotent():
     db = TestingSessionLocal()
     try:
         org = db.execute(select(Organization).where(Organization.slug == "alpha")).scalar_one()
-        camp = Campaign(name="Seed Test Campaign", cycle=2027, organization_id=org.id)
+        camp = Campaign(name="Seed Test Campaign", cycle=2027, organization_id=org.id,
+                        municipio_code="15076")
         db.add(camp); db.commit()
         cid = camp.id
     finally:
         db.close()
-    monkeypatch.setattr(demo_election_date, "_CAMPAIGN_ID", cid)
     try:
         db = TestingSessionLocal(); demo_election_date.seed_election_date(db); db.close()
         db = TestingSessionLocal(); demo_election_date.seed_election_date(db)  # 2nd run: no dup

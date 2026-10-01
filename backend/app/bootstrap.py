@@ -231,6 +231,9 @@ def _seed_demo_activists() -> None:
             db.add(campaign)
             db.flush()
             logger.info("Seeded demo campaign '%s'", campaign_name)
+        if campaign.municipio_code is None:
+            campaign.municipio_code = "15076"   # Lucy = San Mateo Atenco
+            db.flush()
 
         # -- lucy (COORDINADOR) --------------------------------------------
         lucy = db.execute(

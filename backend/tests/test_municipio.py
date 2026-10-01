@@ -11,7 +11,8 @@ from tests.conftest import TestingSessionLocal, auth_headers
 from app.models.census import CensusMetric
 from app.models.electoral_area import AreaLevel, ElectoralArea
 from app.models.seccion_electoral import SeccionElectoral
-from app.seeds.demo_municipio_intel import seed_municipio_intel
+from app.seeds.demo_municipio_intel import seed_intel
+from app.seeds.municipios import MUNICIPIOS
 from app.services import municipio_service
 
 _MUNI = "15076"
@@ -28,11 +29,11 @@ def _seed_study():
             if db.execute(select(SeccionElectoral).where(
                 SeccionElectoral.seccion == code, SeccionElectoral.anio == 2024)).scalar_one_or_none() is None:
                 db.add(SeccionElectoral(
-                    seccion=code, municipio="San Mateo Atenco", anio=2024,
+                    seccion=code, municipio="San Mateo Atenco", municipio_code=_MUNI, anio=2024,
                     lista_nominal=3954, votos=2647, participacion=66.9,
                     coalicion=coal, morena=morena, margen=margen, prioridad="COMPETITIVA"))
         db.commit()
-        seed_municipio_intel(db)
+        seed_intel(db, MUNICIPIOS[_MUNI])
     finally:
         db.close()
 
