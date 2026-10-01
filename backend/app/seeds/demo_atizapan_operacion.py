@@ -141,6 +141,11 @@ def generar_registros(db: Session, campaign: Campaign, rng: random.Random, hoy: 
                 clave_elector_enc=crypto.encrypt_clave(clave), clave_masked=crypto.mask_clave(clave),
                 consentimiento=True, consentimiento_at=creado, aviso_version=notice.version,
                 created_at=creado, created_by=act.id if act else None))
+    # El equipo "lleva trabajando" desde el inicio de la operación: sin esto, la regla
+    # O4 (inactivos) los descarta como "recién dados de alta" y nunca dispara.
+    alta = datetime.combine(inicio, time(8, 0), tzinfo=timezone.utc)
+    for u in {u.id: u for lista in act_por_seccion.values() for u in lista}.values():
+        u.created_at = alta
     db.add_all(out)
     db.flush()
     return out
