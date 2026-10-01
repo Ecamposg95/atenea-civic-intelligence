@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
+import { getAlertas } from "@/api/alertas";
 import { getExecutiveDashboard } from "@/api/dashboard";
+import { ALERTAS_READ } from "@/modules/alertas/logic";
+import { useAuthStore } from "@/store/authStore";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CountdownElectoral } from "@/components/CountdownElectoral";
@@ -44,6 +47,15 @@ export function DashboardPage() {
     () => getExecutiveDashboard(),
     [],
   );
+
+  const role = useAuthStore((s) => s.user?.role);
+  const puedeAlertas = !!role && ALERTAS_READ.includes(role);
+  // Falla silenciosa: el chip es un atajo, nunca debe romper Inicio.
+  const centro = useAsync(
+    () => (puedeAlertas ? getAlertas().catch(() => null) : Promise.resolve(null)),
+    [puedeAlertas],
+  );
+  const criticas = centro.data?.resumen.critica ?? 0;
 
   const promovidos = data?.promovidos;
   const afiliados = data?.afiliados;
@@ -123,7 +135,18 @@ export function DashboardPage() {
         title="Centro de Mando"
         accent="Ejecutivo"
         subtitle={campaignSubtitle(campaign) ?? "Avance de campaña en tiempo real: promoción, afiliación, atención ciudadana y cobertura territorial."}
-        actions={<CountdownElectoral date={data?.election_date ?? null} />}
+        actions={
+          <div className="flex items-center gap-3">
+            {criticas > 0 && (
+              <Link to="/riesgo" className="focus-ring" aria-label={`Ver ${criticas} alertas críticas`}>
+                <StatusPill kind="crit">
+                  {criticas} {criticas === 1 ? "alerta crítica" : "alertas críticas"}
+                </StatusPill>
+              </Link>
+            )}
+            <CountdownElectoral date={data?.election_date ?? null} />
+          </div>
+        }
       />
 
       <DataState
