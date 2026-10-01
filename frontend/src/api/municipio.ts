@@ -55,6 +55,16 @@ export async function getMunicipioPanorama(code: string): Promise<MunicipioPanor
   return (await apiClient.get(`/municipio/${code}/panorama`)).data;
 }
 
+export interface MunicipioCatalogo {
+  code: string;
+  name: string;
+  region: string;
+}
+
+export async function getMunicipioCatalogo(): Promise<MunicipioCatalogo[]> {
+  return (await apiClient.get("/municipio/catalogo")).data;
+}
+
 export async function getRegion(): Promise<RegionOut> {
   return (await apiClient.get("/municipio/region")).data;
 }

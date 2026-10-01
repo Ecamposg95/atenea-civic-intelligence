@@ -17,6 +17,7 @@ export interface Cargo {
 export interface CampaignCreatePayload {
   name: string;
   cycle: string;
+  municipio_code?: string | null;
 }
 
 export interface ContestCreatePayload {

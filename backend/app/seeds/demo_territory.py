@@ -14,12 +14,13 @@ from app.seeds.municipios import MUNICIPIOS, MunicipioConfig
 _ANIO = 2024
 
 
-def _area_seccion(db: Session, code: str, muni: ElectoralArea) -> None:
-    area = db.execute(select(ElectoralArea).where(
-        ElectoralArea.code == code, ElectoralArea.level == AreaLevel.SECCION)).scalar_one_or_none()
+def _area_seccion(areas: dict[str, ElectoralArea], db: Session, code: str, muni: ElectoralArea) -> None:
+    area = areas.get(code)
     if area is None:
-        db.add(ElectoralArea(name=f"Sección {code}", code=code, level=AreaLevel.SECCION,
-                             organization_id=None, municipio_id=muni.id, parent_id=muni.id))
+        area = ElectoralArea(name=f"Sección {code}", code=code, level=AreaLevel.SECCION,
+                             organization_id=None, municipio_id=muni.id, parent_id=muni.id)
+        db.add(area)
+        areas[code] = area
     elif area.municipio_id is None or area.parent_id is None:
         area.municipio_id = muni.id
         area.parent_id = muni.id
@@ -35,10 +36,12 @@ def seed_territory(db: Session, cfg: MunicipioConfig) -> None:
 
     existentes = {f.seccion: f for f in db.execute(select(SeccionElectoral).where(
         SeccionElectoral.anio == _ANIO)).scalars()}
+    areas = {a.code: a for a in db.execute(select(ElectoralArea).where(
+        ElectoralArea.level == AreaLevel.SECCION)).scalars()}
     with (cfg.data_dir / "secciones_2024.csv").open(encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
             code = r["seccion"]
-            _area_seccion(db, code, muni)
+            _area_seccion(areas, db, code, muni)
             fact = existentes.get(code)
             if fact is None:
                 db.add(SeccionElectoral(
@@ -49,7 +52,7 @@ def seed_territory(db: Session, cfg: MunicipioConfig) -> None:
             elif fact.municipio_code != cfg.code:
                 fact.municipio_code = cfg.code   # reconcilia filas previas a 0021
     for code in cfg.extra_secciones:
-        _area_seccion(db, code, muni)
+        _area_seccion(areas, db, code, muni)
     db.commit()
 
 

@@ -67,3 +67,17 @@ def test_region_errores(client, region_seeded):
     _set_muni("15013")
     assert client.get("/api/municipio/region", headers={**auth_headers(client, "activista1@alpha.gov"),
                                                        "X-Campaign-Id": ALPHA_CAMPAIGN_ID}).status_code == 403
+
+
+def test_catalogo_municipios(client):
+    r = client.get("/api/municipio/catalogo", headers=auth_headers(client, "admin@alpha.gov"))
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body) == 8
+    assert body[0]["code"] == "15076"
+    assert "15013" in [m["code"] for m in body]
+    assert all(m["name"] and m["region"] for m in body)
+
+
+def test_catalogo_requiere_auth(client):
+    assert client.get("/api/municipio/catalogo").status_code == 401

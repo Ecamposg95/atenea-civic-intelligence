@@ -1,6 +1,6 @@
 """Seed AZ-3: org 'atizapan', re-domicilio del admin, campaña y estructura (51 usuarios)."""
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from app.core.security import hash_password, verify_password
 from app.models.campaign import Campaign, CampaignMembership, Contest
@@ -103,6 +103,30 @@ def test_rehome_superadmin_de_otra_org(monkeypatch, db):
     propia = db.execute(select(CampaignMembership).where(
         CampaignMembership.user_id == u.id, CampaignMembership.campaign_id == camp.id)).scalar_one()
     assert propia.role == UserRole.ADMIN
+
+
+def test_rehome_no_degrada_al_ultimo_superadmin(monkeypatch, db):
+    alpha = db.execute(select(Organization).where(Organization.slug == "alpha")).scalar_one()
+    u = User(email="ultimo.super@atlastech.mx", full_name="Ultimo Super", role=UserRole.SUPERADMIN,
+             organization_id=alpha.id, hashed_password=hash_password("Otra9!"))
+    db.add(u)
+    db.commit()
+    otro = db.execute(select(User).where(User.email == "super@atlas.gov")).scalar_one()
+    otro_activo = otro.is_active
+    otro.is_active = False
+    db.commit()
+    try:
+        _env(monkeypatch, admin_email="ultimo.super@atlastech.mx")
+        seed_atizapan_campaign(db)
+        db.refresh(u)
+        assert u.role == UserRole.SUPERADMIN
+        assert u.organization_id == alpha.id
+    finally:
+        db.refresh(otro)
+        otro.is_active = otro_activo
+        db.execute(delete(CampaignMembership).where(CampaignMembership.user_id == u.id))
+        db.delete(u)
+        db.commit()
 
 
 def test_rehome_ya_en_org_no_cambia_y_usuario_inexistente_se_crea(monkeypatch, db):

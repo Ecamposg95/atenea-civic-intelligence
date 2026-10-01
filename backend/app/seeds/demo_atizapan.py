@@ -14,7 +14,7 @@ import logging
 import os
 from typing import Optional
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
@@ -91,6 +91,13 @@ def _rehome_admin(db: Session, org: Organization, campaign: Campaign, email: str
         db.flush()
         logger.info("Seeded admin %s in org %s", email, org.slug)
     elif u.organization_id != org.id:
+        if u.role == UserRole.SUPERADMIN:
+            otros = db.execute(select(func.count(User.id)).where(
+                User.role == UserRole.SUPERADMIN, User.is_active.is_(True),
+                User.deleted_at.is_(None), User.id != u.id)).scalar_one()
+            if otros == 0:
+                logger.error("Refusing to re-home the last active SUPERADMIN (user id %s)", u.id)
+                return
         prev_org, prev_role = u.organization_id, u.role
         u.organization_id = org.id
         u.role = UserRole.ADMIN

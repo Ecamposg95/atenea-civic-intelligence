@@ -7,6 +7,7 @@ import {
   listMyCampaigns,
   type CampaignCreatePayload,
 } from "@/api/campaigns";
+import { getMunicipioCatalogo } from "@/api/municipio";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
@@ -69,9 +70,10 @@ const CAMPAIGN_COLUMNS: Column<Campaign>[] = [
 interface FormState {
   name: string;
   cycle: string;
+  municipio_code: string;
 }
 
-const EMPTY_FORM: FormState = { name: "", cycle: "" };
+const EMPTY_FORM: FormState = { name: "", cycle: "", municipio_code: "" };
 
 // ─── Page component ────────────────────────────────────────────────────────────
 
@@ -79,6 +81,8 @@ export function CampaignsPage() {
   const setCampaigns = useCampaignStore((s) => s.setCampaigns);
   const campaigns = useAsync(() => listMyCampaigns(), []);
   const items = campaigns.data ?? [];
+  // Falla silenciosa: sin catálogo el select solo muestra la opción vacía.
+  const catalogo = useAsync(() => getMunicipioCatalogo().catch(() => []), []);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -110,6 +114,7 @@ export function CampaignsPage() {
     setModalError(null);
     try {
       const payload: CampaignCreatePayload = { name, cycle };
+      if (form.municipio_code) payload.municipio_code = form.municipio_code;
       await createCampaign(payload);
       setModalOpen(false);
       campaigns.reload();
@@ -254,6 +259,26 @@ export function CampaignsPage() {
             <p className="mt-1.5 text-[11px] text-ink-faint">
               Año o identificador del ciclo electoral (p. ej. 2027).
             </p>
+          </div>
+          <div>
+            <label className="field-label" htmlFor="campaign-municipio">
+              Municipio (opcional)
+            </label>
+            <select
+              id="campaign-municipio"
+              className="field-input focus-ring"
+              value={form.municipio_code}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, municipio_code: e.target.value }))
+              }
+            >
+              <option value="">Sin municipio (todas las secciones)</option>
+              {(catalogo.data ?? []).map((m) => (
+                <option key={m.code} value={m.code}>
+                  {m.name} · {m.region}
+                </option>
+              ))}
+            </select>
           </div>
           {modalError && (
             <p className="text-xs text-state-critical" role="alert">

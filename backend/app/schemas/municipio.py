@@ -16,6 +16,12 @@ class RegionMunicipio(BaseModel):
     poblacion: Optional[int] = None
 
 
+class MunicipioCatalogo(BaseModel):
+    code: str
+    name: str
+    region: str
+
+
 class RegionOut(BaseModel):
     region: str
     municipios: list[RegionMunicipio]

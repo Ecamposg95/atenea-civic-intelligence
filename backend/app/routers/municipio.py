@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.dependencies import CampaignCtx, DbSession, Tenant, require_roles
 from app.models.user import UserRole
-from app.schemas.municipio import RegionOut
+from app.schemas.municipio import MunicipioCatalogo, RegionOut
+from app.seeds.municipios import MUNICIPIOS, REGIONES
 from app.services import municipio_service
 
 _INTEL_READ = Depends(require_roles(
@@ -24,6 +25,14 @@ def region(db: DbSession, cctx: CampaignCtx):
     if data is None:
         raise HTTPException(status_code=404, detail="Municipio fuera del registro")
     return data
+
+
+@router.get("/catalogo", response_model=list[MunicipioCatalogo])
+def catalogo(ctx: Tenant):
+    return [
+        MunicipioCatalogo(code=c.code, name=c.name, region=REGIONES[c.region])
+        for c in MUNICIPIOS.values()
+    ]
 
 
 @router.get("/{code}/panorama")

@@ -53,7 +53,7 @@ export default function AlertasPage() {
     setSeccion(null);
     setCategoria("todas");
   }, [activeId]);
-  const d =state.data;
+  const d = state.data;
   const visibles = useMemo(
     () => (d ? filtrarAlertas(d.items, categoria, seccion) : []),
     [d, categoria, seccion],

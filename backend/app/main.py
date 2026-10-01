@@ -83,8 +83,11 @@ async def lifespan(app: FastAPI):
         from app.database import SessionLocal
         from app.seeds.demo_territory import seed_all_territories
 
-        with SessionLocal() as db:
-            seed_all_territories(db)
+        try:
+            with SessionLocal() as db:
+                seed_all_territories(db)
+        except Exception:
+            logger.exception("Demo territory seed failed (non-fatal)")
     # Inteligencia municipal de todos los municipios del registro (CensusMetric): idempotent + lightweight
     # (aggregate rows), so ensure it's present on every boot rather than gating
     # on a flag. Never let a seed failure block startup.

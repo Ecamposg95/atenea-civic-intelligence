@@ -50,10 +50,11 @@ export function DashboardPage() {
 
   const role = useAuthStore((s) => s.user?.role);
   const puedeAlertas = !!role && ALERTAS_READ.includes(role);
+  const activeId = useCampaignStore((s) => s.activeId);
   // Falla silenciosa: el chip es un atajo, nunca debe romper Inicio.
   const centro = useAsync(
     () => (puedeAlertas ? getAlertas().catch(() => null) : Promise.resolve(null)),
-    [puedeAlertas],
+    [puedeAlertas, activeId],
   );
   const criticas = centro.data?.resumen.critica ?? 0;
 
