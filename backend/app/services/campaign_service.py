@@ -20,7 +20,9 @@ def list_my_campaigns(db: Session, ctx) -> list[Campaign]:
 
 
 def create_campaign(db: Session, ctx, data) -> Campaign:
-    c = Campaign(name=data.name, cycle=data.cycle, organization_id=ctx.organization_id, created_by=ctx.user.id)
+    c = Campaign(name=data.name, cycle=data.cycle, organization_id=ctx.organization_id,
+                 created_by=ctx.user.id, municipio_code=data.municipio_code,
+                 candidato=data.candidato, partido=data.partido)
     db.add(c)
     db.flush()
     db.add(CampaignMembership(user_id=ctx.user.id, campaign_id=c.id, role=ctx.role))

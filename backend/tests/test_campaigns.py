@@ -90,3 +90,28 @@ def test_contests_are_isolated_across_campaigns(client):
 
     r403 = client.get(f"/api/campaigns/{ALPHA_CAMPAIGN_ID}/contests", headers={**bh0, "X-Campaign-Id": ALPHA_CAMPAIGN_ID})
     assert r403.status_code in (403, 404)
+
+
+from tests.conftest import TestingSessionLocal
+
+
+def test_campaign_create_and_read_municipio_candidato(client):
+    h = auth_headers(client, "admin@alpha.gov")
+    r = client.post("/api/campaigns", headers=h, json={
+        "name": "Atizapán Test 2027", "cycle": 2027,
+        "municipio_code": "15013", "candidato": "Luis Montaño", "partido": "Morena-PVEM-PT"})
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["municipio_code"] == "15013"
+    assert body["candidato"] == "Luis Montaño" and body["partido"] == "Morena-PVEM-PT"
+    mine = client.get("/api/campaigns/mine", headers=h).json()
+    alpha = next(c for c in mine if c["id"] == ALPHA_CAMPAIGN_ID)
+    assert alpha["municipio_code"] is None  # campos opcionales, nullables
+
+
+def test_campaign_context_carries_municipio_code():
+    from app.dependencies import CampaignContext
+    ctx = CampaignContext(user=None, organization_id="o", role=None, campaign_id="c")
+    assert ctx.municipio_code is None
+    ctx2 = CampaignContext(user=None, organization_id="o", role=None, campaign_id="c", municipio_code="15013")
+    assert ctx2.municipio_code == "15013"

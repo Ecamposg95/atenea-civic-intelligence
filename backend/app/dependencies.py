@@ -98,6 +98,7 @@ Tenant = Annotated[TenantContext, Depends(get_tenant_context)]
 @dataclass(frozen=True)
 class CampaignContext(TenantContext):
     campaign_id: str = ""
+    municipio_code: Optional[str] = None
 
 
 def get_campaign_context(
@@ -128,7 +129,8 @@ def get_campaign_context(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this campaign")
     organization_id = campaign.organization_id if ctx.is_superadmin else ctx.organization_id
     return CampaignContext(
-        user=ctx.user, organization_id=organization_id, role=ctx.role, campaign_id=x_campaign_id
+        user=ctx.user, organization_id=organization_id, role=ctx.role,
+        campaign_id=x_campaign_id, municipio_code=campaign.municipio_code,
     )
 
 

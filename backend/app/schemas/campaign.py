@@ -6,6 +6,9 @@ from pydantic import BaseModel
 class CampaignCreate(BaseModel):
     name: str
     cycle: int
+    municipio_code: Optional[str] = None
+    candidato: Optional[str] = None
+    partido: Optional[str] = None
 
 
 class CampaignOut(BaseModel):
@@ -14,6 +17,9 @@ class CampaignOut(BaseModel):
     cycle: int
     status: str
     license_tier: str
+    municipio_code: Optional[str] = None
+    candidato: Optional[str] = None
+    partido: Optional[str] = None
 
     class Config:
         from_attributes = True

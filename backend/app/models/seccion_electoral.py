@@ -18,6 +18,7 @@ class SeccionElectoral(UUIDMixin, Base):
 
     seccion: Mapped[str] = mapped_column(String(20), index=True, nullable=False)
     municipio: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    municipio_code: Mapped[Optional[str]] = mapped_column(String(10), index=True, nullable=True)
     anio: Mapped[int] = mapped_column(Integer, nullable=False)
     lista_nominal: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     votos: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

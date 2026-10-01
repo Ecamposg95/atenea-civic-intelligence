@@ -36,6 +36,10 @@ class Campaign(UUIDMixin, TenantMixin, AuditMixin, Base):
         Enum(LicenseTier, name="license_tier"), default=LicenseTier.STANDARD, nullable=False
     )
     meta_afiliacion: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Municipio INEGI (p. ej. "15013") que acota las secciones de la campaña; NULL = sin acotar.
+    municipio_code: Mapped[Optional[str]] = mapped_column(String(10), index=True, nullable=True)
+    candidato: Mapped[Optional[str]] = mapped_column(String(160), nullable=True)
+    partido: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)
 
 
 class Contest(UUIDMixin, TenantMixin, AuditMixin, CampaignMixin, Base):
