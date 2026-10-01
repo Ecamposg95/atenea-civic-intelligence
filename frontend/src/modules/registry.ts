@@ -1,6 +1,7 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from "react";
 
 import type { UserRole } from "@/types/auth";
+import { ALERTAS_READ } from "@/modules/alertas/logic";
 import {
   AiIcon,
   AlertIcon,
@@ -246,6 +247,9 @@ const PanoramaMunicipio = lazy(() =>
 const PlanTerritorial = lazy(() =>
   import("@/modules/operacion/PlanTerritorialPage"),
 );
+const Alertas = lazy(() =>
+  import("@/modules/alertas/AlertasPage"),
+);
 const WarRoom = lazy(() =>
   import("@/modules/operacion/WarRoomPage"),
 );
@@ -335,14 +339,7 @@ export const MODULES: ModuleDef[] = [
       dataSource: "Módulo propio de captación (por construir).",
     },
   },
-  {
-    key: "riesgo", path: "/riesgo", label: "Alertas", section: "operacion", icon: AlertIcon, state: "soon", roles: INTEL,
-    soon: {
-      summary: "Detección de anomalías y monitoreo de riesgo en territorio.",
-      features: ["Anomalías estadísticas en resultados", "Mapa de zonas de riesgo", "Alertas configurables"],
-      dataSource: "Modelos sobre PREP/cómputos + señales territoriales.",
-    },
-  },
+  { key: "riesgo", path: "/riesgo", label: "Alertas", section: "operacion", icon: AlertIcon, state: "active", element: Alertas, roles: ALERTAS_READ },
 
   // Administración (ex-gobernanza + ex-administracion)
   { key: "auditoria", path: "/auditoria", label: "Auditoría", section: "administracion", icon: ShieldIcon, state: "active", element: Auditoria, roles: ADMINY },
