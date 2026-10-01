@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -99,11 +99,20 @@ function SeccionesTabla({
 export default function PanoramaMunicipioPage() {
   const activeId = useCampaignStore((s) => s.activeId);
   const campaign = useCampaignStore((s) => s.campaigns.find((c) => c.id === s.activeId));
+  const hasMunicipio = !!campaign?.municipio_code;
   const regionState = useAsync(
-    () => (activeId ? getRegion() : Promise.reject(new Error("Selecciona una campaña"))),
-    [activeId],
+    () =>
+      !activeId
+        ? Promise.reject(new Error("Selecciona una campaña"))
+        : !hasMunicipio
+          ? Promise.reject(new Error("Esta campaña no tiene municipio asignado"))
+          : getRegion(),
+    [activeId, hasMunicipio],
   );
   const [selected, setSelected] = useState<string | null>(null);
+  useEffect(() => {
+    setSelected(null);
+  }, [activeId]);
   const code = selected ?? (regionState.data ? pickDefaultCode(regionState.data, campaign?.municipio_code) : null);
   const state = useAsync(() => (code ? getMunicipioPanorama(code) : Promise.resolve(null)), [code]);
   const d = state.data;
@@ -182,7 +191,7 @@ export default function PanoramaMunicipioPage() {
 
             {/* Tendencia electoral */}
             <section>
-              <SectionHeading eyebrow="Lectura electoral" title="Volatilidad real, no dominio absoluto" note="2015–2024" />
+              <SectionHeading eyebrow="Lectura electoral" title="Tendencia electoral municipal" note="2018–2024" />
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <ChartFrame title="Participación ciudadana" caption="% por elección municipal">
                   <AreaTrend points={d.historico.map((h) => ({ x: String(h.anio), y: h.participacion ?? 0 }))} />
