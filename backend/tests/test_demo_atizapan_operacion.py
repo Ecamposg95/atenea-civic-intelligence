@@ -176,3 +176,19 @@ def test_orquestador_una_sola_vez_y_reset(campaign, monkeypatch):
     assert op.ya_sembrado(db, camp) is False
     for model in (Caso, Minuta, Acuerdo, AgendaItem, SeccionPlan, Militante):
         assert db.execute(select(func.count()).select_from(model).where(model.campaign_id == camp.id)).scalar_one() == 0
+
+
+def test_generar_registros_retrodata_alta_del_equipo(campaign):
+    """Regresión: sin retrodatar, O4 descarta a todo el equipo como 'recién dado de alta'."""
+    db, camp = campaign
+    hoy = date(2026, 9, 30)
+    regs = op.generar_registros(db, camp, random.Random(15013), hoy)
+    primera: dict[str, object] = {}
+    for r in regs:
+        if r.activista_id and (r.activista_id not in primera or r.created_at < primera[r.activista_id]):
+            primera[r.activista_id] = r.created_at
+    assert primera
+    for uid, first in primera.items():
+        alta = db.get(User, uid).created_at.replace(tzinfo=None)
+        assert alta <= first.replace(tzinfo=None)
+        assert alta.date() < hoy - timedelta(days=7)

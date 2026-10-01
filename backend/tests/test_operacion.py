@@ -8,6 +8,7 @@ from app.models.operacion import AgendaItem, SeccionPlan
 from app.models.organization import Organization
 from app.models.registro import Registro
 from app.models.seccion_electoral import SeccionElectoral
+from app.models.user import User
 from app.services import operacion_service
 
 _SEC = "8881"
@@ -200,3 +201,16 @@ def test_list_planes_aisla_por_municipio(coordinador_ctx, db_session, _limpia_se
 def test_folio_prefix_por_municipio(coordinador_ctx):
     assert territory_service.folio_prefix(coordinador_ctx) == "SMA"
     assert territory_service.folio_prefix(replace(coordinador_ctx, municipio_code="15013")) == "ATZ"
+
+
+def test_list_planes_responsable_nombre_usa_full_name(coordinador_ctx, db_session):
+    """Regresión: list_planes usaba User.name (inexistente) y reventaba con responsable_id."""
+    _seed()
+    coord = db_session.execute(select(User).where(User.email == "coord@alpha.gov")).scalar_one()
+    db_session.add(SeccionPlan(
+        organization_id=coordinador_ctx.organization_id, campaign_id=coordinador_ctx.campaign_id,
+        seccion=_SEC, responsable_id=coord.id))
+    db_session.commit()
+    fila = next(p for p in list_planes(db_session, coordinador_ctx) if p["seccion"] == _SEC)
+    assert fila["plan"]["responsable_id"] == coord.id
+    assert fila["plan"]["responsable_nombre"] == coord.full_name
