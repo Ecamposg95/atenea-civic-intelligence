@@ -126,6 +126,7 @@ def test_casos_sla_vencidos_y_estados(campaign):
     assert len(casos) == op.N_CASOS
     vencidos = [c for c in casos if c.fecha_compromiso and c.fecha_compromiso < hoy and c.estado not in ("ATENDIDO", "CERRADO")]
     assert len(vencidos) >= op.N_CASOS * 0.35
+    assert len(vencidos) == op.CASOS_VENCIDOS == 24
     assert len({c.folio for c in casos}) == len(casos)
     assert all(c.tipo in ("PETICION", "QUEJA", "APOYO", "OTRO") and c.seccion and c.asignado_a for c in casos)
     n_ev = db.execute(select(func.count()).select_from(CasoEvento).where(
@@ -142,6 +143,7 @@ def test_minutas_acuerdos_vencidos(campaign):
     assert all(m.estado == "PUBLICADA" and len(m.asistentes) >= 9 for m in minutas)
     vencidos = [a for a in acuerdos if a.fecha_limite and a.fecha_limite < hoy and a.estado == "PENDIENTE"]
     assert len(vencidos) >= op.N_ACUERDOS * 0.2
+    assert len(vencidos) == op.ACUERDOS_VENCIDOS == 10
     assert all(a.responsable_id for a in acuerdos)
 
 
@@ -164,6 +166,11 @@ def test_orquestador_una_sola_vez_y_reset(campaign, monkeypatch):
     from tests.conftest import ALPHA_CAMPAIGN_ID
     assert db.execute(select(func.count()).select_from(Registro).where(
         Registro.campaign_id == ALPHA_CAMPAIGN_ID, Registro.promotor == op.MARCADOR)).scalar_one() == 0
+    hoy = date(2026, 9, 30)
+    casos = db.execute(select(Caso).where(Caso.campaign_id == camp.id)).scalars().all()
+    assert sum(1 for c in casos if c.fecha_compromiso < hoy and c.estado not in ("ATENDIDO", "CERRADO")) == 24
+    acs = db.execute(select(Acuerdo).where(Acuerdo.campaign_id == camp.id)).scalars().all()
+    assert sum(1 for a in acs if a.fecha_limite < hoy and a.estado == "PENDIENTE") == 10
     borrado = op.reset_operacion(db, camp)
     assert borrado["registros"] == op.N_PROMOVIDOS and borrado["casos"] == op.N_CASOS
     assert op.ya_sembrado(db, camp) is False

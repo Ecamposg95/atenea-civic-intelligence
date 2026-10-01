@@ -184,6 +184,8 @@ from app.services import caso_service  # noqa: E402
 from app.services.operacion_service import suggest_meta  # noqa: E402
 
 N_CASOS, N_MINUTAS, N_ACUERDOS, N_AGENDA_POR_FASE = 60, 12, 40, 10
+CASOS_VENCIDOS, CASOS_TERMINALES = 24, 21
+ACUERDOS_VENCIDOS = 10
 _TITULOS_CASO = ["Falta de agua en la colonia", "Bache en calle principal", "Luminaria fundida",
                  "Solicitud de patrullaje", "Fuga de drenaje", "Poda de árbol peligroso",
                  "Recolección de basura irregular", "Apoyo para despensa", "Gestión de acta de nacimiento",
@@ -209,12 +211,14 @@ def generar_casos(db: Session, campaign: Campaign, rng: random.Random, hoy: date
     secciones = sorted(act_por_seccion, key=int)
     lider_de_seccion = {s: acts[0].lider_id for s, acts in act_por_seccion.items() if acts}
     out = []
+    # Cuotas exactas (40 % vencidos / 35 % terminales / 25 % en curso), orden mezclado.
+    slots = ["V"] * CASOS_VENCIDOS + ["T"] * CASOS_TERMINALES + ["C"] * (N_CASOS - CASOS_VENCIDOS - CASOS_TERMINALES)
+    rng.shuffle(slots)
     for k in range(N_CASOS):
         sec = rng.choice(secciones)
-        u = rng.random()
-        if u < 0.40:
+        if slots[k] == "V":
             estado, fecha = rng.choice(["PENDIENTE", "EN_PROCESO"]), hoy - timedelta(days=rng.randint(1, 20))
-        elif u < 0.75:
+        elif slots[k] == "T":
             estado, fecha = rng.choice(["ATENDIDO", "CERRADO"]), hoy - timedelta(days=rng.randint(1, 30))
         else:
             estado, fecha = "EN_PROCESO", hoy + timedelta(days=rng.randint(1, 10))
@@ -251,17 +255,20 @@ def generar_minutas(db: Session, campaign: Campaign, rng: random.Random, hoy: da
         db.flush()
         minutas.append(m)
     por_minuta = distribuir(N_ACUERDOS, {m.id: 1.0 for m in minutas})
-    for m in minutas:
-        for i in range(por_minuta[m.id]):
-            limite = m.fecha + timedelta(days=rng.randint(3, 21))
-            vencido = limite < hoy
-            estado = "PENDIENTE" if (vencido and rng.random() < 0.45) else ("CUMPLIDO" if vencido else "EN_CURSO")
-            a = Acuerdo(organization_id=campaign.organization_id, campaign_id=campaign.id, minuta_id=m.id,
-                        texto=f"{rng.choice(['Entregar', 'Revisar', 'Convocar', 'Cerrar'])} {rng.choice(['padrón de zona', 'casos de agua', 'brigada', 'reporte de avance'])}",
-                        orden=i, responsable_id=rng.choice(lideres).id, fecha_limite=limite, estado=estado,
-                        created_by=coord.id)
-            db.add(a)
-            acuerdos.append(a)
+    plan = [(m, i, m.fecha + timedelta(days=rng.randint(3, 21))) for m in minutas for i in range(por_minuta[m.id])]
+    candidatos = [k for k, (_, _, lim) in enumerate(plan) if lim < hoy]
+    pendientes = set(rng.sample(candidatos, ACUERDOS_VENCIDOS))  # cuota exacta de vencidos PENDIENTE
+    for k, (m, i, limite) in enumerate(plan):
+        if k in pendientes:
+            estado = "PENDIENTE"
+        else:
+            estado = "CUMPLIDO" if limite < hoy else "EN_CURSO"
+        a = Acuerdo(organization_id=campaign.organization_id, campaign_id=campaign.id, minuta_id=m.id,
+                    texto=f"{rng.choice(['Entregar', 'Revisar', 'Convocar', 'Cerrar'])} {rng.choice(['padrón de zona', 'casos de agua', 'brigada', 'reporte de avance'])}",
+                    orden=i, responsable_id=rng.choice(lideres).id, fecha_limite=limite, estado=estado,
+                    created_by=coord.id)
+        db.add(a)
+        acuerdos.append(a)
     db.flush()
     return minutas, acuerdos
 
@@ -326,8 +333,9 @@ def seed_atizapan_operacion(db: Session, hoy: Optional[date] = None) -> bool:
 
 
 def reset_operacion(db: Session, campaign: Campaign) -> dict[str, int]:
-    """Borra SOLO lo generado por este seed en esa campaña (marcador / tablas completas de la campaña
-    demo). Uso local o de rescate; nunca en el lifespan."""
+    """Borra, en la campaña dada: registros y militantes SOLO con marcador "demo-seed"; y TODOS los
+    casos, eventos de caso, acuerdos, minutas, agenda y planes de la campaña (sin filtro de marcador,
+    pensado para la campaña demo). Uso local o de rescate; nunca en el lifespan."""
     cid = campaign.id
     counts = {}
     caso_ids = [i for (i,) in db.execute(select(Caso.id).where(Caso.campaign_id == cid)).all()]
