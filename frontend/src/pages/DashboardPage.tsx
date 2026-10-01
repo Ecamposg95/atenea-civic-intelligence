@@ -16,6 +16,8 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { useAsync } from "@/hooks/useAsync";
+import { useCampaignStore } from "@/store/campaignStore";
+import { campaignSubtitle } from "@/modules/municipio/regionHelpers";
 import { CHART_PALETTE } from "@/constants/ui";
 import {
   AlertIcon,
@@ -104,6 +106,7 @@ export function DashboardPage() {
     [casosPorEstadoData],
   );
 
+  const campaign = useCampaignStore((s) => s.campaigns.find((c) => c.id === s.activeId));
   const alertas = data?.alertas ?? [];
   const slaVencidos = casos?.sla_vencidos ?? 0;
   const hasAttention = alertas.length > 0 || slaVencidos > 0;
@@ -119,7 +122,7 @@ export function DashboardPage() {
         eyebrow="Executive briefing"
         title="Centro de Mando"
         accent="Ejecutivo"
-        subtitle="Avance de campaña en tiempo real: promoción, afiliación, atención ciudadana y cobertura territorial."
+        subtitle={campaignSubtitle(campaign) ?? "Avance de campaña en tiempo real: promoción, afiliación, atención ciudadana y cobertura territorial."}
         actions={<CountdownElectoral date={data?.election_date ?? null} />}
       />
 

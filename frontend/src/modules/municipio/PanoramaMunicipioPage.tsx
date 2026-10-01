@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -10,9 +11,9 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { DataState } from "@/components/ui/DataState";
 import { CellBar } from "@/components/ui/CellBar";
 import { useAsync } from "@/hooks/useAsync";
-import { getMunicipioPanorama, type SeccionRow } from "@/api/municipio";
-
-const CODE = "15076";
+import { getMunicipioPanorama, getRegion, type SeccionRow } from "@/api/municipio";
+import { useCampaignStore } from "@/store/campaignStore";
+import { pickDefaultCode } from "./regionHelpers";
 
 const nf = new Intl.NumberFormat("es-MX");
 const num = (v: number | null | undefined, suffix = "") =>
@@ -31,7 +32,15 @@ const PRIORIDAD_TONE: Record<string, string> = {
 const prioridadLabel = (p: string) =>
   p.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
-function SeccionesTabla({ secciones, onRowClick }: { secciones: SeccionRow[]; onRowClick: (seccion: string) => void }) {
+function SeccionesTabla({
+  secciones,
+  bloques,
+  onRowClick,
+}: {
+  secciones: SeccionRow[];
+  bloques: { propio: string; rival: string };
+  onRowClick: (seccion: string) => void;
+}) {
   const maxPart = Math.max(1, ...secciones.map((s) => s.participacion ?? 0));
   return (
     <div className="overflow-x-auto">
@@ -40,8 +49,8 @@ function SeccionesTabla({ secciones, onRowClick }: { secciones: SeccionRow[]; on
           <tr className="text-left text-xs uppercase tracking-wider text-ink-faint">
             <th className="px-3 py-2 font-semibold">Sección</th>
             <th className="px-3 py-2 font-semibold">Participación</th>
-            <th className="px-3 py-2 font-semibold text-right">Coalición</th>
-            <th className="px-3 py-2 font-semibold text-right">Morena</th>
+            <th className="px-3 py-2 font-semibold text-right">{bloques.propio}</th>
+            <th className="px-3 py-2 font-semibold text-right">{bloques.rival}</th>
             <th className="px-3 py-2 font-semibold text-right">Margen</th>
             <th className="px-3 py-2 font-semibold">Prioridad</th>
           </tr>
@@ -88,19 +97,51 @@ function SeccionesTabla({ secciones, onRowClick }: { secciones: SeccionRow[]; on
 }
 
 export default function PanoramaMunicipioPage() {
-  const state = useAsync(() => getMunicipioPanorama(CODE), []);
+  const activeId = useCampaignStore((s) => s.activeId);
+  const campaign = useCampaignStore((s) => s.campaigns.find((c) => c.id === s.activeId));
+  const regionState = useAsync(
+    () => (activeId ? getRegion() : Promise.reject(new Error("Selecciona una campaña"))),
+    [activeId],
+  );
+  const [selected, setSelected] = useState<string | null>(null);
+  const code = selected ?? (regionState.data ? pickDefaultCode(regionState.data, campaign?.municipio_code) : null);
+  const state = useAsync(() => (code ? getMunicipioPanorama(code) : Promise.resolve(null)), [code]);
   const d = state.data;
   const nav = useNavigate();
+  const esCampana = !!code && code === campaign?.municipio_code;
+  const nombre = d?.municipio.name ?? "Panorama municipal";
+  const region = regionState.data;
 
   return (
-    <AppLayout title="San Mateo Atenco" crumb="Inteligencia municipal">
+    <AppLayout title={nombre} crumb="Inteligencia municipal">
       <PageHeader
-        eyebrow="Inteligencia municipal · Estudio VG"
-        title="San Mateo Atenco"
-        subtitle="Elección operable: margen corto, territorio compacto y voto volátil. Diagnóstico y lectura electoral 2015–2024."
+        eyebrow="Inteligencia municipal · IEEM / INEGI"
+        title={nombre}
+        subtitle="Diagnóstico y lectura electoral 2018–2024 por sección."
       />
 
-      <DataState loading={state.loading} error={state.error} onRetry={state.reload}>
+      {region && region.municipios.length > 1 && (
+        <div className="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Municipio">
+          {region.municipios.map((m) => (
+            <button
+              key={m.code}
+              role="tab"
+              aria-selected={m.code === code}
+              onClick={() => setSelected(m.code)}
+              className={`rounded-pill px-3 py-1 text-xs font-semibold focus-ring ${m.code === code ? "bg-accent/15 text-accent" : "bg-line/60 text-ink-muted hover:text-ink"}`}
+            >
+              {m.name}
+              {m.es_campana ? " · campaña" : ""}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <DataState
+        loading={regionState.loading || state.loading}
+        error={regionState.error ?? state.error}
+        onRetry={regionState.error ? regionState.reload : state.reload}
+      >
         {d && (
           <div className="space-y-8">
             {/* Resumen ejecutivo */}
@@ -132,11 +173,10 @@ export default function PanoramaMunicipioPage() {
                 <MetricCard label="Población" value={num(d.socio.poblacion)} context={`${pct(d.socio.pct_mujeres)} mujeres`} tone="warm" delay={80} />
                 <MetricCard label="Pobreza moderada" value={pct(d.socio.pobreza_moderada_pct)} context={`${pct(d.socio.pobreza_extrema_pct)} extrema`} tone="warning" delay={120} />
                 <MetricCard label="Viviendas" value={num(d.socio.viviendas)} context={`${pct(d.socio.pct_jefa_hogar)} con jefa de hogar`} tone="teal" delay={160} />
-                <MetricCard label="Población 5–19" value={pct(d.socio.pct_pob_5_19)} context={`crecimiento ${pct(d.socio.crecimiento_pct_2010_2020)} 2010–2020`} tone="accent" delay={200} />
+                <MetricCard label="18 años y más" value={num(d.socio.pob_18_mas)} context={`crecimiento ${pct(d.socio.crecimiento_pct_2010_2020)} 2010–2020`} tone="accent" delay={200} />
               </div>
               <p className="mt-3 text-sm text-ink-muted">
-                Municipio compacto, joven y familiar; el <strong>calzado</strong> concentra identidad, empleo y comercio.
-                Traslado promedio al trabajo {num(d.socio.traslado_trabajo_min)} min · {pct(d.socio.pct_estudiantes_transporte_publico)} de estudiantes en transporte público.
+                Grado promedio de escolaridad {num(d.socio.grado_escolaridad)} · {pct(d.socio.pct_sin_derechohabiencia)} sin derechohabiencia · {pct(d.socio.pct_viviendas_internet)} de viviendas con internet.
               </p>
             </section>
 
@@ -147,7 +187,7 @@ export default function PanoramaMunicipioPage() {
                 <ChartFrame title="Participación ciudadana" caption="% por elección municipal">
                   <AreaTrend points={d.historico.map((h) => ({ x: String(h.anio), y: h.participacion ?? 0 }))} />
                 </ChartFrame>
-                <ChartFrame title="Margen de victoria" caption="votos de diferencia — la ventaja se comprimió a 874 en 2024">
+                <ChartFrame title="Margen de victoria" caption="votos de diferencia por elección">
                   <Bars items={d.historico.map((h) => ({ label: String(h.anio), value: h.margen_votos ?? 0 }))} />
                 </ChartFrame>
               </div>
@@ -158,13 +198,13 @@ export default function PanoramaMunicipioPage() {
               <SectionHeading eyebrow="Resultado 2024" title="Anatomía del voto" note="por partido" />
               <div className="mt-4 grid gap-4 lg:grid-cols-3">
                 <div className="lg:col-span-2">
-                  <ChartFrame title="Votos por partido · 2024" caption="MC (voto bisagra) obtuvo 4.4× el margen de victoria">
+                  <ChartFrame title="Votos por partido · 2024" caption="voto directo por partido">
                     <Bars items={d.voto2024.map((v) => ({ label: v.partido, value: v.votos }))} highlightFirst />
                   </ChartFrame>
                 </div>
                 <div className="grid grid-cols-2 gap-4 lg:grid-cols-1">
-                  <MetricCard label="Coalición ganadora" value={num(d.coalicion_ganadora_votos)} context="PAN·PRI·PRD·NAEM" tone="accent" />
-                  <MetricCard label="Morena (solo)" value={num(d.voto2024.find((v) => v.partido === "MORENA")?.votos ?? null)} context="a 874 votos de la coalición" tone="warm" />
+                  <MetricCard label="Coalición ganadora" value={num(d.coalicion_ganadora_votos)} context="bloque ganador" tone="accent" />
+                  <MetricCard label="Morena (solo)" value={num(d.voto2024.find((v) => v.partido === "MORENA")?.votos ?? null)} context="voto directo del partido" tone="warm" />
                 </div>
               </div>
             </section>
@@ -175,23 +215,65 @@ export default function PanoramaMunicipioPage() {
                 <SectionHeading
                   eyebrow="Territorio"
                   title="Geografía seccional 2024"
-                  note={`${num(d.secciones_resumen.morena)} Morena · ${num(d.secciones_resumen.coalicion)} coalición`}
+                  note={`${num(d.secciones_resumen.coalicion)} ${d.bloques.propio} · ${num(d.secciones_resumen.morena)} ${d.bloques.rival}`}
                 />
-                <Link to="/plan-territorial" className="btn-primary focus-ring shrink-0">
-                  Ver Plan Territorial
-                </Link>
+                {esCampana && (
+                  <Link to="/plan-territorial" className="btn-primary focus-ring shrink-0">
+                    Ver Plan Territorial
+                  </Link>
+                )}
               </div>
               <div className="mt-4 card-premium p-2">
                 {d.secciones.length > 0 ? (
-                  <SeccionesTabla secciones={d.secciones} onRowClick={() => nav("/plan-territorial")} />
+                  <SeccionesTabla
+                    secciones={d.secciones}
+                    bloques={d.bloques}
+                    onRowClick={esCampana ? () => nav("/plan-territorial") : () => {}}
+                  />
                 ) : (
                   <p className="p-4 text-sm text-ink-faint">Sin matriz seccional cargada.</p>
                 )}
               </div>
               <p className="mt-2 text-xs text-ink-faint">
-                Margen = coalición − Morena por sección. Positivo (cian) = ventaja coalición; negativo (coral) = ventaja Morena.
+                Margen = {d.bloques.propio} − {d.bloques.rival} por sección. Positivo = ventaja propia; negativo = ventaja rival.
               </p>
             </section>
+
+            {region && region.municipios.length > 1 && (
+              <section>
+                <SectionHeading eyebrow="Región" title={region.region} note="IEEM 2024 · Censo 2020" />
+                <div className="mt-4 card-premium overflow-x-auto p-2">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs uppercase tracking-wider text-ink-faint">
+                        <th className="px-3 py-2">Municipio</th>
+                        <th className="px-3 py-2 text-right">Lista nominal</th>
+                        <th className="px-3 py-2 text-right">Participación</th>
+                        <th className="px-3 py-2 text-right">Margen 2024</th>
+                        <th className="px-3 py-2 text-right">Secciones</th>
+                        <th className="px-3 py-2 text-right">Persuadibles</th>
+                        <th className="px-3 py-2 text-right">Población</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {region.municipios.map((m) => (
+                        <tr key={m.code} className={`border-t border-line/70 ${m.es_campana ? "bg-accent/8 font-semibold" : ""}`}>
+                          <td className="px-3 py-2">{m.name}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{num(m.lista_nominal_2024)}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{pct(m.participacion_2024)}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {m.margen_votos_2024 != null ? `${m.margen_votos_2024 >= 0 ? "+" : ""}${nf.format(m.margen_votos_2024)}` : "—"}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums">{num(m.secciones_total)}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{num(m.secciones_persuadibles)}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{num(m.poblacion)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
           </div>
         )}
       </DataState>

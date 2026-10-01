@@ -6,6 +6,9 @@ export interface Campaign {
   cycle: string;
   status: string;
   license_tier: string;
+  municipio_code?: string | null;
+  candidato?: string | null;
+  partido?: string | null;
 }
 
 /** Key for the active campaign UUID (read by the API client interceptor). */

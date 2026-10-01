@@ -1,4 +1,6 @@
 import { apiClient } from "./client";
+import type { RegionOut } from "@/modules/municipio/regionHelpers";
+export type { RegionMunicipio, RegionOut } from "@/modules/municipio/regionHelpers";
 
 export interface HistoricoElectoral {
   anio: number;
@@ -40,6 +42,7 @@ export interface SeccionesResumen {
 
 export interface MunicipioPanorama {
   municipio: { code: string; name: string };
+  bloques: { propio: string; rival: string };
   socio: Record<string, number | undefined>;
   historico: HistoricoElectoral[];
   voto2024: VotoPartido[];
@@ -50,4 +53,8 @@ export interface MunicipioPanorama {
 
 export async function getMunicipioPanorama(code: string): Promise<MunicipioPanorama> {
   return (await apiClient.get(`/municipio/${code}/panorama`)).data;
+}
+
+export async function getRegion(): Promise<RegionOut> {
+  return (await apiClient.get("/municipio/region")).data;
 }

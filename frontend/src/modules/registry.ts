@@ -283,7 +283,7 @@ export const MODULES: ModuleDef[] = [
       dataSource: "Candidaturas MX (apielectoral.mx) — ya integrada en el backend.",
     },
   },
-  { key: "municipio-panorama", path: "/municipio", label: "San Mateo Atenco", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: PanoramaMunicipio, roles: INTEL_TERRITORY },
+  { key: "municipio-panorama", path: "/municipio", label: "Panorama municipal", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: PanoramaMunicipio, roles: INTEL_TERRITORY },
   { key: "territorios", path: "/territorios", label: "Territorios", section: "inteligencia", icon: LayersIcon, state: "active", element: Territorios, roles: INTEL_ANALYST },
   { key: "ieem", path: "/ieem", label: "IEEM", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Ieem, roles: INTEL },
   { key: "worldbank", path: "/indicadores", label: "Indicadores", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: WorldBank, roles: INTEL },

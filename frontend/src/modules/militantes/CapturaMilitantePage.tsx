@@ -17,6 +17,8 @@ import {
 import { enqueueJob } from "@/offline/queue";
 import { isNetworkError } from "@/offline/sync";
 import type { QueuedBlob } from "@/offline/types";
+import { useCampaignStore } from "@/store/campaignStore";
+import { getMunicipioPanorama } from "@/api/municipio";
 import { usePendingSyncStore } from "@/store/pendingSyncStore";
 import { PhotoCapture } from "./components/PhotoCapture";
 import { SignaturePad } from "./components/SignaturePad";
@@ -58,7 +60,7 @@ const EMPTY_FORM: FormState = {
   calle_numero: "",
   colonia: "",
   cp: "",
-  municipio: "San Mateo Atenco",
+  municipio: "",
   telefono: "",
   email: "",
   es_activista: false,
@@ -197,6 +199,13 @@ export default function CapturaMilitantePage() {
 
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const campaign = useCampaignStore((s) => s.campaigns.find((c) => c.id === s.activeId));
+  useEffect(() => {
+    if (campaign?.municipio_code)
+      getMunicipioPanorama(campaign.municipio_code)
+        .then((p) => setForm((f) => (f.municipio ? f : { ...f, municipio: p.municipio.name })))
+        .catch(() => {});
+  }, [campaign?.municipio_code]);
   const [frente, setFrente] = useState<Blob | null>(null);
   const [reverso, setReverso] = useState<Blob | null>(null);
   const [firma, setFirma] = useState<Blob | null>(null);
