@@ -24,6 +24,7 @@ from app.core.rate_limiting import limiter
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.routers import (
     admin,
+    alertas,
     analytics,
     arco,
     audit,
@@ -246,7 +247,7 @@ def _configure_error_handlers(app: FastAPI) -> None:
 def _register_routers(app: FastAPI) -> None:
     """Mount all API routers under the configured prefix."""
     prefix = settings.API_PREFIX
-    for module in (health, auth, users, organizations, campaigns, maps, analytics, sources, audit, intel, catalogs, dashboard, territory, ingest, exports, registros, militantes, municipio, operacion, promovidos, privacy, admin, arco, reports, forms, responses, casos, public_forms, minutas, scrum):
+    for module in (health, auth, users, organizations, campaigns, maps, analytics, sources, audit, intel, catalogs, dashboard, territory, ingest, exports, registros, militantes, municipio, operacion, promovidos, privacy, admin, arco, reports, forms, responses, casos, public_forms, minutas, scrum, alertas):
         app.include_router(module.router, prefix=prefix)
 
 

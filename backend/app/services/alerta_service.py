@@ -203,3 +203,44 @@ def regla_inactivos(db: Session, ctx: CampaignContext, hoy: date) -> list[dict]:
             f"Activista o capturista sin registros en los últimos {DIAS_INACTIVIDAD} días",
             "/admin/estructura", valor=dias, umbral=DIAS_INACTIVIDAD, peso=dias))
     return out
+
+
+def evaluar(db: Session, ctx: CampaignContext, hoy: Optional[date] = None) -> dict:
+    """Ejecuta las 7 reglas, ordena (severidad, peso desc) y arma resumen + cuadrícula."""
+    hoy = hoy or datetime.now(timezone.utc).date()
+    planes = operacion_service.list_planes(db, ctx)
+    fechas = db.execute(
+        scoped_query(Registro, ctx).with_only_columns(Registro.created_at)
+    ).scalars().all()
+
+    items = (
+        reglas_seccion(planes)
+        + regla_participacion(planes)
+        + regla_ritmo([f for f in fechas if f is not None], hoy)
+        + regla_casos(db, ctx, hoy)
+        + regla_inactivos(db, ctx, hoy)
+        + regla_acuerdos(db, ctx, hoy)
+    )
+    items.sort(key=lambda a: (_SEVERIDAD_RANGO[a["severidad"]], -a["peso"]))
+
+    peor: dict[str, str] = {}
+    for a in items:  # ya ordenadas: la primera por sección es la más severa
+        if a["seccion"] and a["seccion"] not in peor:
+            peor[a["seccion"]] = a["severidad"]
+    secciones = [{"seccion": p["seccion"], "severidad_max": peor.get(p["seccion"])}
+                 for p in planes]
+
+    def _cuenta(campo: str, valor: str) -> int:
+        return sum(1 for a in items if a[campo] == valor)
+
+    resumen = {
+        "critica": _cuenta("severidad", "critica"),
+        "alta": _cuenta("severidad", "alta"),
+        "media": _cuenta("severidad", "media"),
+        "territorial": _cuenta("categoria", "territorial"),
+        "operativa": _cuenta("categoria", "operativa"),
+        "secciones_afectadas": sum(1 for c in secciones if c["severidad_max"]),
+        "secciones_total": len(secciones),
+    }
+    return {"resumen": resumen, "secciones": secciones, "items": items,
+            "evaluado_en": datetime.now(timezone.utc)}
