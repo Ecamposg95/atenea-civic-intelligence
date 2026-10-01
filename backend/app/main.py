@@ -95,6 +95,15 @@ async def lifespan(app: FastAPI):
             seed_municipio_intel(db)
     except Exception:
         logger.exception("Municipio intel seed failed during startup")
+    # Atizapán demo (env-gated, idempotent): org, admin re-home, campaign, structure.
+    try:
+        from app.database import SessionLocal
+        from app.seeds.demo_atizapan import seed_atizapan_campaign
+
+        with SessionLocal() as db:
+            seed_atizapan_campaign(db)
+    except Exception:
+        logger.exception("Atizapán demo seed failed during startup")
     # Election date (idempotent) so the Command Center countdown runs.
     try:
         from app.database import SessionLocal
