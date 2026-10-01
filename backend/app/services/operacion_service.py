@@ -14,6 +14,7 @@ from app.models.operacion import AgendaItem, SeccionPlan
 from app.models.registro import Registro
 from app.models.seccion_electoral import SeccionElectoral
 from app.models.user import User
+from app.services.territory_service import secciones_query
 
 _ANIO = 2024
 _PERSUADIBLE_UMBRAL = 150
@@ -48,9 +49,7 @@ def _avance_por_seccion(db: Session, ctx: CampaignContext) -> dict[str, int]:
 
 def list_planes(db: Session, ctx: CampaignContext) -> list[dict]:
     secciones = db.execute(
-        select(SeccionElectoral)
-        .where(SeccionElectoral.anio == _ANIO)
-        .order_by(SeccionElectoral.margen)
+        secciones_query(ctx, _ANIO).order_by(SeccionElectoral.margen)
     ).scalars().all()
 
     planes = {p.seccion: p for p in db.execute(

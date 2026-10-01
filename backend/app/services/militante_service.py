@@ -18,6 +18,7 @@ from app.models.user import User, UserRole
 from app.schemas.militante import MilitanteCreate, MilitanteEstadoUpdate
 from app.services import privacy_service, territory_service
 from app.services.audit_service import record_audit
+from app.services.territory_service import secciones_query
 
 
 class ConsentRequired(Exception):
@@ -67,7 +68,7 @@ def _next_folio(db: Session, ctx: CampaignContext) -> str:
     suffix on MAX (not count) also means deletes never lower the counter.
     """
     year = date.today().year
-    prefix = f"SMA-{year}-"
+    prefix = f"{territory_service.folio_prefix(ctx)}-{year}-"
     folios = db.execute(
         select(Militante.folio).where(
             Militante.campaign_id == ctx.campaign_id,
@@ -370,8 +371,7 @@ def panorama(db: Session, ctx: CampaignContext) -> dict:
     codes = set(counts)
     facts = {}
     if codes:
-        for f in db.execute(select(SeccionElectoral).where(
-                SeccionElectoral.seccion.in_(codes), SeccionElectoral.anio == 2024)).scalars():
+        for f in db.execute(secciones_query(ctx).where(SeccionElectoral.seccion.in_(codes))).scalars():
             facts[f.seccion] = f
     # promovidos per section (Registro), same scope
     prom = {}

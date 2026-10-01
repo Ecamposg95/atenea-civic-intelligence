@@ -151,3 +151,52 @@ def test_agenda_crud(client):
     done = client.patch(f"/api/operacion/agenda/{item_id}", headers=_hdr(client, "coord@alpha.gov"),
                         json={"done": True})
     assert done.status_code == 200 and done.json()["done"] is True
+
+
+from dataclasses import replace
+
+from app.services import territory_service
+from app.services.operacion_service import list_planes
+
+
+@pytest.fixture
+def _limpia_secciones_777x():
+    yield
+    db = TestingSessionLocal()
+    try:
+        db.execute(delete(SeccionElectoral).where(SeccionElectoral.seccion.in_(["7771", "7772"])))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _ensure_sec(db, code, muni_code):
+    if db.execute(select(SeccionElectoral).where(
+            SeccionElectoral.seccion == code, SeccionElectoral.anio == 2024)).scalar_one_or_none() is None:
+        db.add(SeccionElectoral(seccion=code, municipio="X", municipio_code=muni_code, anio=2024,
+                                lista_nominal=100, votos=50, participacion=50.0,
+                                coalicion=30, morena=20, margen=10, prioridad="ALTA_PERSUADIBLE"))
+        db.commit()
+
+
+def test_secciones_query_sin_municipio_no_filtra(coordinador_ctx, db_session, _limpia_secciones_777x):
+    _ensure_sec(db_session, "7771", "15076")
+    _ensure_sec(db_session, "7772", "15013")
+    codes = {s.seccion for s in db_session.execute(territory_service.secciones_query(coordinador_ctx)).scalars()}
+    assert {"7771", "7772"} <= codes
+
+
+def test_list_planes_aisla_por_municipio(coordinador_ctx, db_session, _limpia_secciones_777x):
+    _ensure_sec(db_session, "7771", "15076")
+    _ensure_sec(db_session, "7772", "15013")
+    sma = replace(coordinador_ctx, municipio_code="15076")
+    atz = replace(coordinador_ctx, municipio_code="15013")
+    sma_codes = {p["seccion"] for p in list_planes(db_session, sma)}
+    atz_codes = {p["seccion"] for p in list_planes(db_session, atz)}
+    assert "7771" in sma_codes and "7772" not in sma_codes
+    assert "7772" in atz_codes and "7771" not in atz_codes
+
+
+def test_folio_prefix_por_municipio(coordinador_ctx):
+    assert territory_service.folio_prefix(coordinador_ctx) == "SMA"
+    assert territory_service.folio_prefix(replace(coordinador_ctx, municipio_code="15013")) == "ATZ"

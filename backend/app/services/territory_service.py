@@ -3,10 +3,13 @@ from __future__ import annotations
 
 from typing import Optional
 
-from sqlalchemy import or_, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session
 
+from app.dependencies import CampaignContext
 from app.models.electoral_area import AreaLevel, ElectoralArea
+from app.models.seccion_electoral import SeccionElectoral
+from app.seeds.municipios import config_de
 from app.models.user import User
 
 
@@ -65,3 +68,17 @@ def search_areas(
     if level:
         stmt = stmt.where(ElectoralArea.level == level)
     return list(db.execute(stmt.limit(limit)).scalars().all())
+
+
+def secciones_query(ctx: CampaignContext, anio: int = 2024) -> Select:
+    """Secciones (matriz electoral) de la campaña. Sin ``municipio_code`` no se filtra
+    (compatibilidad: campañas creadas antes de 0021 y fixtures)."""
+    q = select(SeccionElectoral).where(SeccionElectoral.anio == anio)
+    if ctx.municipio_code:
+        q = q.where(SeccionElectoral.municipio_code == ctx.municipio_code)
+    return q
+
+
+def folio_prefix(ctx: CampaignContext) -> str:
+    cfg = config_de(ctx.municipio_code)
+    return cfg.folio_prefix if cfg else "SMA"

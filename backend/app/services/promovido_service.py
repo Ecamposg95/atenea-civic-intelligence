@@ -14,6 +14,7 @@ from app.models.seccion_electoral import SeccionElectoral
 from app.models.user import UserRole
 from app.services import territory_service
 from app.services.registro_service import _role_scoped
+from app.services.territory_service import secciones_query
 
 
 def _promovido_role_scoped(ctx: CampaignContext):
@@ -80,8 +81,8 @@ def list_promovidos(
 
     # prioridad filter needs the electoral join
     if prioridad:
-        pr = select(SeccionElectoral.seccion).where(
-            SeccionElectoral.prioridad == prioridad, SeccionElectoral.anio == 2024)
+        pr = secciones_query(ctx).with_only_columns(SeccionElectoral.seccion).where(
+            SeccionElectoral.prioridad == prioridad)
         stmt = stmt.where(Registro.seccion.in_(pr))
 
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
@@ -98,9 +99,7 @@ def list_promovidos(
     codes = {r.seccion for r in rows if r.seccion}
     facts = {}
     if codes:
-        for f in db.execute(select(SeccionElectoral).where(
-            SeccionElectoral.seccion.in_(codes), SeccionElectoral.anio == 2024)
-        ).scalars():
+        for f in db.execute(secciones_query(ctx).where(SeccionElectoral.seccion.in_(codes))).scalars():
             facts[f.seccion] = f
     for r in rows:
         f = facts.get(r.seccion)
