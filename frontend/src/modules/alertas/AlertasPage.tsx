@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { getAlertas, type Alerta } from "@/api/alertas";
@@ -49,7 +49,11 @@ export default function AlertasPage() {
   const state = useAsync(() => (activeId ? getAlertas() : Promise.resolve(null)), [activeId]);
   const [categoria, setCategoria] = useState<FiltroCategoria>("todas");
   const [seccion, setSeccion] = useState<string | null>(null);
-  const d = state.data;
+  useEffect(() => {
+    setSeccion(null);
+    setCategoria("todas");
+  }, [activeId]);
+  const d =state.data;
   const visibles = useMemo(
     () => (d ? filtrarAlertas(d.items, categoria, seccion) : []),
     [d, categoria, seccion],
