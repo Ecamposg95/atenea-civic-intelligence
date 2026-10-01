@@ -81,7 +81,21 @@ The COORDINADOR can now also **capture** (`CapturaWriteCtx` +COORDINADOR) and
   the moved **technical** blocks (audit log, data sources, cartography, governance).
 - **`app/seeds/demo_election_date.py`** — idempotent seed (Cargo+Contest,
   `election_date=2027-06-06`), run unconditionally in the lifespan so the
-  countdown always has a date. `DEMO_CAMPAIGN_ID` env override.
+  countdown always has a date for every campaign with a registry `municipio_code`
+  (the old `DEMO_CAMPAIGN_ID` override was removed).
+
+### Demo Atizapán / multi-municipio
+
+- Registry: `app/seeds/municipios.py` (`MunicipioConfig`, `MUNICIPIOS`, `REGIONES`, `config_de`); data in
+  `app/seeds/municipios/<code>/{secciones_2024.csv,intel.csv,manifest.json}` (15076 SMA + región "atizapan").
+- Semantics: `SeccionElectoral.coalicion` = bloque PROPIO, `morena` = RIVAL, `margen = coalicion − morena`.
+- `Campaign.municipio_code/candidato/partido` (mig 0021) → `CampaignContext.municipio_code`;
+  `territory_service.secciones_query(ctx)` scopes plan territorial/promovidos/militantes (no municipio → no filter).
+- `GET /municipio/{code}/panorama`, `GET /municipio/region`; alertas: `GET /alertas` (page `/riesgo`).
+- Seeds: `SEED_DEMO_TERRITORY`, `SEED_DEMO_ATIZAPAN(+_PASSWORD/_ORG_SLUG/_ADMIN_EMAIL)`; synthetic operation marked
+  `Registro.promotor == "demo-seed"`; local reset `scripts/seed_atizapan_operacion.py --reset --yes`.
+- Regenerate CSVs: `PYTHONPATH=. .venv/bin/python scripts/build_municipio_dataset.py --region atizapan` (never in PROD;
+  IEEM `ID_MUNICIPIO` ≠ INEGI code, see `IEEM_ID` map). Guion: `docs/demo-atizapan.md`.
 
 ### Promovidos — richer views
 

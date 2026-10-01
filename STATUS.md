@@ -133,6 +133,18 @@ Delivered all **Fase 7–9 compliance** work:
 | `SEED_ACTIVISTA_PASSWORD` | **Required to enable demo seed** — absent → skipped. |
 | `SEED_DEMO_CAMPAIGN_NAME` | Demo campaign name (default: `Campaña Demo 2027`). |
 
+### Seed — demo Atizapán / territorio (opt-in)
+
+| Variable | Description |
+|----------|-------------|
+| `SEED_DEMO_TERRITORY` | `true` → carga secciones/intel de todos los municipios del registro (`app/seeds/municipios.py`). La intel (`seed_municipio_intel`) corre siempre. |
+| `SEED_DEMO_ATIZAPAN` | `true` → org "Atizapán 2027", campaña "Atizapán de Zaragoza 2027", 51 usuarios `@demo.atizapan.mx` y, una sola vez (marcador `demo-seed`), la operación sintética. |
+| `SEED_DEMO_ATIZAPAN_PASSWORD` | **Requerida** para el seed de Atizapán; contraseña común de los usuarios demo. |
+| `SEED_DEMO_ATIZAPAN_ORG_SLUG` | Slug de la org (default: `atizapan`). |
+| `SEED_DEMO_ATIZAPAN_ADMIN_EMAIL` | Re-domicilia a ese usuario como ADMIN de la org nueva; irreversible por seed. |
+
+`DEMO_CAMPAIGN_ID` ya no existe: la fecha de elección aplica a toda campaña con `municipio_code` del registro.
+
 ### Retention (opt-in)
 
 | Variable | Default | Description |
