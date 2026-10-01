@@ -102,3 +102,11 @@ def test_ya_sembrado_marcador(campaign):
     assert op.ya_sembrado(db, camp) is False
     op.generar_registros(db, camp, random.Random(1), date(2026, 9, 30)); db.commit()
     assert op.ya_sembrado(db, camp) is True
+
+
+def test_clave_unica_resuelve_colisiones():
+    seen: set[str] = set()
+    rng = random.Random(1)
+    a = op.clave_unica(rng, "GARCIA HERNANDEZ", date(1985, 3, 9), "H", 7, seen)
+    b = op.clave_unica(rng, "GARCIA HERNANDEZ", date(1985, 3, 9), "H", 1007, seen)  # mismo n % 1000
+    assert a != b and len(b) == 18 and seen == {a, b}

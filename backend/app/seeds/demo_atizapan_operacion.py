@@ -55,8 +55,20 @@ def distribuir(total: int, pesos: dict[str, float]) -> dict[str, int]:
 
 
 def clave_ficticia(rng: random.Random, apellidos: str, nacimiento: date, sexo: str, n: int) -> str:
+    # `rng` no se usa (firma estable); la clave es función pura de sus argumentos.
     letras = "".join(ch for ch in apellidos.upper() if ch.isalpha())[:6].ljust(6, "X")
     return f"{letras}{nacimiento:%y%m%d}15{sexo}{n % 1000:03d}"
+
+
+def clave_unica(rng: random.Random, apellidos: str, nacimiento: date, sexo: str, n: int,
+                seen: set[str]) -> str:
+    """Como clave_ficticia pero única por construcción: si ya existe, avanza la fecha un día."""
+    clave = clave_ficticia(rng, apellidos, nacimiento, sexo, n)
+    while clave in seen:
+        nacimiento += timedelta(days=1)
+        clave = clave_ficticia(rng, apellidos, nacimiento, sexo, n)
+    seen.add(clave)
+    return clave
 
 
 def ya_sembrado(db: Session, campaign: Campaign) -> bool:
@@ -94,6 +106,7 @@ def generar_registros(db: Session, campaign: Campaign, rng: random.Random, hoy: 
         select(User).where(User.email == f"coordinador@{EMAIL_DOMAIN}")).scalar_one()))
     facts = db.execute(select(SeccionElectoral).where(
         SeccionElectoral.municipio_code == campaign.municipio_code, SeccionElectoral.anio == 2024)).scalars().all()
+    facts.sort(key=lambda f: int(f.seccion))  # orden determinista (sin depender del SQL)
     lideres, act_por_seccion = _estructura(db, campaign)
     silenciosos = activistas_de_zonas(db, campaign, ZONAS_SILENCIOSAS)
     cupos = distribuir(N_PROMOVIDOS, {f.seccion: (f.lista_nominal or 1) * _PESO.get(f.prioridad or "", 1.0) for f in facts})
@@ -102,6 +115,7 @@ def generar_registros(db: Session, campaign: Campaign, rng: random.Random, hoy: 
     inicio = hoy - timedelta(weeks=SEMANAS)
 
     out: list[Registro] = []
+    seen: set[str] = set()
     n = 0
     for f in facts:
         acts = act_por_seccion.get(f.seccion) or []
@@ -118,7 +132,7 @@ def generar_registros(db: Session, campaign: Campaign, rng: random.Random, hoy: 
             if act is not None and act.id in silenciosos and dia >= ult_ini:
                 dia -= timedelta(days=14)
             creado = datetime.combine(dia, time(rng.randint(8, 20), rng.randint(0, 59)), tzinfo=timezone.utc)
-            clave = clave_ficticia(rng, apellidos, nac, sexo, n)
+            clave = clave_unica(rng, apellidos, nac, sexo, n, seen)
             out.append(Registro(
                 organization_id=campaign.organization_id, campaign_id=campaign.id,
                 activista_id=act.id if act else None, nombre_completo=nombre, seccion=f.seccion,
