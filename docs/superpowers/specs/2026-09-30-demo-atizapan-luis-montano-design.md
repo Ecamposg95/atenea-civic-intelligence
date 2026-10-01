@@ -79,17 +79,20 @@ Municipal ITER 2020: población 523,674 (51.6 % mujeres), 18+ 390,028, viviendas
 
 ### 3.0 Región "Atizapán y periferia" (IEEM 2024, verificado en el mismo XLSX)
 
-El `ID_MUNICIPIO` del IEEM coincide con la clave municipal INEGI (código = `"15" + zfill(3)`).
+El `ID_MUNICIPIO` del IEEM es un consecutivo **alfabético** propio del instituto y **no** coincide con la clave
+INEGI (solo coincide por casualidad en Atizapán, 13). El script de datos lleva un mapa explícito
+`IEEM_ID` INEGI→IEEM: 15013→13, 15104→105, 15057→58, 15060→61, 15121→25, 15038→39, 15046→47
+(47 = Jilotzingo; 46 es Jilotepec). ITER sí usa la clave INEGI.
 
-| Municipio | `MUNICIPIO` (IEEM) | Código | Secciones 2024 | Lista nominal 2024 |
-|---|---|---|---|---|
-| Atizapán de Zaragoza (campaña) | `ATIZAPAN DE ZARAGOZA` | 15013 | 174 | 422,224 |
-| Tlalnepantla de Baz | `TLALNEPANTLA DE BAZ` | 15104 | 385 | 568,787 |
-| Naucalpan de Juárez | `NAUCALPAN DE JUAREZ` | 15057 | 460 | 710,816 |
-| Nicolás Romero | `NICOLAS ROMERO` | 15060 | 110 | 313,687 |
-| Cuautitlán Izcalli | `CUAUTITLAN IZCALLI` | 15121 | 262 | 431,918 |
-| Isidro Fabela | `ISIDRO FABELA` | 15038 | 5 | 9,323 |
-| Jilotzingo | `JILOTZINGO` | 15046 | 10 | 17,459 |
+| Municipio | `MUNICIPIO` (IEEM) | `ID_MUNICIPIO` IEEM | Código INEGI | Secciones 2024 | Lista nominal 2024 |
+|---|---|---|---|---|---|
+| Atizapán de Zaragoza (campaña) | `ATIZAPAN DE ZARAGOZA` | 13 | 15013 | 174 | 422,224 |
+| Tlalnepantla de Baz | `TLALNEPANTLA DE BAZ` | 105 | 15104 | 385 | 568,787 |
+| Naucalpan de Juárez | `NAUCALPAN DE JUAREZ` | 58 | 15057 | 460 | 710,816 |
+| Nicolás Romero | `NICOLAS ROMERO` | 61 | 15060 | 110 | 313,687 |
+| Cuautitlán Izcalli | `CUAUTITLAN IZCALLI` | 25 | 15121 | 262 | 431,918 |
+| Isidro Fabela | `ISIDRO FABELA` | 39 | 15038 | 5 | 9,323 |
+| Jilotzingo | `JILOTZINGO` | 47 | 15046 | 10 | 17,459 |
 
 Total región: 1,406 secciones. Los periféricos usan los **mismos bloques** que Atizapán (§3.1),
 porque la lectura es la del mismo cliente (Morena-PVEM-PT como propio). Solo Atizapán lleva campaña.
@@ -122,8 +125,8 @@ python3 scripts/build_municipio_dataset.py --region atizapan      # los 7 códig
   (default `.cache/datasets/`, ignorado por git); reutiliza el archivo si ya existe. Los archivos
   fuente se leen **una vez** y se generan todos los municipios pedidos.
 - Lee con `openpyxl` en modo `read_only`; localiza el encabezado buscando la fila que contiene
-  `SECCION`; filtra `ID_MUNICIPIO == int(code[2:])` y `SECCION > 0`. El nombre del municipio se
-  toma del registro (§5.2), no del XLSX.
+  `SECCION`; filtra `ID_MUNICIPIO == IEEM_ID[code]` (mapa explícito INEGI→IEEM, §3.0) y `SECCION > 0`. El nombre
+  del municipio se toma del registro (§5.2), no del XLSX.
 - Genera **`secciones_2024.csv`** (esquema idéntico al de SMA):
   `seccion,lista_nominal,votos,participacion,coalicion,morena,margen,prioridad`.
   - `votos = TOTAL_VOTOS`; `participacion = round(TOTAL_VOTOS / LISTA_NOMINAL * 100, 1)`.

@@ -20,7 +20,7 @@
 - Frontend: `cd frontend && npm run build && npm run test`.
 - Semántica de columnas `SeccionElectoral`: `coalicion` = bloque **propio**, `morena` = bloque **rival**, `margen = coalicion − morena`.
 - Prioridad: `|margen| < 30` ALTA_PERSUADIBLE; `|margen| ≤ 150` COMPETITIVA; `margen > 150` DEFENDER_EXPANDIR; `margen < −150` RECUPERAR_OPOSICION.
-- Códigos INEGI: Atizapán 15013, Tlalnepantla 15104, Naucalpan 15057, Nicolás Romero 15060, Cuautitlán Izcalli 15121, Isidro Fabela 15038, Jilotzingo 15046; SMA 15076. En el IEEM `ID_MUNICIPIO == int(code[2:])`.
+- Códigos INEGI: Atizapán 15013, Tlalnepantla 15104, Naucalpan 15057, Nicolás Romero 15060, Cuautitlán Izcalli 15121, Isidro Fabela 15038, Jilotzingo 15046; SMA 15076. El `ID_MUNICIPIO` del IEEM NO es la clave INEGI: el CLI usa el mapa `IEEM_ID` (15013→13, 15104→105, 15057→58, 15060→61, 15121→25, 15038→39, 15046→47); corrección descubierta en Task 2.
 - Correos demo `@demo.atizapan.mx`; contraseña común desde `SEED_DEMO_ATIZAPAN_PASSWORD`; org slug default `atizapan`.
 - Commits pequeños por tarea con `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`.
 
