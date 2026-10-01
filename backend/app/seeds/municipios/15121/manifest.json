@@ -1,0 +1,82 @@
+{
+  "municipio": "15121",
+  "generado": "2026-09-30",
+  "fuentes": {
+    "ieem_2024": {
+      "url": "https://www.ieem.org.mx/assets/docs/procesos-electorales/resultados/2024/Ayuntamientos/Resultados_definitivos_ayu_seccion.xlsx",
+      "sha256": "a7921f089daa0a145a85a7046d4ec9d39a35944620bf15f736de8764a73c530d"
+    },
+    "ieem_2021": {
+      "url": "https://www.ieem.org.mx/assets/docs/procesos-electorales/resultados/2021/RESULTADOS%20DEFINITIVOS%20INTEGRANTES%20DE%20LOS%20AYUNTAMIENTOS/RESULTADOS%20POR%20SECCION%20ELECION%20AYUNTAMIENTOS%202021.xlsx",
+      "sha256": "7013d0dbdf0e1b4eabc693a42be1a30266fc25287a1409bbd3acda6726863b4b"
+    },
+    "ieem_2018": {
+      "url": "https://www.ieem.org.mx/assets/docs/procesos-electorales/resultados/2018/2018_SEE_AYUN_MEX_SEC.xlsx",
+      "sha256": "2406e9823b1ea28ffe096e528abc3b15ccf1cfb2b69ee7ec5caf419e0fba23aa"
+    },
+    "inegi_iter_2020": {
+      "url": "https://www.inegi.org.mx/contenidos/programas/ccpv/2020/datosabiertos/iter/iter_15_cpv2020_csv.zip",
+      "sha256": "340fe3f35db84fd7c5e51b7e7b1da7c34c3a220cccfa664a43edb137e5407614"
+    }
+  },
+  "secciones": 262,
+  "umbrales_prioridad": {
+    "alta_persuadible_lt": 30,
+    "competitiva_le": 150
+  },
+  "bloques": {
+    "2024": {
+      "propio": [
+        "MORENA",
+        "PT",
+        "PVEM"
+      ],
+      "rivales": [
+        [
+          "NAEM",
+          "PAN",
+          "PRD",
+          "PRI"
+        ]
+      ]
+    },
+    "2021": {
+      "propio": [
+        "MORENA",
+        "NAEM",
+        "PT"
+      ],
+      "rivales": [
+        [
+          "PAN",
+          "PRD",
+          "PRI"
+        ]
+      ]
+    },
+    "2018": {
+      "propio": [
+        "ES",
+        "MORENA",
+        "PT"
+      ],
+      "rivales": [
+        [
+          "MC",
+          "PAN",
+          "PRD"
+        ],
+        [
+          "PRI"
+        ],
+        [
+          "PVEM"
+        ]
+      ]
+    }
+  },
+  "omitidos": [
+    "coneval: no se pasó --coneval (pobreza_*_pct omitidos)",
+    "movilidad/crecimiento_pct_2010_2020/pct_pob_5_19: no están en ITER básico"
+  ]
+}

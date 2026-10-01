@@ -6,6 +6,8 @@ Semántica (spec §3.1): la columna ``coalicion`` es el bloque PROPIO de la camp
 """
 from __future__ import annotations
 
+import csv
+from pathlib import Path
 from typing import Iterable
 
 # Bloques por año (partidos que forman cada bloque). Una columna del XLSX cuenta para
@@ -143,3 +145,53 @@ def _int(v) -> int:
         return int(v)
     except (TypeError, ValueError):
         return int(float(v))
+
+
+SECCIONES_HEADER = ["seccion", "lista_nominal", "votos", "participacion",
+                    "coalicion", "morena", "margen", "prioridad"]
+INTEL_HEADER = ["categoria", "anio", "indicador", "valor"]
+
+
+def intel_socio_iter(iter_rows: Iterable[dict], code: str) -> list[tuple]:
+    mun = code[2:].zfill(3)
+    fila = next((r for r in iter_rows
+                 if str(r.get("MUN", "")).zfill(3) == mun and str(r.get("LOC", "")) == "0000"), None)
+    if fila is None:
+        raise ValueError(f"ITER: no hay fila municipal (LOC=0000) para {code}")
+    pob = _num(fila["POBTOT"]); viv = _num(fila["TVIVHAB"]); hog = _num(fila["TOTHOG"])
+    pct = lambda a, b: round(a / b * 100, 1) if b else 0.0  # noqa: E731
+    return [
+        ("socio", 2020, "poblacion", int(pob)),
+        ("socio", 2020, "pct_mujeres", pct(_num(fila["POBFEM"]), pob)),
+        ("socio", 2020, "pct_hombres", pct(_num(fila["POBMAS"]), pob)),
+        ("socio", 2020, "viviendas", int(viv)),
+        ("socio", 2020, "pct_jefa_hogar", pct(_num(fila["HOGJEF_F"]), hog)),
+        ("socio", 2020, "pob_18_mas", int(_num(fila["P_18YMAS"]))),
+        ("socio", 2020, "grado_escolaridad", _num(fila["GRAPROES"])),
+        ("socio", 2020, "pct_sin_derechohabiencia", pct(_num(fila["PSINDER"]), pob)),
+        ("socio", 2020, "pct_viviendas_internet", pct(_num(fila["VPH_INTER"]), viv)),
+    ]
+
+
+def escribir_csvs(out_dir: Path, secciones: list[dict], intel: list[tuple]) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with (out_dir / "secciones_2024.csv").open("w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=SECCIONES_HEADER)
+        w.writeheader()
+        w.writerows(secciones)
+    with (out_dir / "intel.csv").open("w", encoding="utf-8", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(INTEL_HEADER)
+        for cat, anio, ind, val in intel:
+            w.writerow([cat, anio, ind, _fmt(val)])
+
+
+def _num(v) -> float:
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return 0.0  # ITER usa "*" / "N/D" para datos protegidos
+
+
+def _fmt(v) -> str:
+    return str(int(v)) if isinstance(v, (int,)) or (isinstance(v, float) and v.is_integer()) else str(v)

@@ -116,3 +116,55 @@ def test_intel_voto2024_y_secciones():
     assert res["secciones_total"] == 3
     assert res["secciones_coalicion"] + res["secciones_morena"] == 3
     assert res["secciones_persuadibles"] == sum(1 for s in secs if abs(s["margen"]) <= 150)
+
+
+import csv
+from pathlib import Path
+
+
+def _iter_rows():
+    return [
+        {"ENTIDAD": "15", "MUN": "013", "NOM_MUN": "Atizapán de Zaragoza", "LOC": "0001",
+         "POBTOT": "5", "POBFEM": "3", "POBMAS": "2", "P_18YMAS": "4", "TVIVHAB": "2",
+         "HOGJEF_F": "1", "TOTHOG": "2", "GRAPROES": "9.5", "PSINDER": "1", "VPH_INTER": "1"},
+        {"ENTIDAD": "15", "MUN": "013", "NOM_MUN": "Atizapán de Zaragoza", "LOC": "0000",
+         "POBTOT": "1000", "POBFEM": "520", "POBMAS": "480", "P_18YMAS": "750", "TVIVHAB": "300",
+         "HOGJEF_F": "100", "TOTHOG": "300", "GRAPROES": "11.06", "PSINDER": "250", "VPH_INTER": "210"},
+        {"ENTIDAD": "15", "MUN": "104", "NOM_MUN": "Tlalnepantla", "LOC": "0000",
+         "POBTOT": "9", "POBFEM": "4", "POBMAS": "5", "P_18YMAS": "7", "TVIVHAB": "3",
+         "HOGJEF_F": "1", "TOTHOG": "3", "GRAPROES": "10", "PSINDER": "2", "VPH_INTER": "2"},
+    ]
+
+
+def test_intel_socio_iter_toma_fila_municipal_y_deriva_porcentajes():
+    socio = dict((i, v) for _, _, i, v in b.intel_socio_iter(_iter_rows(), "15013"))
+    assert socio["poblacion"] == 1000
+    assert socio["pct_mujeres"] == 52.0 and socio["pct_hombres"] == 48.0
+    assert socio["viviendas"] == 300
+    assert socio["pct_jefa_hogar"] == round(100 / 300 * 100, 1)
+    assert socio["pob_18_mas"] == 750
+    assert socio["grado_escolaridad"] == 11.06
+    assert socio["pct_sin_derechohabiencia"] == 25.0
+    assert socio["pct_viviendas_internet"] == 70.0
+
+
+def test_intel_socio_iter_municipio_ausente_error():
+    with pytest.raises(ValueError, match="15999"):
+        b.intel_socio_iter(_iter_rows(), "15999")
+
+
+def test_escribir_csvs_usa_encabezados_de_sma(tmp_path: Path):
+    header, rows = b.leer_hoja(_hoja())
+    atz = b.filas_municipio(rows, "15013")
+    secs = b.secciones_2024(atz, header)
+    intel = b.intel_electoral(2024, atz, header) + b.intel_secciones(secs)
+    b.escribir_csvs(tmp_path, secs, intel)
+    with (tmp_path / "secciones_2024.csv").open(encoding="utf-8") as f:
+        r = csv.reader(f)
+        assert next(r) == ["seccion", "lista_nominal", "votos", "participacion",
+                           "coalicion", "morena", "margen", "prioridad"]
+        assert len(list(r)) == 3
+    with (tmp_path / "intel.csv").open(encoding="utf-8") as f:
+        r = csv.reader(f)
+        assert next(r) == ["categoria", "anio", "indicador", "valor"]
+        assert ["electoral", "2024", "elec_casillas", "9"] in list(r)
