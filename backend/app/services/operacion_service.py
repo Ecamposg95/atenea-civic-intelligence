@@ -61,7 +61,7 @@ def list_planes(db: Session, ctx: CampaignContext) -> list[dict]:
     avance = _avance_por_seccion(db, ctx)
 
     resp_ids = {p.responsable_id for p in planes.values() if p.responsable_id}
-    nombres = {u.id: u.name for u in db.execute(
+    nombres = {u.id: u.full_name for u in db.execute(
         select(User).where(User.id.in_(resp_ids or {"__none__"}))).scalars()}
 
     out: list[dict] = []
