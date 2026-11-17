@@ -33,7 +33,7 @@ export default {
           "Roboto",
           "sans-serif",
         ],
-        atlas: ["Montserrat", "system-ui", "sans-serif"],
+        atlas: ["Inter", "system-ui", "-apple-system", "Segoe UI", "Arial", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       boxShadow: {

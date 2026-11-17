@@ -1,14 +1,22 @@
 /**
  * Crédito "Desarrollado por Atlas Tech".
  *
- * Usa la identidad Atlas Tech (Teal Aurora: panel #1E1E22, borde #2A2A32,
- * regla aurora, wordmark ATLAS_TECH en Montserrat). Estos colores viven SOLO
- * en este badge: el resto de la app conserva el azul de campaña.
- * Los colores son fijos (no dependen del tema) para que la marca sea idéntica
- * en claro y oscuro.
+ * Identidad Atlas Horizon: negro #050505, vidrio con borde translúcido, luz
+ * ámbar en el horizonte (#FF6A1F → #FFD3A8), Inter ligera (nunca 700).
+ * Lockup "Atlas Tech" (Atlas 500, Tech 300 en gris cálido).
+ * Estos colores viven SOLO en este crédito: el resto de la app conserva el
+ * azul de campaña. Son fijos (no dependen del tema) para que la marca sea
+ * idéntica en claro y oscuro.
  */
 
-const AURORA = "linear-gradient(90deg,#00C9B1 0%,#00E5FF 30%,#7B2FBE 65%,#C026D3 100%)";
+const HORIZON = {
+  black: "#050505",
+  glassLine: "rgba(255,255,255,.12)",
+  ink: "#F5F2EE",
+  muted: "#A8A29A",
+  dim: "#6E6862",
+  glow: "#FFD3A8",
+} as const;
 const VERSION = "v0.2.0";
 
 export function AtlasMark({ size = 20, className = "" }: { size?: number; className?: string }) {
@@ -30,21 +38,21 @@ export function AtlasMark({ size = 20, className = "" }: { size?: number; classN
   );
 }
 
-function Wordmark({ className = "" }: { className?: string }) {
+/** Lockup "Atlas Tech". "Atlas" hereda `currentColor`; "Tech" va más tenue. */
+function Wordmark({ className = "", subColor }: { className?: string; subColor?: string }) {
   return (
-    <span className={`font-atlas tracking-[0.08em] ${className}`}>
-      <span aria-hidden="true">
-        <span className="font-extrabold">ATLAS</span>
-        <span className="font-normal">_TECH</span>
+    <span className={`font-atlas whitespace-nowrap tracking-[-0.01em] ${className}`}>
+      <span className="font-medium">Atlas</span>{" "}
+      <span className="font-light" style={subColor ? { color: subColor } : { opacity: 0.7 }}>
+        Tech
       </span>
-      <span className="sr-only">Atlas Tech</span>
     </span>
   );
 }
 
 /**
- * `badge`  — bloque destacado (pie del Sidebar, Login).
- * `inline` — línea discreta (pie del contenido en móvil).
+ * `badge`  — bloque Horizon destacado (pie del Sidebar, Login).
+ * `inline` — línea discreta (pie del contenido en móvil), sigue el tema.
  */
 export function AtlasCredit({
   variant = "badge",
@@ -56,41 +64,51 @@ export function AtlasCredit({
   if (variant === "inline") {
     return (
       <p
-        className={`flex items-center justify-center gap-2 text-[12px] text-ink-muted ${className}`}
+        className={`flex items-center justify-center gap-2 font-atlas text-[12px] font-light text-ink-muted ${className}`}
       >
-        <AtlasMark size={14} className="text-ink" />
         <span>Desarrollado por</span>
-        <Wordmark className="text-[12px] text-ink" />
-        <span
-          aria-hidden="true"
-          className="h-[2px] w-6 rounded-full"
-          style={{ background: AURORA }}
-        />
+        <AtlasMark size={14} className="text-ink" />
+        <Wordmark className="text-[12.5px] text-ink" />
       </p>
     );
   }
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[4px] border ${className}`}
-      style={{ background: "#141416", borderColor: "#2A2A32", color: "#E8E8EA" }}
+      className={`relative isolate overflow-hidden rounded-2xl border font-atlas ${className}`}
+      style={{ background: HORIZON.black, borderColor: HORIZON.glassLine, color: HORIZON.ink }}
     >
+      {/* Horizonte: borde de luz ámbar con resplandor, detrás del contenido. */}
       <span
         aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-[3px]"
-        style={{ background: AURORA }}
+        className="pointer-events-none absolute -z-10 left-1/2 -translate-x-1/2 rounded-[50%]"
+        style={{
+          top: "72%",
+          width: "220%",
+          height: "160%",
+          borderTop: "1.5px solid #FFB27A",
+          boxShadow: "0 -4px 18px rgba(255,140,60,.75), 0 -14px 48px rgba(255,106,31,.45)",
+          background:
+            "radial-gradient(50% 30% at 50% 0%, rgba(255,140,60,.5), rgba(122,36,10,.3) 45%, rgba(5,5,5,0) 75%)",
+        }}
       />
-      <div className="flex items-center gap-3 px-3.5 pb-3 pt-[15px]">
-        <AtlasMark size={30} />
-        <div className="min-w-0 flex-1 leading-tight">
-          <div className="font-atlas text-[11px] font-medium" style={{ color: "#A3A3AE" }}>
-            Desarrollado por
-          </div>
-          <Wordmark className="text-[16px]" />
-        </div>
-        <span className="font-atlas text-[10px] font-medium" style={{ color: "#A3A3AE" }}>
+      <div className="flex items-center justify-between gap-3 px-4 pt-3">
+        <span
+          className="text-[10px] font-normal uppercase tracking-[0.22em]"
+          style={{ color: HORIZON.muted }}
+        >
+          Desarrollado por
+        </span>
+        <span className="font-mono text-[10px]" style={{ color: HORIZON.dim }}>
           {VERSION}
         </span>
+      </div>
+      <div className="flex items-center gap-2.5 px-4 pb-5 pt-2">
+        <AtlasMark
+          size={24}
+          className="[filter:drop-shadow(0_0_10px_rgba(255,140,60,.55))]"
+        />
+        <Wordmark className="text-[17px]" subColor={HORIZON.muted} />
       </div>
     </div>
   );

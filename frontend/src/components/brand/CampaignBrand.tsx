@@ -1,20 +1,16 @@
-import { useCampaignStore } from "@/store/campaignStore";
-
 /** Fallback estático (Login y antes de que cargue /campaigns/mine). */
 export const CAMPAIGN_FALLBACK = {
-  candidato: "Víctor Manuel Garduño",
-  candidatoCompleto: "Víctor Manuel Garduño Garrido",
+  candidato: "ViGar",
+  candidatoCompleto: "ViGar",
   contienda: "San Mateo Atenco 2027",
 };
 
 /** Candidato + contienda de la campaña activa, con fallback estático. */
 export function useCampaignIdentity() {
-  const campaign = useCampaignStore((s) =>
-    s.campaigns.find((c) => c.id === s.activeId),
-  );
   return {
-    candidato: campaign?.candidato?.trim() || CAMPAIGN_FALLBACK.candidato,
-    // App SMA-only: el nombre interno de la campaña (p.ej. "Campaña Demo 2027") no se muestra.
+    // App SMA-only: la marca del candidato es fija ("ViGar"); el nombre/candidato
+    // guardado en la campaña (p.ej. "Campaña Demo 2027") no se muestra.
+    candidato: CAMPAIGN_FALLBACK.candidato,
     contienda: CAMPAIGN_FALLBACK.contienda,
   };
 }
