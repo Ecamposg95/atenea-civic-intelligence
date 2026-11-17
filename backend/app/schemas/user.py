@@ -60,6 +60,9 @@ class UserRead(UserBase):
     area_nivel: str | None = None
     created_at: datetime
     updated_at: datetime
+    # Set when the user is soft-deleted (lets the UI tell "eliminados" apart
+    # when listing with include_deleted=true).
+    deleted_at: datetime | None = None
 
 
 class TerritorioAssign(BaseModel):

@@ -25,6 +25,7 @@ from app.schemas.user import (
     UserUpdate,
 )
 from app.services import users_service
+from app.services.audit_service import record_audit
 from app.utils.pagination import PaginationParams
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -86,6 +87,7 @@ def list_users(
     role: UserRole | None = Query(None),
     is_active: bool | None = Query(None),
     include_deleted: bool = Query(False),
+    deleted_only: bool = Query(False, description="Only soft-deleted users"),
     sort: str = Query("created_at", pattern="^(created_at|full_name|email|role)$"),
     order: str = Query("asc", pattern="^(asc|desc)$"),
 ) -> Page[UserRead]:
@@ -96,6 +98,7 @@ def list_users(
         role=role,
         is_active=is_active,
         include_deleted=include_deleted,
+        deleted_only=deleted_only,
         sort=sort,
         order=order,
         limit=pagination.limit,
@@ -175,7 +178,18 @@ def assign_territory(
         ).scalar_one_or_none()
         if area is None:
             raise HTTPException(status_code=404, detail="Área no encontrada")
+    previous_area = user.area_id
     user.area_id = payload.area_id
+    user.updated_by = ctx.user.id
+    record_audit(
+        db,
+        action="user.assign_territory",
+        actor_id=ctx.user.id,
+        organization_id=user.organization_id,
+        entity_type="user",
+        entity_id=user.id,
+        meta={"area_id": payload.area_id, "previous_area_id": previous_area},
+    )
     db.commit()
     db.refresh(user)
     return UserRead.model_validate(user)

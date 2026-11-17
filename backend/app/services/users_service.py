@@ -87,6 +87,36 @@ def _validate_lider(
         )
 
 
+def _validate_coordinador_ref(
+    db: Session,
+    ctx: TenantContext,
+    coordinador_id: str | None,
+    org_id: str | None,
+    target_id: str | None = None,
+) -> None:
+    """Validate that coordinador_id references a COORDINADOR in the same tenant."""
+    if coordinador_id is None:
+        return
+    if coordinador_id == target_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A user cannot be their own coordinator",
+        )
+    coord = db.execute(
+        select(User).where(User.id == coordinador_id, User.deleted_at.is_(None))
+    ).scalar_one_or_none()
+    if coord is None or coord.role != UserRole.COORDINADOR:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="coordinador_id must reference a COORDINADOR user",
+        )
+    if not ctx.is_superadmin and coord.organization_id != org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="coordinador_id must be in the same organization",
+        )
+
+
 def _validate_coordinador(
     db: Session,
     actor: User,
@@ -197,10 +227,18 @@ def _assert_can_manage(ctx: TenantContext, target: User) -> None:
 
 
 def _assert_can_assign_role(ctx: TenantContext, role: UserRole) -> None:
+    """Role-grant guard.
+
+    - SUPERADMIN can only be granted by a superadmin.
+    - ADMIN can be granted by a superadmin or by an ADMIN (within their own
+      tenant — the org always comes from the caller's context). An ADMIN
+      already holds every tenant-level power, so this is not an escalation;
+      COORDINADOR/LIDER can never grant it.
+    """
     if role == UserRole.SUPERADMIN and not ctx.is_superadmin:
         raise _forbidden("Only a superadmin can grant the superadmin role")
-    if role == UserRole.ADMIN and not ctx.is_superadmin:
-        raise _forbidden("Only a superadmin can grant the admin role")
+    if role == UserRole.ADMIN and not (ctx.is_superadmin or ctx.role == UserRole.ADMIN):
+        raise _forbidden("Only an admin can grant the admin role")
 
 
 def _get_owned(db: Session, ctx: TenantContext, user_id: str, *, include_deleted: bool) -> User:
@@ -223,16 +261,25 @@ def list_users(
     role: UserRole | None = None,
     is_active: bool | None = None,
     include_deleted: bool = False,
+    deleted_only: bool = False,
     sort: str = "created_at",
     order: str = "asc",
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[Sequence[User], int]:
-    """Search/filter/sort users within the caller's tenant. Returns (rows, total)."""
+    """Search/filter/sort users within the caller's tenant. Returns (rows, total).
+
+    ``deleted_only`` returns only soft-deleted users (the "eliminados" view);
+    it wins over ``include_deleted``. Non-superadmin callers never see
+    superadmin accounts (they cannot manage them anyway).
+    """
     filters = []
     if not ctx.is_superadmin:
         filters.append(User.organization_id == ctx.organization_id)
-    if not include_deleted:
+        filters.append(User.role != UserRole.SUPERADMIN)
+    if deleted_only:
+        filters.append(User.deleted_at.is_not(None))
+    elif not include_deleted:
         filters.append(User.deleted_at.is_(None))
     if role is not None:
         filters.append(User.role == role)
@@ -285,6 +332,7 @@ def create_user(db: Session, ctx: TenantContext, data: UserCreate) -> tuple[User
     _enforce_actor_scope(db, ctx, data.role, data.lider_id, data.coordinador_id)
 
     _validate_lider(db, ctx, data.lider_id, org_id)
+    _validate_coordinador_ref(db, ctx, data.coordinador_id, org_id)
 
     temp_password = data.password or generate_temp_password()
     user = User(
@@ -311,7 +359,12 @@ def create_user(db: Session, ctx: TenantContext, data: UserCreate) -> tuple[User
         organization_id=org_id,
         entity_type="user",
         entity_id=user.id,
-        meta={"role": data.role.value},
+        meta={
+            "role": data.role.value,
+            "seccion": data.seccion,
+            "lider_id": data.lider_id,
+            "coordinador_id": data.coordinador_id,
+        },
     )
     db.commit()
     db.refresh(user)
@@ -322,6 +375,7 @@ def update_user(db: Session, ctx: TenantContext, user_id: str, data: UserUpdate)
     user = _get_owned(db, ctx, user_id, include_deleted=False)
 
     target_role = data.role if data.role is not None else user.role
+    previous_role = user.role
     if data.role is not None and data.role != user.role:
         _assert_can_assign_role(ctx, data.role)
         if user.id == ctx.user.id:
@@ -339,6 +393,9 @@ def update_user(db: Session, ctx: TenantContext, user_id: str, data: UserUpdate)
         _validate_lider(db, ctx, data.lider_id, user.organization_id, target_id=user.id)
         user.lider_id = data.lider_id
     if "coordinador_id" in data.model_fields_set:
+        _validate_coordinador_ref(
+            db, ctx, data.coordinador_id, user.organization_id, target_id=user.id
+        )
         user.coordinador_id = data.coordinador_id
     # Enforce sub-structure scope when COORDINADOR/LIDER updates structure fields.
     _update_actor_scope_check(
@@ -364,7 +421,16 @@ def update_user(db: Session, ctx: TenantContext, user_id: str, data: UserUpdate)
         organization_id=user.organization_id,
         entity_type="user",
         entity_id=user.id,
-        meta=data.model_dump(exclude_none=True),
+        # Only the fields actually sent (explicit nulls included, so clearing
+        # seccion/lider is visible in the trail). No secrets in UserUpdate.
+        meta={
+            **data.model_dump(mode="json", include=data.model_fields_set),
+            **(
+                {"previous_role": previous_role.value}
+                if data.role is not None and data.role != previous_role
+                else {}
+            ),
+        },
     )
     db.commit()
     db.refresh(user)

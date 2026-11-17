@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 
 import { getAlertas } from "@/api/alertas";
 import { getExecutiveDashboard } from "@/api/dashboard";
@@ -43,6 +43,13 @@ const SCRUM_COLUMN_LABEL: Record<string, string> = {
 const SCRUM_COLUMNS = ["POR_HACER", "EN_CURSO", "HECHO"] as const;
 
 export function DashboardPage() {
+  // Capturistas only capture paper sheets: Inicio is the capture screen for them.
+  const rol = useAuthStore((s) => s.user?.role);
+  if (rol === "capturista") return <Navigate to="/captura" replace />;
+  return <DashboardEjecutivo />;
+}
+
+function DashboardEjecutivo() {
   const { data, loading, error, reload } = useAsync<ExecutiveDashboard>(
     () => getExecutiveDashboard(),
     [],

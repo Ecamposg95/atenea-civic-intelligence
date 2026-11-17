@@ -324,12 +324,31 @@ def test_lider_cannot_create_lider(client: TestClient) -> None:
     assert r.status_code == 403, r.text
 
 
-def test_admin_cannot_create_admin(client: TestClient) -> None:
-    """ADMIN cannot create another ADMIN — only SA may grant that role (403)."""
+def test_admin_can_create_admin_in_own_org(client: TestClient) -> None:
+    """ADMIN may grant ADMIN within its own tenant (org comes from the JWT)."""
     h = auth_headers(client, "admin@alpha.gov")
     r = client.post(
         "/api/users",
-        json={"email": "newadmin@alpha.gov", "full_name": "NA", "role": "admin"},
+        json={
+            "email": "newadmin@alpha.gov",
+            "full_name": "NA",
+            "role": "admin",
+            # Ignored for non-superadmins (Golden Rule #2).
+            "organization_id": _org_id(client, "admin@beta.gov"),
+        },
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["user"]["organization_id"] == _org_id(client, "admin@alpha.gov")
+
+
+def test_coordinador_cannot_promote_to_admin(client: TestClient) -> None:
+    h = auth_headers(client, "coord@alpha.gov")
+    me = client.get("/api/auth/me", headers=h).json()
+    r = client.post(
+        "/api/users",
+        json={"email": "c2@alpha.gov", "full_name": "C2", "role": "admin",
+              "coordinador_id": me["id"]},
         headers=h,
     )
     assert r.status_code == 403, r.text
@@ -372,3 +391,190 @@ def test_coordinador_and_lider_can_list_users(client: TestClient) -> None:
     coord = auth_headers(client, "coord@alpha.gov")
     some_id = client.get("/api/users", headers=coord).json()["items"][0]["id"]
     assert client.get(f"/api/users/{some_id}", headers=coord).status_code == 403
+
+
+# --- Admin CRUD completeness (spec 2026-11-17 §12) --------------------------
+def _audit_actions(entity_id: str) -> list[str]:
+    from sqlalchemy import select
+
+    from app.models.audit_log import AuditLog
+    from tests.conftest import TestingSessionLocal
+
+    db = TestingSessionLocal()
+    try:
+        return list(
+            db.execute(
+                select(AuditLog.action).where(AuditLog.entity_id == entity_id)
+            ).scalars()
+        )
+    finally:
+        db.close()
+
+
+def _superadmin_in_alpha() -> str:
+    """A superadmin that happens to live in the alpha org (worst case for leaks)."""
+    from sqlalchemy import select
+
+    from app.core.security import hash_password
+    from app.models.organization import Organization
+    from app.models.user import UserRole
+    from tests.conftest import TestingSessionLocal
+
+    db = TestingSessionLocal()
+    try:
+        existing = db.execute(
+            select(User.id).where(User.email == "sa-in-alpha@atlas.gov")
+        ).scalar_one_or_none()
+        if existing:
+            return existing
+        org_id = db.execute(
+            select(Organization.id).where(Organization.slug == "alpha")
+        ).scalar_one()
+        sa = User(email="sa-in-alpha@atlas.gov", full_name="SA Alpha",
+                  hashed_password=hash_password("password123"),
+                  role=UserRole.SUPERADMIN, organization_id=org_id)
+        db.add(sa)
+        db.commit()
+        return sa.id
+    finally:
+        db.close()
+
+
+def test_admin_can_create_every_field_role(client: TestClient) -> None:
+    h = auth_headers(client, "admin@alpha.gov")
+    for i, role in enumerate(
+        ["coordinador", "lider", "activista", "capturista", "analyst", "viewer", "consulta"]
+    ):
+        r = client.post(
+            "/api/users",
+            headers=h,
+            json={"email": f"r{i}@alpha.gov", "full_name": f"R {i}", "role": role,
+                  "seccion": "4321", "phone": "5512345678"},
+        )
+        assert r.status_code == 201, (role, r.text)
+        u = r.json()["user"]
+        assert u["role"] == role and u["seccion"] == "4321" and u["phone"] == "5512345678"
+
+
+def test_admin_cannot_promote_to_superadmin(client: TestClient) -> None:
+    h = auth_headers(client, "admin@alpha.gov")
+    uid = client.post(
+        "/api/users", headers=h,
+        json={"email": "promo@alpha.gov", "full_name": "P", "role": "viewer"},
+    ).json()["user"]["id"]
+    r = client.patch(f"/api/users/{uid}", headers=h, json={"role": "superadmin"})
+    assert r.status_code == 403, r.text
+
+
+def test_admin_cannot_touch_or_list_superadmin(client: TestClient) -> None:
+    h = auth_headers(client, "admin@alpha.gov")
+    sa_id = _superadmin_in_alpha()
+    try:
+        _assert_superadmin_untouchable(client, h, sa_id)
+    finally:
+        _drop_user(sa_id)
+
+
+def _drop_user(user_id: str) -> None:
+    from tests.conftest import TestingSessionLocal
+
+    db = TestingSessionLocal()
+    try:
+        u = db.get(User, user_id)
+        if u is not None:
+            db.delete(u)
+            db.commit()
+    finally:
+        db.close()
+
+
+def _assert_superadmin_untouchable(client: TestClient, h: dict, sa_id: str) -> None:
+    listed = client.get("/api/users?limit=200", headers=h).json()["items"]
+    assert all(u["role"] != "superadmin" for u in listed)
+    assert sa_id not in [u["id"] for u in listed]
+    for method, path in [
+        ("patch", f"/api/users/{sa_id}"),
+        ("post", f"/api/users/{sa_id}/deactivate"),
+        ("post", f"/api/users/{sa_id}/reset-password"),
+        ("delete", f"/api/users/{sa_id}"),
+    ]:
+        kwargs = {"json": {"full_name": "Hacked"}} if method == "patch" else {}
+        r = getattr(client, method)(path, headers=h, **kwargs)
+        assert r.status_code == 403, (path, r.status_code)
+
+
+def test_deleted_only_filter(client: TestClient) -> None:
+    h = auth_headers(client, "admin@alpha.gov")
+    uid = client.post(
+        "/api/users", headers=h,
+        json={"email": "gone@alpha.gov", "full_name": "Gone", "role": "viewer"},
+    ).json()["user"]["id"]
+    assert client.delete(f"/api/users/{uid}", headers=h).status_code == 204
+    body = client.get("/api/users?deleted_only=true", headers=h).json()
+    assert [u["id"] for u in body["items"]] == [uid]
+    assert body["total"] == 1
+    assert body["items"][0]["deleted_at"] is not None
+    assert uid not in [u["id"] for u in client.get("/api/users", headers=h).json()["items"]]
+
+
+def test_list_pagination_and_active_filter(client: TestClient) -> None:
+    h = auth_headers(client, "admin@alpha.gov")
+    for i in range(3):
+        client.post("/api/users", headers=h,
+                    json={"email": f"pg{i}@alpha.gov", "full_name": f"Pg {i}", "role": "viewer"})
+    page = client.get("/api/users?q=pg&limit=2&offset=0&sort=email", headers=h).json()
+    assert page["total"] == 3 and len(page["items"]) == 2 and page["limit"] == 2
+    page2 = client.get("/api/users?q=pg&limit=2&offset=2&sort=email", headers=h).json()
+    assert len(page2["items"]) == 1
+    uid = page["items"][0]["id"]
+    client.post(f"/api/users/{uid}/deactivate", headers=h)
+    inactive = client.get("/api/users?q=pg&is_active=false", headers=h).json()["items"]
+    assert [u["id"] for u in inactive] == [uid]
+
+
+def test_admin_sets_lider_and_coordinador(client: TestClient) -> None:
+    h = auth_headers(client, "admin@alpha.gov")
+    coord_id = client.get("/api/auth/me", headers=auth_headers(client, "coord@alpha.gov")).json()["id"]
+    lider_id = client.get("/api/auth/me", headers=auth_headers(client, "lider@alpha.gov")).json()["id"]
+    lider = client.post("/api/users", headers=h, json={
+        "email": "l2@alpha.gov", "full_name": "L2", "role": "lider",
+        "coordinador_id": coord_id,
+    })
+    assert lider.status_code == 201, lider.text
+    act = client.post("/api/users", headers=h, json={
+        "email": "a2@alpha.gov", "full_name": "A2", "role": "activista",
+        "lider_id": lider_id, "seccion": "100",
+    }).json()["user"]
+    moved = client.patch(f"/api/users/{act['id']}", headers=h,
+                         json={"lider_id": lider.json()["user"]["id"]})
+    assert moved.status_code == 200 and moved.json()["lider_id"] == lider.json()["user"]["id"]
+    # coordinador_id must point at a COORDINADOR
+    bad = client.patch(f"/api/users/{act['id']}", headers=h, json={"coordinador_id": lider_id})
+    assert bad.status_code == 400, bad.text
+
+
+def test_reset_password_forces_change_and_every_mutation_is_audited(
+    client: TestClient,
+) -> None:
+    h = auth_headers(client, "admin@alpha.gov")
+    uid = client.post("/api/users", headers=h, json={
+        "email": "aud@alpha.gov", "full_name": "Aud", "role": "capturista",
+    }).json()["user"]["id"]
+    client.patch(f"/api/users/{uid}", headers=h, json={"role": "analyst", "seccion": None})
+    client.post(f"/api/users/{uid}/deactivate", headers=h)
+    client.post(f"/api/users/{uid}/activate", headers=h)
+    reset = client.post(f"/api/users/{uid}/reset-password", headers=h).json()
+    client.delete(f"/api/users/{uid}", headers=h)
+    client.post(f"/api/users/{uid}/restore", headers=h)
+
+    # temp password works and the user is forced to change it
+    token = client.post("/api/auth/login", json={
+        "email": "aud@alpha.gov", "password": reset["temporary_password"],
+    }).json()["access_token"]
+    me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"}).json()
+    assert me["must_change_password"] is True
+
+    actions = _audit_actions(uid)
+    for a in ("user.create", "user.update", "user.deactivate", "user.activate",
+              "user.reset_password", "user.delete", "user.restore"):
+        assert a in actions, (a, actions)

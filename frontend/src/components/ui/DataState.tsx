@@ -22,7 +22,6 @@ interface DataStateProps {
  *
  * Empty-state convention: for a REAL dataset whose table hasn't been ingested
  * yet, pass `emptyMessage="Ingesta pendiente"` (honest empty, never fake data).
- * For preview modules with sample fixtures, keep the PreviewBanner instead.
  */
 export function DataState({
   loading,

@@ -6,6 +6,7 @@ import {
   AlertIcon,
   AnalyticsIcon,
   DashboardIcon,
+  MapIcon,
   DatabaseIcon,
   LayersIcon,
   SearchIcon,
@@ -138,6 +139,12 @@ const Busqueda = lazy(() =>
 const Historial = lazy(() =>
   import("@/modules/historial/HistorialPage").then((m) => ({ default: m.HistorialPage })),
 );
+const MapaSma = lazy(() =>
+  import("@/modules/mapa/MapaSmaPage").then((m) => ({ default: m.MapaSmaPage })),
+);
+const CapturaHojas = lazy(() =>
+  import("@/modules/captura/CapturaHojasPage").then((m) => ({ default: m.CapturaHojasPage })),
+);
 const Captura = lazy(() =>
   import("@/modules/captura/CapturaPage").then((m) => ({ default: m.CapturaPage })),
 );
@@ -215,6 +222,8 @@ export const MODULES: ModuleDef[] = [
   // Inicio (rendered as a loose item above the sections in Sidebar.tsx —
   // section value below is unused for grouping but must be a valid ModuleSection).
   { key: "dashboard", path: "/", label: "Inicio", section: "operacion", icon: DashboardIcon, state: "active", element: Dashboard, end: true, roles: ALL },
+  { key: "captura", path: "/captura", label: "Captura de hojas", section: "operacion", icon: VotersIcon, state: "active", element: CapturaHojas, roles: ["superadmin", "admin", "coordinador", "capturista"] },
+  { key: "mapa", path: "/mapa", label: "Mapa SMA", section: "operacion", icon: MapIcon, state: "active", element: MapaSma, roles: ["superadmin", "admin", "coordinador", "lider", "analyst"] },
 
   // Inteligencia Electoral (ex-plataforma data/analysis tools + existing intel datasets)
   { key: "analytics", path: "/analytics", label: "Analítica", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Analytics, roles: INTEL },
@@ -226,7 +235,7 @@ export const MODULES: ModuleDef[] = [
 
   // Operación (ex-ciudadanía)
   { key: "promovidos-importar", path: "/promovidos/importar", label: "Importar", section: "operacion", icon: DatabaseIcon, state: "active", element: ImportarPromovidos, roles: ["superadmin", "admin", "coordinador"] },
-  { key: "captura", path: "/captura", label: "Activistas", section: "operacion", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "admin", "lider", "activista", "capturista"] },
+  { key: "captura-campo", path: "/captura-campo", label: "Captura en campo", section: "operacion", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "lider", "activista"] },
   { key: "plan-territorial", path: "/plan-territorial", label: "Plan Territorial", section: "operacion", icon: LayersIcon, state: "active", element: PlanTerritorial, roles: CONSOLE_COORD },
   { key: "war-room", path: "/war-room", label: "War Room", section: "operacion", icon: AnalyticsIcon, state: "active", element: WarRoom, roles: CONSOLE_COORD },
   // Minutas & Acuerdos — only the two non-parameterized routes are nav items;
