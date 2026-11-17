@@ -60,20 +60,6 @@ export const STATUS_ORDER: IntegrationStatus[] = [
 export const INTEGRATIONS: IntegrationSource[] = [
   // ── Activas (reales, alcanzables) ──────────────────────────────────────
   {
-    key: "ieem",
-    name: "IEEM Numeralia",
-    powers: "Estado de México (IEEM) · numeralia electoral",
-    status: "activa",
-    format: "CSV · EdoMex",
-  },
-  {
-    key: "worldbank",
-    name: "World Bank",
-    powers: "Indicadores Nacionales · series macroeconómicas",
-    status: "activa",
-    format: "API pública · indicadores",
-  },
-  {
     key: "gadm",
     name: "Geometría GADM",
     powers: "Cartografía · estados y municipios",
@@ -83,19 +69,8 @@ export const INTEGRATIONS: IntegrationSource[] = [
   {
     key: "analytics",
     name: "Auditoría / Analytics",
-    powers: "Activity Analytics · Auditoría & Cumplimiento",
+    powers: "Plataforma · Auditoría & Cumplimiento",
     status: "activa",
     format: "DB interna",
-  },
-
-  // ── Bloqueadas (externo caído) ─────────────────────────────────────────
-  {
-    key: "ckan",
-    name: "datos.gob.mx (CKAN)",
-    powers: "Datasets abiertos · catálogo",
-    status: "bloqueada",
-    format: "CKAN · SSL",
-    howTo:
-      "El portal presenta un error de certificado SSL del lado del proveedor. No es configurable desde Atenea; depende de que datos.gob.mx corrija su TLS.",
   },
 ];

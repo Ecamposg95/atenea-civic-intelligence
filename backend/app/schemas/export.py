@@ -24,6 +24,10 @@ EXPORT_COLUMNS: list[str] = [
     "consentimiento",
     "consentimiento_at",
     "created_at",
+    # Captura SMA (0022) — appended so earlier column positions stay stable.
+    "tipo",
+    "cadena",
+    "valor_viejo",
 ]
 
 MEDIA_TYPES: dict[str, str] = {

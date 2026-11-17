@@ -9,7 +9,6 @@ import {
   MapIcon,
   DatabaseIcon,
   LayersIcon,
-  SearchIcon,
   SettingsIcon,
   ShieldIcon,
   UserIcon,
@@ -17,7 +16,7 @@ import {
 } from "@/components/ui/icons";
 
 export type ModuleState = "active" | "preview";
-export type ModuleSection = "operacion" | "inteligencia" | "administracion";
+export type ModuleSection = "operacion" | "administracion";
 
 export interface ModuleDef {
   key: string;
@@ -43,10 +42,6 @@ const ALL: UserRole[] = [
   "superadmin", "admin", "coordinador", "lider",
   "activista", "capturista", "analyst", "viewer", "consulta",
 ];
-// Broad intelligence library (reference datasets, analytics, search). A
-// COORDINADOR is a campaign/territory operator, NOT an intelligence viewer, so
-// she is intentionally excluded here.
-const INTEL: UserRole[] = ["superadmin", "admin", "lider", "analyst", "viewer"];
 // Territory/operational intel a coordinador DOES keep (San Mateo Atenco panorama).
 const INTEL_TERRITORY: UserRole[] = ["superadmin", "admin", "coordinador", "lider", "analyst", "viewer"];
 // Activist console a coordinador owns (dashboard, registros).
@@ -56,7 +51,6 @@ const CONSOLE_CAPTURA: UserRole[] = [
   "superadmin", "admin", "coordinador", "lider", "activista", "capturista",
 ];
 const ADMINY: UserRole[] = ["superadmin", "admin"];
-const REPORTS: UserRole[] = ["superadmin", "admin", "coordinador", "lider", "analyst", "viewer", "consulta"];
 // Minutas & Acuerdos — read tier (list/detail/mis-acuerdos) also reaches
 // activista/capturista, who attend reuniones but don't create/edit actas.
 export const MINUTAS_READ: UserRole[] = [
@@ -88,13 +82,11 @@ export interface ModuleGroup {
 
 export const SECTION_LABELS: Record<ModuleSection, string> = {
   operacion: "Operación",
-  inteligencia: "Inteligencia Electoral",
   administracion: "Administración",
 };
 
 export const SECTION_ORDER: ModuleSection[] = [
   "operacion",
-  "inteligencia",
   "administracion",
 ];
 
@@ -105,12 +97,6 @@ const PlatformDashboard = lazy(() =>
   import("@/pages/PlatformDashboardPage").then((m) => ({
     default: m.PlatformDashboardPage,
   })),
-);
-const Analytics = lazy(() =>
-  import("@/pages/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage })),
-);
-const Sources = lazy(() =>
-  import("@/pages/SourcesPage").then((m) => ({ default: m.SourcesPage })),
 );
 const Users = lazy(() =>
   import("@/pages/UsersPage").then((m) => ({ default: m.UsersPage })),
@@ -125,17 +111,6 @@ const Auditoria = lazy(() =>
     default: m.AuditoriaPage,
   })),
 );
-const Ieem = lazy(() =>
-  import("@/modules/ieem/IeemPage").then((m) => ({ default: m.IeemPage })),
-);
-const WorldBank = lazy(() =>
-  import("@/modules/worldbank/WorldBankPage").then((m) => ({
-    default: m.WorldBankPage,
-  })),
-);
-const Reportes = lazy(() =>
-  import("@/modules/reportes/ReportesPage").then((m) => ({ default: m.ReportesPage })),
-);
 const Configuracion = lazy(() =>
   import("@/modules/configuracion/ConfiguracionPage").then((m) => ({
     default: m.ConfiguracionPage,
@@ -149,9 +124,6 @@ const Campaigns = lazy(() =>
     default: m.CampaignsPage,
   })),
 );
-const Busqueda = lazy(() =>
-  import("@/modules/busqueda/BusquedaPage").then((m) => ({ default: m.BusquedaPage })),
-);
 const Historial = lazy(() =>
   import("@/modules/historial/HistorialPage").then((m) => ({ default: m.HistorialPage })),
 );
@@ -161,25 +133,12 @@ const MapaSma = lazy(() =>
 const CapturaHojas = lazy(() =>
   import("@/modules/captura/CapturaHojasPage").then((m) => ({ default: m.CapturaHojasPage })),
 );
-const Captura = lazy(() =>
-  import("@/modules/captura/CapturaPage").then((m) => ({ default: m.CapturaPage })),
-);
 const ImportarPromovidos = lazy(() =>
   import("@/modules/promovidos/ImportarPromovidosPage").then((m) => ({ default: m.ImportarPromovidosPage })),
 );
-const AdminDashboard = lazy(() =>
-  import("@/modules/admin/AdminDashboardPage").then((m) => ({
-    default: m.AdminDashboardPage,
-  })),
-);
-const AdminRegistros = lazy(() =>
-  import("@/modules/admin/AdminRegistrosPage").then((m) => ({
-    default: m.AdminRegistrosPage,
-  })),
-);
-const AdminEstructura = lazy(() =>
-  import("@/modules/admin/AdminEstructuraPage").then((m) => ({
-    default: m.AdminEstructuraPage,
+const Estructura = lazy(() =>
+  import("@/modules/promovidos/EstructuraPage").then((m) => ({
+    default: m.EstructuraPage,
   })),
 );
 const Promovidos = lazy(() =>
@@ -251,17 +210,9 @@ export const MODULES: ModuleDef[] = [
   { key: "captura", path: "/captura", label: "Captura de hojas", section: "operacion", icon: VotersIcon, state: "active", element: CapturaHojas, roles: ["superadmin", "admin", "coordinador", "capturista"] },
   { key: "mapa", path: "/mapa", label: "Mapa", group: "territorio", section: "operacion", icon: MapIcon, state: "active", element: MapaSma, roles: ["superadmin", "admin", "coordinador", "lider", "analyst"] },
 
-  // Inteligencia Electoral (ex-plataforma data/analysis tools + existing intel datasets)
-  { key: "analytics", path: "/analytics", label: "Analítica", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Analytics, roles: INTEL },
-  { key: "sources", path: "/sources", label: "Fuentes", section: "inteligencia", icon: DatabaseIcon, state: "active", element: Sources, roles: ["superadmin", "admin", "analyst"] },
-  { key: "busqueda", path: "/busqueda", label: "Búsqueda", section: "inteligencia", icon: SearchIcon, state: "active", element: Busqueda, roles: INTEL },
-  { key: "municipio-panorama", path: "/municipio", label: "Panorama", group: "territorio", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: PanoramaMunicipio, roles: INTEL_TERRITORY },
-  { key: "ieem", path: "/ieem", label: "IEEM", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Ieem, roles: INTEL },
-  { key: "worldbank", path: "/indicadores", label: "Indicadores", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: WorldBank, roles: INTEL },
+  { key: "municipio-panorama", path: "/municipio", label: "Panorama", group: "territorio", section: "operacion", icon: AnalyticsIcon, state: "active", element: PanoramaMunicipio, roles: INTEL_TERRITORY },
 
   // Operación (ex-ciudadanía)
-  { key: "promovidos-importar", path: "/promovidos/importar", label: "Importar", group: "personas", section: "operacion", icon: DatabaseIcon, state: "active", element: ImportarPromovidos, roles: ["superadmin", "admin", "coordinador"] },
-  { key: "captura-campo", path: "/captura-campo", label: "Captura en campo", section: "operacion", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "lider", "activista"], hidden: true },
   { key: "plan-territorial", path: "/plan-territorial", label: "Plan", group: "territorio", section: "operacion", icon: LayersIcon, state: "active", element: PlanTerritorial, roles: CONSOLE_COORD },
   { key: "war-room", path: "/war-room", label: "War Room", group: "territorio", section: "operacion", icon: AnalyticsIcon, state: "active", element: WarRoom, roles: CONSOLE_COORD },
   // Minutas & Acuerdos — only the two non-parameterized routes are nav items;
@@ -289,12 +240,10 @@ export const MODULES: ModuleDef[] = [
   // Administración (ex-gobernanza + ex-administracion)
   { key: "auditoria", path: "/auditoria", label: "Auditoría", group: "sistema", section: "administracion", icon: ShieldIcon, state: "active", element: Auditoria, roles: ADMINY },
   { key: "historial", path: "/historial", label: "Ingestas", group: "sistema", section: "administracion", icon: DatabaseIcon, state: "active", element: Historial, roles: ADMINY },
-  { key: "reportes", path: "/reportes", label: "Reportes", group: "personas", section: "administracion", icon: DatabaseIcon, state: "active", element: Reportes, roles: REPORTS },
 
-  // Admin console (role-gated, active)
-  { key: "admin-dashboard", path: "/admin", label: "Consola", group: "personas", section: "administracion", icon: AnalyticsIcon, state: "active", element: AdminDashboard, roles: CONSOLE_COORD },
-  { key: "admin-registros", path: "/admin/registros", label: "Registros", group: "personas", section: "administracion", icon: VotersIcon, state: "active", element: AdminRegistros, roles: CONSOLE_COORD },
-  { key: "admin-estructura", path: "/admin/estructura", label: "Estructura", group: "personas", section: "administracion", icon: UserIcon, state: "active", element: AdminEstructura, roles: ["superadmin", "admin", "coordinador"] },
+  // Personas: Lista (above) → Estructura (paper tree; path kept for alert links) → Importar
+  { key: "admin-estructura", path: "/admin/estructura", label: "Estructura", group: "personas", section: "operacion", icon: UserIcon, state: "active", element: Estructura, roles: CONSOLE_COORD },
+  { key: "promovidos-importar", path: "/promovidos/importar", label: "Importar", group: "personas", section: "operacion", icon: DatabaseIcon, state: "active", element: ImportarPromovidos, roles: ["superadmin", "admin", "coordinador"] },
 
   // Administración (role-gated, active)
   { key: "users", path: "/users", label: "Usuarios", section: "administracion", icon: UserIcon, state: "active", element: Users, roles: ADMINY },

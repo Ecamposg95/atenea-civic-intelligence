@@ -68,13 +68,7 @@ _INTEL_TERRITORY_ENDPOINTS = [
     "/api/maps/areas",
     "/api/territory/children",
 ]
-# Reference-dataset proxy (IEEM / World Bank): national/state datasets, not
-# campaign data. A COORDINADOR is a field operator, not an intelligence viewer,
-# so these are denied to her (kept for analyst/viewer/lider/admin).
-_INTEL_REFERENCE_ENDPOINTS = [
-    "/api/intel/ieem/datasets",
-]
-_INTEL_ENDPOINTS = _INTEL_TERRITORY_ENDPOINTS + _INTEL_REFERENCE_ENDPOINTS
+_INTEL_ENDPOINTS = _INTEL_TERRITORY_ENDPOINTS
 
 _BLOCKED_ON_INTEL = [
     "activista1@alpha.gov",   # ACTIVISTA
@@ -99,39 +93,11 @@ def test_intelligence_allows_viewer_and_above(client):
             assert code not in (401, 403), f"{ep} [{email}] expected access, got {code}"
 
 
-def test_coordinador_reaches_territory_intel_but_not_reference(client):
-    """COORDINADOR is a campaign/territory operator, not an intelligence viewer:
-    she keeps dashboard/maps/territorios data but is denied the reference-dataset
-    proxy (IEEM / World Bank)."""
+def test_coordinador_reaches_territory_intel(client):
+    """COORDINADOR keeps dashboard/maps/territorios data."""
     for ep in _INTEL_TERRITORY_ENDPOINTS:
         code = client.get(ep, headers=_ih(client, "coord@alpha.gov")).status_code
         assert code not in (401, 403), f"{ep} [coord] expected access, got {code}"
-    for ep in _INTEL_REFERENCE_ENDPOINTS:
-        code = client.get(ep, headers=_ih(client, "coord@alpha.gov")).status_code
-        assert code == 403, f"{ep} [coord] expected 403, got {code}"
-
-
-def test_sources_blocks_viewer_capturista_consulta_activista(client):
-    """Sources router requires ADMIN or ANALYST; lower roles must be blocked.
-
-    RED: these return 200 before gating.
-    GREEN: return 403 after require_roles(ADMIN, ANALYST) guard.
-    """
-    blocked = [
-        "viewer@alpha.gov",       # VIEWER
-        "capturista@alpha.gov",   # CAPTURISTA
-        "consulta@alpha.gov",     # CONSULTA
-        "activista1@alpha.gov",   # ACTIVISTA
-    ]
-    for email in blocked:
-        code = client.get("/api/sources", headers=_ih(client, email)).status_code
-        assert code == 403, f"/api/sources [{email}] expected 403, got {code}"
-
-
-def test_sources_allows_admin(client):
-    """Admin must reach sources endpoints after gating."""
-    code = client.get("/api/sources", headers=_ih(client, "admin@alpha.gov")).status_code
-    assert code not in (401, 403), f"/api/sources [admin] expected access, got {code}"
 
 
 def test_organizations_admin_can_list_own_org(client):

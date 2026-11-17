@@ -1,7 +1,8 @@
 """Captura de hojas SMA — /captura/* (spec 2026-11-17 §5).
 
-ADMIN, COORDINADOR and CAPTURISTA (superadmin auto-passes). Everything is
-tenant+campaign scoped through ``CampaignCtx`` (X-Campaign-Id).
+Capture endpoints: ADMIN, COORDINADOR and CAPTURISTA. ``GET /captura/estructura``
+(read-only paper tree): ADMIN, COORDINADOR and LIDER. Superadmin auto-passes.
+Everything is tenant+campaign scoped through ``CampaignCtx`` (X-Campaign-Id).
 """
 from typing import Annotated, Literal, Optional
 
@@ -10,21 +11,24 @@ from fastapi.responses import JSONResponse
 
 from app.dependencies import CampaignCtx, DbSession, require_roles
 from app.models.user import UserRole
-from app.schemas.captura_sma import CatalogoOut, HojaIn, HojaOut, HojaResumen, PersonaOut
+from app.schemas.captura_sma import (
+    CatalogoOut, EstructuraPage, HojaIn, HojaOut, HojaResumen, PersonaOut,
+)
 from app.services import captura_sma_service as svc
 from app.services import privacy_service
 
-_CAPTURA = Depends(require_roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.CAPTURISTA))
+_CAPTURA = [Depends(require_roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.CAPTURISTA))]
+_ESTRUCTURA = [Depends(require_roles(UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER))]
 
-router = APIRouter(prefix="/captura", tags=["captura"], dependencies=[_CAPTURA])
+router = APIRouter(prefix="/captura", tags=["captura"])
 
 
-@router.get("/catalogo", response_model=CatalogoOut)
+@router.get("/catalogo", response_model=CatalogoOut, dependencies=_CAPTURA)
 def catalogo(ctx: CampaignCtx) -> CatalogoOut:
     return svc.catalogo()
 
 
-@router.get("/personas", response_model=list[PersonaOut])
+@router.get("/personas", response_model=list[PersonaOut], dependencies=_CAPTURA)
 def personas(
     db: DbSession, ctx: CampaignCtx,
     tipo: Annotated[Literal["LIDER", "ACTIVISTA"], Query()],
@@ -33,7 +37,7 @@ def personas(
     return svc.buscar_personas(db, ctx, tipo, q)
 
 
-@router.post("/hoja", response_model=HojaOut,
+@router.post("/hoja", response_model=HojaOut, dependencies=_CAPTURA,
              responses={422: {"model": HojaOut, "description": "La hoja tiene errores"}})
 def hoja(data: HojaIn, db: DbSession, ctx: CampaignCtx):
     if ctx.is_superadmin and not ctx.organization_id:
@@ -50,6 +54,19 @@ def hoja(data: HojaIn, db: DbSession, ctx: CampaignCtx):
     return out
 
 
-@router.get("/mis-hojas", response_model=list[HojaResumen])
+@router.get("/mis-hojas", response_model=list[HojaResumen], dependencies=_CAPTURA)
 def mis_hojas(db: DbSession, ctx: CampaignCtx) -> list[HojaResumen]:
     return svc.mis_hojas(db, ctx)
+
+
+@router.get("/estructura", response_model=EstructuraPage, dependencies=_ESTRUCTURA)
+def estructura(
+    db: DbSession, ctx: CampaignCtx,
+    seccion: Annotated[Optional[str], Query(max_length=20)] = None,
+    q: Annotated[Optional[str], Query(max_length=120)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> EstructuraPage:
+    """Paper structure Líder → Activistas → Promovidos (new captures only),
+    paginated by líder. Never returns clave/CURP."""
+    return svc.estructura(db, ctx, seccion=seccion, q=q, limit=limit, offset=offset)

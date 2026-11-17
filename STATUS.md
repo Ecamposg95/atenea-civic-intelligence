@@ -17,8 +17,10 @@ captura de activistas (offline PWA queue), plan territorial, war room, alertas,
 militantes (afiliación), atención ciudadana (casos, formularios, OCR INE),
 minutas y acuerdos, scrum (tablero, pendientes, ciclos).
 
-**Inteligencia:** panorama municipal SMA, IEEM, indicadores (World Bank),
-analítica, búsqueda, fuentes.
+**Territorio:** mapa SMA, panorama municipal SMA. (Los módulos nacionales de
+"Inteligencia Electoral" — analítica, fuentes, búsqueda, IEEM, indicadores World
+Bank — se eliminaron 2026-11; `/api/analytics/overview` sigue alimentando
+`/plataforma`.)
 
 **Administración:** consola admin (registros, reveal auditado, estructura),
 reportes, auditoría, ingestas, usuarios, organización, organizaciones, campañas,

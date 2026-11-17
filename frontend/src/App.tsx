@@ -85,10 +85,9 @@ let globalOnlineDrainWired = false;
 
 /**
  * Wires the offline queue to the app's lifecycle, independent of whichever
- * page happens to be mounted — so a reconnect drains the queue even when the
- * user isn't on the legacy CapturaPage (which keeps its own page-scoped
- * drain-on-reconnect effect; both are safe to run together because
- * `drainQueue` is guarded against concurrent runs).
+ * page happens to be mounted — so a reconnect drains the queue (militantes,
+ * atención and any registro rows still queued by the retired field-capture
+ * page) wherever the user is. `drainQueue` is guarded against concurrent runs.
  *
  * Gated on `isAuthenticated`: draining while logged out would send requests
  * with no auth header, which the queue's handlers would read back as a

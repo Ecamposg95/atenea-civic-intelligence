@@ -1,5 +1,10 @@
 # INE México — Integraciones de datos
 
+> **Histórico (2026-11):** el router `/api/sources/*`, el CLI `scripts/ingest_ine.py`
+> y los clientes `ckan`/`candidaturas`/`padron`/`prep` se eliminaron (app SMA-only).
+> Solo quedan `integrations/ine/{base,config,cartografia}.py` (usados por `/api/maps/*`
+> y `/api/analytics/overview`).
+
 Ágora consume múltiples fuentes del **Instituto Nacional Electoral (INE)** y de
 datos abiertos relacionados. La capa vive en `backend/app/integrations/ine/` y se
 expone vía `/api/sources/*` y `/api/maps/*`, con ingesta a PostGIS por CLI.

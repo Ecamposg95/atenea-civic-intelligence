@@ -66,7 +66,7 @@ def map_level(name: str | None) -> AreaLevel:
 # --- Source registry --------------------------------------------------------
 @dataclass(frozen=True)
 class SourceDescriptor:
-    """A consumable INE data source, surfaced via /api/sources."""
+    """A consumable INE data source, counted in /api/analytics/overview."""
 
     id: str
     name: str

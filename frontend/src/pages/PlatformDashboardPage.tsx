@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 
 import { getOverview } from "@/api/analytics";
 import { getAreas } from "@/api/maps";
-import { getSources } from "@/api/sources";
 import { useThemeStore } from "@/store/themeStore";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -30,7 +28,6 @@ import {
 } from "@/components/ui/icons";
 import type { AnalyticsAlert, AnalyticsOverview } from "@/types/analytics";
 import type { AreasResponse } from "@/types/maps";
-import type { SourceInfo } from "@/types/sources";
 
 const nf = new Intl.NumberFormat("en-US");
 
@@ -63,13 +60,6 @@ const ALERT_KIND: Record<AnalyticsAlert["level"], "ok" | "warn" | "crit"> = {
   critical: "crit",
 };
 
-const KIND_BADGE: Record<string, string> = {
-  api: "border-accent/30 bg-accent/10 text-accent",
-  wms: "border-teal/30 bg-teal/10 text-teal",
-  download: "border-state-warning/30 bg-state-warning/10 text-state-warning",
-  portal: "border-line text-ink-muted",
-};
-
 /** Compact Spanish relative time from an ISO timestamp. */
 function relativeTime(iso: string | undefined): string {
   if (!iso) return "—";
@@ -88,7 +78,7 @@ function relativeTime(iso: string | undefined): string {
 
 /**
  * Superadmin-only technical dashboard: audit-trail pulse, governance alerts,
- * territorial coverage (mini-map) and the data-sources catalog. These are the
+ * and territorial coverage (mini-map). These are the
  * platform-operations blocks that used to live on the executive Command
  * Center before it was reoriented to campaign KPIs (see DashboardPage.tsx).
  */
@@ -104,13 +94,6 @@ export function PlatformDashboardPage() {
   const [areasError, setAreasError] = useState<string | null>(null);
   const [areasReloadKey, setAreasReloadKey] = useState(0);
   const [fitKey, setFitKey] = useState(0);
-
-  const {
-    data: sources,
-    loading: sourcesLoading,
-    error: sourcesError,
-    reload: reloadSources,
-  } = useAsync<SourceInfo[]>(() => getSources(), []);
 
   useEffect(() => {
     // State level only — light payload for the mini-map/coverage (municipality
@@ -176,7 +159,7 @@ export function PlatformDashboardPage() {
         eyebrow="Vista técnica"
         title="Plataforma"
         accent="& Gobernanza"
-        subtitle="Auditoría, cobertura territorial y catálogo de fuentes de datos — visibilidad reservada al equipo de plataforma."
+        subtitle="Auditoría y cobertura territorial — visibilidad reservada al equipo de plataforma."
         actions={
           activitySeries.length > 0 && (
             <div className="card-premium px-4 py-3">
@@ -405,11 +388,11 @@ export function PlatformDashboardPage() {
         </div>
       </div>
 
-      {/* ---- Territorial coverage (mini-map) + data sources ---- */}
+      {/* ---- Territorial coverage (mini-map) ---- */}
       <div className="reveal mt-8" style={{ animationDelay: "40ms" }}>
-        <SectionHeading eyebrow="Territorio" title="Cobertura y fuentes" note="Cartografía y catálogo de datos" />
+        <SectionHeading eyebrow="Territorio" title="Cobertura" note="Cartografía" />
       </div>
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-4">
         <div className="reveal" style={{ animationDelay: "160ms" }}>
           <Card
             title="Cobertura territorial"
@@ -461,63 +444,6 @@ export function PlatformDashboardPage() {
                 </div>
               </div>
             )}
-          </Card>
-        </div>
-
-        <div className="reveal" style={{ animationDelay: "240ms" }}>
-          <Card
-            title="Fuentes de datos"
-            accentDot
-            className="h-full"
-            action={
-              <Link
-                to="/sources"
-                className="text-xs font-medium text-accent transition-colors hover:text-accent-strong"
-              >
-                Ver todas
-              </Link>
-            }
-          >
-            <DataState
-              loading={sourcesLoading}
-              error={sourcesError}
-              onRetry={reloadSources}
-              skeleton={
-                <div className="h-[180px] animate-pulse rounded-lg bg-panel-hover" />
-              }
-            >
-              <div className="space-y-2.5">
-                {(sources ?? []).slice(0, 5).map((src, i) => (
-                  <div
-                    key={src.id}
-                    className="reveal group flex items-center justify-between gap-3 rounded-lg border border-line bg-bg-sunken px-3 py-2.5 transition-all hover:-translate-y-0.5 hover:border-line-strong hover:bg-panel-hover"
-                    style={{ animationDelay: `${300 + i * 60}ms` }}
-                  >
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <span className="metric-chip h-8 w-8 shrink-0 text-accent transition-colors group-hover:text-teal">
-                        <DatabaseIcon width={15} height={15} />
-                      </span>
-                      <div className="min-w-0">
-                        <div className="truncate text-sm text-ink">{src.name}</div>
-                        {src.formats.length > 0 && (
-                          <div className="truncate font-mono text-[10px] uppercase tracking-wide text-ink-faint">
-                            {src.formats.slice(0, 4).join(" · ")}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <span className={`pill shrink-0 ${KIND_BADGE[src.kind] ?? "border-line"}`}>
-                      {src.kind}
-                    </span>
-                  </div>
-                ))}
-                {(sources ?? []).length === 0 && (
-                  <p className="p-4 text-center text-sm text-ink-faint">
-                    Sin fuentes de datos disponibles.
-                  </p>
-                )}
-              </div>
-            </DataState>
           </Card>
         </div>
       </div>

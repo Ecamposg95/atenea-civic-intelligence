@@ -141,7 +141,7 @@ alembic upgrade head                      # apply migrations
 | GET    | `/api/users`              | Tenant-scoped users (paginated)  |
 | GET    | `/api/organizations`      | Organizations (paginated)        |
 | GET    | `/api/maps/areas`         | Electoral areas as GeoJSON       |
-| GET    | `/api/analytics/overview` | Civic intelligence KPIs          |
+| GET    | `/api/analytics/overview` | Platform/audit KPIs (`/plataforma`) |
 
 ## Frontend commands
 ```bash

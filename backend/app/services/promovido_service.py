@@ -60,6 +60,7 @@ def list_promovidos(
     db: Session, ctx: CampaignContext, *, seccion: Optional[str], promotor: Optional[str],
     prioridad: Optional[str], q: Optional[str], limit: int, offset: int,
     sort: str = "created_at", order: str = "desc", legacy: str = "todos",
+    tipo: Optional[str] = None, padre_id: Optional[str] = None, padre: Optional[str] = None,
 ) -> tuple[list[Registro], int, bool]:
     secciones = territory_service.scope_secciones(db, ctx.user)
     # COORDINADOR is the campaign executive → campaign-wide, no territory gate.
@@ -78,6 +79,15 @@ def list_promovidos(
         stmt = stmt.where(Registro.legacy.is_(True))
     if seccion:
         stmt = stmt.where(Registro.seccion == seccion)
+    if tipo:
+        stmt = stmt.where(Registro.tipo == tipo)
+    if padre_id:
+        stmt = stmt.where(Registro.padre_id == padre_id)
+    if padre and padre.strip():
+        # Líder/activista by name → their direct children (tenant-scoped lookup).
+        padres = scoped_query(Registro, ctx).with_only_columns(Registro.id).where(
+            Registro.nombre_completo.ilike(f"%{' '.join(padre.split())}%"))
+        stmt = stmt.where(Registro.padre_id.in_(padres))
     if promotor:
         stmt = stmt.where(Registro.promotor.ilike(f"%{promotor}%"))
     if q:

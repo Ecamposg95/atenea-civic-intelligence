@@ -5,7 +5,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 
 import { getAreas } from "@/api/maps";
-import { getIeemDataset } from "@/api/intel";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -30,19 +29,6 @@ function triggerDownload(blob: Blob, filename: string): void {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-}
-
-/** Serialize an array of flat string-record rows to RFC-4180-ish CSV. */
-function rowsToCsv(columns: string[], rows: Record<string, string>[]): string {
-  const escape = (v: string): string => {
-    if (/[",\n]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
-    return v;
-  };
-  const header = columns.map(escape).join(",");
-  const body = rows
-    .map((row) => columns.map((c) => escape(row[c] ?? "")).join(","))
-    .join("\n");
-  return `${header}\n${body}`;
 }
 
 type ExportState = {
@@ -171,7 +157,6 @@ function ExportAction({
 
 export function ConfiguracionPage() {
   const [geoState, setGeoState] = useState<ExportState>(IDLE);
-  const [ieemState, setIeemState] = useState<ExportState>(IDLE);
 
   const counts = useMemo(() => {
     const c: Record<IntegrationStatus, number> = {
@@ -210,29 +195,6 @@ export function ConfiguracionPage() {
       });
     } catch (e: unknown) {
       setGeoState({
-        loading: false,
-        tone: "error",
-        message: e instanceof Error ? e.message : "No se pudo exportar",
-      });
-    }
-  }
-
-  async function exportIeem(): Promise<void> {
-    setIeemState({ loading: true, message: null, tone: null });
-    try {
-      const ds = await getIeemDataset("municipios");
-      const csv = rowsToCsv(ds.columns, ds.rows);
-      triggerDownload(
-        new Blob([csv], { type: "text/csv;charset=utf-8" }),
-        "ieem_municipios.csv",
-      );
-      setIeemState({
-        loading: false,
-        tone: "ok",
-        message: `Descargado · ${ds.rows.length} filas`,
-      });
-    } catch (e: unknown) {
-      setIeemState({
         loading: false,
         tone: "error",
         message: e instanceof Error ? e.message : "No se pudo exportar",
@@ -339,16 +301,6 @@ export function ConfiguracionPage() {
               icon={<LayersIcon width={16} height={16} />}
               state={geoState}
               onRun={() => void exportAreas()}
-            />
-          </div>
-          <div className="reveal" style={{ animationDelay: "180ms" }}>
-            <ExportAction
-              title="IEEM · municipios (CSV)"
-              description="Exporta el dataset de municipios de la numeralia IEEM (Estado de México) serializado a CSV listo para hoja de cálculo."
-              buttonLabel="Descargar ieem_municipios.csv"
-              icon={<DatabaseIcon width={16} height={16} />}
-              state={ieemState}
-              onRun={() => void exportIeem()}
             />
           </div>
         </div>

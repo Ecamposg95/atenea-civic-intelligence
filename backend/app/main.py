@@ -38,7 +38,6 @@ from app.routers import (
     forms,
     health,
     ingest,
-    intel,
     maps,
     militantes,
     minutas,
@@ -52,7 +51,6 @@ from app.routers import (
     reports,
     responses,
     scrum,
-    sources,
     territory,
     users,
 )
@@ -233,7 +231,7 @@ def _configure_error_handlers(app: FastAPI) -> None:
 def _register_routers(app: FastAPI) -> None:
     """Mount all API routers under the configured prefix."""
     prefix = settings.API_PREFIX
-    for module in (health, auth, users, organizations, campaigns, maps, analytics, sources, audit, intel, catalogs, dashboard, territory, ingest, exports, registros, militantes, municipio, operacion, promovidos, privacy, admin, arco, reports, forms, responses, casos, public_forms, minutas, scrum, alertas, captura_sma):
+    for module in (health, auth, users, organizations, campaigns, maps, analytics, audit, catalogs, dashboard, territory, ingest, exports, registros, militantes, municipio, operacion, promovidos, privacy, admin, arco, reports, forms, responses, casos, public_forms, minutas, scrum, alertas, captura_sma):
         app.include_router(module.router, prefix=prefix)
 
 

@@ -88,3 +88,40 @@ class HojaResumen(BaseModel):
     titular_nuevo: bool = False
     filas: int
     created_at: datetime
+
+
+# ── Estructura del papel (Líder → Activistas → Promovidos) ──────────────────
+# Never carries clave/CURP — names, sección and counts only.
+
+class EstructuraPersona(BaseModel):
+    id: str
+    nombre_completo: str
+    seccion: Optional[str] = None
+
+
+class EstructuraActivista(EstructuraPersona):
+    promovidos: list[EstructuraPersona] = Field(default_factory=list)
+
+
+class EstructuraLider(EstructuraPersona):
+    activistas: list[EstructuraActivista] = Field(default_factory=list)
+    total_promovidos: int = 0
+    familias_completas: int = 0      # activistas with ≥ meta_promovidos
+
+
+class EstructuraResumen(BaseModel):
+    lideres: int = 0
+    activistas: int = 0
+    promovidos: int = 0
+    familias_completas: int = 0
+    lideres_completos: int = 0       # líderes with ≥ meta_activistas
+
+
+class EstructuraPage(BaseModel):
+    items: list[EstructuraLider]
+    total: int                       # líderes matching the filters
+    limit: int
+    offset: int
+    meta_activistas: int
+    meta_promovidos: int
+    resumen: EstructuraResumen       # over ALL líderes matching the filters

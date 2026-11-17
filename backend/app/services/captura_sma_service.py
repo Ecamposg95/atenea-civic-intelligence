@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import false, func, select
 from sqlalchemy.orm import Session, aliased
 
 from app.core import crypto
@@ -23,7 +23,8 @@ from app.dependencies import CampaignContext
 from app.models.audit_log import AuditLog
 from app.models.registro import Registro
 from app.schemas.captura_sma import (
-    CatalogoOut, FilaResultado, HojaIn, HojaOut, HojaResumen, PersonaIn, PersonaOut,
+    CatalogoOut, EstructuraActivista, EstructuraLider, EstructuraPage, EstructuraPersona,
+    EstructuraResumen, FilaResultado, HojaIn, HojaOut, HojaResumen, PersonaIn, PersonaOut,
     SeccionCatalogo, TitularIn,
 )
 from app.seeds import sma
@@ -411,3 +412,109 @@ def mis_hojas(db: Session, ctx: CampaignContext, limit: int = 20) -> list[HojaRe
             created_at=a.created_at,
         ))
     return out
+
+
+# ── Estructura del papel ─────────────────────────────────────────────────────
+
+def _estructura_base(db: Session, ctx: CampaignContext):
+    """Visible non-legacy registros. ADMIN/COORDINADOR/superadmin: whole campaign
+    (``scoped_query``). LIDER: the same scope as ``GET /promovidos`` (hierarchy
+    + territory), so the tree never shows more than the Lista does."""
+    from app.models.user import UserRole
+    from app.services import promovido_service, territory_service
+
+    if ctx.is_superadmin or ctx.role in (UserRole.ADMIN, UserRole.COORDINADOR):
+        stmt = scoped_query(Registro, ctx)
+    else:
+        stmt = promovido_service._promovido_role_scoped(ctx)
+        secciones = territory_service.scope_secciones(db, ctx.user)
+        stmt = stmt.where(Registro.seccion.in_(secciones) if secciones else false())
+    return stmt.where(Registro.legacy.is_(False))
+
+
+def estructura(db: Session, ctx: CampaignContext, *, seccion: Optional[str], q: Optional[str],
+               limit: int, offset: int) -> EstructuraPage:
+    """Paper structure Líder → Activistas → Promovidos, paginated by líder.
+
+    ``q`` matches any name in a líder's tree (líder, activista or promovido);
+    ``seccion`` matches the líder's or any of its activistas' sección. Names,
+    secciones and counts only — never clave/CURP."""
+    meta_act, meta_prom = MAX_FILAS["LIDER"], MAX_FILAS["FAMILIA"]
+    base = _estructura_base(db, ctx).subquery()
+    R = aliased(Registro, base)
+
+    personas = db.execute(
+        select(R.id, R.tipo, R.nombre_completo, R.seccion, R.padre_id)
+        .where(R.tipo.in_(("LIDER", "ACTIVISTA")))
+    ).all()
+    lideres = {p.id: p for p in personas if p.tipo == "LIDER"}
+    acts_de: dict[str, list] = {}
+    for p in personas:
+        if p.tipo == "ACTIVISTA" and p.padre_id in lideres:
+            acts_de.setdefault(p.padre_id, []).append(p)
+    n_prom: dict[str, int] = dict(db.execute(
+        select(R.padre_id, func.count()).where(R.tipo == "PROMOVIDO", R.padre_id.is_not(None))
+        .group_by(R.padre_id)
+    ).all())
+
+    # ── filters ──
+    candidatos = set(lideres)
+    if seccion and seccion.strip():
+        s = seccion.strip()
+        candidatos = {lid for lid in candidatos
+                      if lideres[lid].seccion == s or any(a.seccion == s for a in acts_de.get(lid, []))}
+    if q and q.strip():
+        needle = " ".join(q.split()).upper()
+        hit = {lid for lid in candidatos
+               if needle in (lideres[lid].nombre_completo or "").upper()
+               or any(needle in (a.nombre_completo or "").upper() for a in acts_de.get(lid, []))}
+        # promovido names live one level deeper → resolve through their activista
+        act_padre = {a.id: lid for lid in candidatos for a in acts_de.get(lid, [])}
+        if act_padre:
+            prom_hits = db.execute(
+                select(R.padre_id).where(
+                    R.tipo == "PROMOVIDO", R.padre_id.in_(list(act_padre)),
+                    func.upper(R.nombre_completo).like(f"%{needle}%"))
+            ).scalars().all()
+            hit |= {act_padre[a] for a in prom_hits if a in act_padre}
+        candidatos = hit
+
+    orden = sorted(candidatos, key=lambda lid: (lideres[lid].nombre_completo or "", lid))
+
+    def _completas(lid: str) -> int:
+        return sum(1 for a in acts_de.get(lid, []) if n_prom.get(a.id, 0) >= meta_prom)
+
+    resumen = EstructuraResumen(
+        lideres=len(orden),
+        activistas=sum(len(acts_de.get(lid, [])) for lid in orden),
+        promovidos=sum(n_prom.get(a.id, 0) for lid in orden for a in acts_de.get(lid, [])),
+        familias_completas=sum(_completas(lid) for lid in orden),
+        lideres_completos=sum(1 for lid in orden if len(acts_de.get(lid, [])) >= meta_act),
+    )
+
+    pagina = orden[offset:offset + limit]
+    pag_acts = [a.id for lid in pagina for a in acts_de.get(lid, [])]
+    proms_de: dict[str, list[EstructuraPersona]] = {}
+    if pag_acts:
+        for p in db.execute(
+            select(R.id, R.nombre_completo, R.seccion, R.padre_id)
+            .where(R.tipo == "PROMOVIDO", R.padre_id.in_(pag_acts))
+            .order_by(R.nombre_completo, R.id)
+        ).all():
+            proms_de.setdefault(p.padre_id, []).append(
+                EstructuraPersona(id=p.id, nombre_completo=p.nombre_completo, seccion=p.seccion))
+
+    items = []
+    for lid in pagina:
+        lider = lideres[lid]
+        acts = sorted(acts_de.get(lid, []), key=lambda a: (a.nombre_completo or "", a.id))
+        items.append(EstructuraLider(
+            id=lider.id, nombre_completo=lider.nombre_completo, seccion=lider.seccion,
+            activistas=[EstructuraActivista(id=a.id, nombre_completo=a.nombre_completo,
+                                            seccion=a.seccion, promovidos=proms_de.get(a.id, []))
+                        for a in acts],
+            total_promovidos=sum(n_prom.get(a.id, 0) for a in acts),
+            familias_completas=_completas(lid),
+        ))
+    return EstructuraPage(items=items, total=len(orden), limit=limit, offset=offset,
+                          meta_activistas=meta_act, meta_promovidos=meta_prom, resumen=resumen)

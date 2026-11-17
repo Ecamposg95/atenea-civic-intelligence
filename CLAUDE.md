@@ -81,7 +81,7 @@ The COORDINADOR can now also **capture** (`CapturaWriteCtx` +COORDINADOR) and
   alerts), composed from `operacion_service.seguimiento` + militante/caso panoramas.
   Frontend: `pages/DashboardPage.tsx` ("Centro de Mando", executive, Atenea kit).
 - **`pages/PlatformDashboardPage.tsx`** (route `/plataforma`, gated superadmin/admin) —
-  the moved **technical** blocks (audit log, data sources, cartography, governance).
+  the moved **technical** blocks (audit log, cartography, governance). The national "Inteligencia Electoral" modules (analytics, sources, búsqueda, IEEM, World Bank; `/api/sources`, `/api/intel`) were removed — SMA-only.
 - **`app/seeds/demo_election_date.py`** — idempotent seed (Cargo+Contest,
   `election_date=2027-06-06`), run unconditionally in the lifespan so the
   countdown always has a date for every campaign with a registry `municipio_code`

@@ -613,9 +613,7 @@ class TestRbacMatrixFlow:
 
     def test_coordinador_console_and_intel_access(self, client):
         """COORDINADOR (campaign executive) reads admin console + territory
-        analytics, captures, and reveals (audited); blocked only from the
-        reference-dataset intel proxy (she is a campaign/territory operator,
-        not an intelligence viewer)."""
+        analytics, captures, and reveals (audited)."""
         h = _hdr(client, "coord@alpha.gov")
         ih = auth_headers(client, "coord@alpha.gov")
 
@@ -637,8 +635,6 @@ class TestRbacMatrixFlow:
             headers=h,
         ).status_code == 404
 
-        # Reference-dataset proxy (IEEM / World Bank): 403 — not campaign data.
-        assert client.get("/api/intel/ieem/datasets", headers=ih).status_code == 403
         # Territory analytics (feeds her Command Center dashboard): 200.
         assert client.get("/api/analytics/overview", headers=ih).status_code == 200
 
@@ -739,7 +735,6 @@ class TestRbacMatrixFlow:
             assert client.get("/api/admin/metricas", headers=h).status_code == 403
 
             # Intelligence: 403
-            assert client.get("/api/intel/ieem/datasets", headers=ih).status_code == 403
             assert client.get("/api/analytics/overview", headers=ih).status_code == 403
 
         finally:
@@ -764,7 +759,6 @@ class TestRbacMatrixFlow:
         assert client.get("/api/admin/metricas", headers=h).status_code == 403
 
         # Intelligence: 403
-        assert client.get("/api/intel/ieem/datasets", headers=ih).status_code == 403
         assert client.get("/api/analytics/overview", headers=ih).status_code == 403
 
         # Reports: 200
@@ -772,17 +766,13 @@ class TestRbacMatrixFlow:
 
     # -- ANALYST ---------------------------------------------------------------
 
-    def test_analyst_intel_sources_reports_allowed(self, client):
-        """ANALYST: 200 on intel/sources/reports; 403 on capture/admin/reveal."""
+    def test_analyst_analytics_reports_allowed(self, client):
+        """ANALYST: 200 on analytics/reports; 403 on capture/admin/reveal."""
         h = _hdr(client, "analyst@alpha.gov")
         ih = auth_headers(client, "analyst@alpha.gov")
 
         # Intelligence: 200
-        assert client.get("/api/intel/ieem/datasets", headers=ih).status_code == 200
         assert client.get("/api/analytics/overview", headers=ih).status_code == 200
-
-        # Sources (admin+analyst only): 200
-        assert client.get("/api/sources", headers=ih).status_code == 200
 
         # Reports: 200
         assert client.get("/api/reports/secciones", headers=h).status_code == 200
@@ -805,17 +795,13 @@ class TestRbacMatrixFlow:
 
     # -- VIEWER ----------------------------------------------------------------
 
-    def test_viewer_intel_and_reports_allowed_sources_blocked(self, client):
-        """VIEWER: 200 on intel/reports; 403 on capture/admin/sources."""
+    def test_viewer_analytics_and_reports_allowed(self, client):
+        """VIEWER: 200 on analytics/reports; 403 on capture/admin."""
         h = _hdr(client, "viewer@alpha.gov")
         ih = auth_headers(client, "viewer@alpha.gov")
 
         # Intelligence: 200
-        assert client.get("/api/intel/ieem/datasets", headers=ih).status_code == 200
         assert client.get("/api/analytics/overview", headers=ih).status_code == 200
-
-        # Sources (admin+analyst only): 403
-        assert client.get("/api/sources", headers=ih).status_code == 403
 
         # Reports: 200
         assert client.get("/api/reports/secciones", headers=h).status_code == 200

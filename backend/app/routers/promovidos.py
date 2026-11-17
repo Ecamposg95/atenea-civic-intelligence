@@ -32,11 +32,15 @@ def list_promovidos(
     sort: Annotated[Optional[str], Query()] = None,
     order: Annotated[Optional[str], Query()] = None,
     legacy: Annotated[Literal["nuevos", "viejos", "todos"], Query()] = "todos",
+    tipo: Annotated[Optional[Literal["LIDER", "ACTIVISTA", "PROMOVIDO"]], Query()] = None,
+    padre_id: Annotated[Optional[str], Query(max_length=36)] = None,
+    padre: Annotated[Optional[str], Query(max_length=120)] = None,
 ) -> PromovidoList:
     rows, total, has_territory = promovido_service.list_promovidos(
         db, ctx, seccion=seccion, promotor=promotor, prioridad=prioridad,
         q=q, limit=limit, offset=offset,
-        sort=sort or "created_at", order=order or "desc", legacy=legacy)
+        sort=sort or "created_at", order=order or "desc", legacy=legacy,
+        tipo=tipo, padre_id=padre_id, padre=padre)
     return PromovidoList(
         items=[PromovidoRead.model_validate(r, from_attributes=True) for r in rows],
         total=total, limit=limit, offset=offset, has_territory=has_territory)

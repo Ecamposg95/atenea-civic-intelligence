@@ -32,6 +32,8 @@ def _fetch_rows(
     *,
     q: Optional[str],
     seccion: Optional[str],
+    legacy: str = "todos",
+    tipo: Optional[str] = None,
 ) -> list[dict]:
     """Return raw row dicts for all in-scope registros, with join columns.
 
@@ -44,6 +46,7 @@ def _fetch_rows(
     act = aliased(User)
     lid = aliased(User)
     org = aliased(Organization)
+    padre = aliased(Registro)
 
     stmt = (
         select(
@@ -51,12 +54,20 @@ def _fetch_rows(
             act.full_name.label("act_name"),
             lid.full_name.label("lid_name"),
             org.name.label("org_name"),
+            padre.nombre_completo.label("padre_name"),
         )
         .where(Registro.id.in_(scope))
         .outerjoin(act, act.id == Registro.activista_id)
         .outerjoin(lid, lid.id == act.lider_id)
         .outerjoin(org, org.id == Registro.organization_id)
+        .outerjoin(padre, padre.id == Registro.padre_id)
     )
+    if legacy == "nuevos":
+        stmt = stmt.where(Registro.legacy.is_(False))
+    elif legacy == "viejos":
+        stmt = stmt.where(Registro.legacy.is_(True))
+    if tipo:
+        stmt = stmt.where(Registro.tipo == tipo)
 
     if q:
         like = f"%{q}%"
@@ -69,7 +80,7 @@ def _fetch_rows(
     results = db.execute(stmt.order_by(Registro.created_at.desc())).all()
 
     rows: list[dict] = []
-    for r, act_name, lid_name, org_name in results:
+    for r, act_name, lid_name, org_name, padre_name in results:
         rows.append({
             "id": str(r.id),
             "organization_name": org_name or "",
@@ -89,6 +100,9 @@ def _fetch_rows(
                 r.consentimiento_at.isoformat() if r.consentimiento_at else ""
             ),
             "created_at": r.created_at.isoformat() if r.created_at else "",
+            "tipo": r.tipo or "",
+            "cadena": padre_name or "",
+            "valor_viejo": "Sí" if r.legacy else "No",
         })
     return rows
 
@@ -117,6 +131,8 @@ def build_registros_export(
     q: Optional[str] = None,
     seccion: Optional[str] = None,
     reveal: bool = False,
+    legacy: str = "todos",
+    tipo: Optional[str] = None,
 ) -> tuple[bytes, str, str]:
     """Build a registros export file and write an audit entry.
 
@@ -131,7 +147,7 @@ def build_registros_export(
       - Reveal export → action "registro.export.reveal"
       meta carries {count, fmt} — NO PII (Golden Rule #5).
     """
-    rows = _fetch_rows(db, ctx, q=q, seccion=seccion)
+    rows = _fetch_rows(db, ctx, q=q, seccion=seccion, legacy=legacy, tipo=tipo)
     _resolve_clave_column(rows, reveal=reveal)
 
     action = "registro.export.reveal" if reveal else "registro.export"

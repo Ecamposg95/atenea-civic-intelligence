@@ -33,6 +33,8 @@ def export_registros(
     q: Optional[str] = Query(None),
     seccion: Optional[str] = Query(None),
     reveal: bool = Query(False),
+    legacy: Literal["nuevos", "viejos", "todos"] = Query("todos"),
+    tipo: Optional[Literal["LIDER", "ACTIVISTA", "PROMOVIDO"]] = Query(None),
 ) -> Response:
     """Download a scoped registros export (CSV or XLSX).
 
@@ -57,6 +59,8 @@ def export_registros(
         q=q,
         seccion=seccion,
         reveal=reveal,
+        legacy=legacy,
+        tipo=tipo,
     )
     return Response(
         content=file_bytes,

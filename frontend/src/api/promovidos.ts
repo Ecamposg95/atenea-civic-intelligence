@@ -17,6 +17,15 @@ export interface RegistroDetalle {
   promotor: string | null;
   activista_nombre: string | null;
   clave_masked: string | null;
+  apellido_paterno?: string | null;
+  apellido_materno?: string | null;
+  nombres?: string | null;
+  /** Captura SMA (0022) — optional so an older backend never breaks the drawer. */
+  legacy?: boolean;
+  tipo?: TipoPersona | null;
+  padre_id?: string | null;
+  padre_nombre?: string | null;
+  curp_masked?: string | null;
   consentimiento: boolean;
   consentimiento_at: string | null;
   created_at: string;
@@ -54,6 +63,9 @@ async function _importPost(file: File, commit: boolean) {
 export const previewImport = (file: File): Promise<ImportPreview> => _importPost(file, false);
 export const commitImport = (file: File): Promise<ImportResult> => _importPost(file, true);
 
+export type TipoPersona = "LIDER" | "ACTIVISTA" | "PROMOVIDO";
+export type FiltroLegacy = "nuevos" | "viejos" | "todos";
+
 export interface Promovido {
   id: string;
   nombre_completo: string;
@@ -70,6 +82,11 @@ export interface Promovido {
   prioridad: string | null;
   /** Optional: not yet returned by every backend build of PromovidoRead. */
   created_at?: string | null;
+  /** Captura SMA (0022): "valor viejo", person type and parent (líder/activista). */
+  legacy?: boolean;
+  tipo?: TipoPersona | null;
+  padre_id?: string | null;
+  padre_nombre?: string | null;
 }
 
 export interface PromovidoList {
@@ -91,6 +108,13 @@ export interface PromovidoFilters {
   sort?: "nombre" | "seccion" | "created_at" | "edad";
   /** Server sort direction: asc | desc. */
   order?: "asc" | "desc";
+  /** Nuevos (captura SMA) / Valores viejos / Todos. */
+  legacy?: FiltroLegacy;
+  tipo?: TipoPersona | "";
+  /** Exact parent registro (from Estructura "ver familia"). */
+  padre_id?: string;
+  /** Líder/activista name → that person's direct children. */
+  padre?: string;
 }
 
 export async function listPromovidos(f: PromovidoFilters = {}): Promise<PromovidoList> {
@@ -98,4 +122,26 @@ export async function listPromovidos(f: PromovidoFilters = {}): Promise<Promovid
   for (const [k, v] of Object.entries(f)) if (v !== undefined && v !== "") params[k] = v;
   const { data } = await apiClient.get<PromovidoList>("/promovidos", { params });
   return data;
+}
+
+export interface ExportFilters {
+  q?: string;
+  seccion?: string;
+  legacy?: FiltroLegacy;
+  tipo?: TipoPersona | "";
+}
+
+/** Download the masked export (`GET /registros/export`, audited server-side). */
+export async function downloadExport(format: "csv" | "xlsx", f: ExportFilters = {}): Promise<void> {
+  const params: Record<string, string> = { format };
+  for (const [k, v] of Object.entries(f)) if (v) params[k] = v;
+  const res = await apiClient.get<Blob>("/registros/export", { params, responseType: "blob" });
+  const url = URL.createObjectURL(res.data);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `personas_${new Date().toISOString().slice(0, 10)}.${format}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
