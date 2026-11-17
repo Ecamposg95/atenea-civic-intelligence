@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -19,10 +19,11 @@ def authenticate_user(db: Session, identifier: str, password: str) -> User | Non
     Instead we order deterministically and take the first match so the
     result is stable without crashing.
     """
+    ident = (identifier or "").strip()
     user = db.execute(
         select(User)
         .where(
-            or_(User.email == identifier, User.phone == identifier),
+            or_(func.lower(User.email) == ident.lower(), User.phone == ident),
             User.deleted_at.is_(None),
         )
         .order_by(User.email)

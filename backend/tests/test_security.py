@@ -177,7 +177,7 @@ def test_rate_limit_login_returns_429(monkeypatch):
       TestClient).
     * ``limiter.reset()`` wipes all in-memory counters so this test starts
       from zero regardless of previous activity.
-    * With ``LOGIN_RATE_LIMIT="5/minute"``, the 6th request from the same IP
+    * With ``LOGIN_RATE_LIMIT="20/minute"``, the 21st request from the same IP
       must receive a 429 with the standard error envelope.
     """
     from app.core.rate_limiting import limiter
@@ -192,7 +192,7 @@ def test_rate_limit_login_returns_429(monkeypatch):
     payload = {"identifier": "admin@alpha.gov", "password": "bad-password-for-rate-test"}
 
     statuses: list[int] = []
-    for _ in range(6):
+    for _ in range(25):
         resp = c.post("/api/auth/login", json=payload)
         statuses.append(resp.status_code)
         if resp.status_code == 429:
@@ -203,7 +203,7 @@ def test_rate_limit_login_returns_429(monkeypatch):
             break
 
     assert 429 in statuses, (
-        f"Expected at least one 429 after 6 login attempts but got: {statuses}"
+        f"Expected at least one 429 after 25 login attempts but got: {statuses}"
     )
 
 

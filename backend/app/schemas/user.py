@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.models.user import UserRole
 
@@ -12,6 +12,12 @@ class UserBase(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)
     role: UserRole = UserRole.VIEWER
     phone: str | None = Field(default=None, max_length=40)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def _normalize_email(cls, v: object) -> object:
+        # Logins are case/whitespace-insensitive; store emails canonical.
+        return v.strip().lower() if isinstance(v, str) else v
 
 
 class UserCreate(UserBase):

@@ -406,4 +406,23 @@ def run_bootstrap() -> None:
     _enable_postgis()   # must run BEFORE _migrate so the geometry type exists
     _migrate()
     _seed()
+    _backfill_memberships()
     logger.info("Database bootstrap complete")
+
+
+def _backfill_memberships() -> None:
+    """Every live non-superadmin user must belong to its org's campaign(s).
+
+    Users created before memberships were auto-assigned (or by any path that
+    skipped them) would otherwise be locked out of every campaign-scoped
+    endpoint. Idempotent; never fatal.
+    """
+    from app.services.users_service import backfill_campaign_memberships
+
+    try:
+        with SessionLocal() as db:
+            n = backfill_campaign_memberships(db)
+        if n:
+            logger.info("Backfilled %d campaign membership(s)", n)
+    except Exception:  # pragma: no cover - defensive, boot must not die here
+        logger.exception("Campaign membership backfill failed (non-fatal)")

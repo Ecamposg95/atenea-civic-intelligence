@@ -131,8 +131,11 @@ export function LoginPage() {
                   <input
                     id="identifier"
                     type="text"
-                    inputMode="text"
+                    inputMode="email"
                     autoComplete="username"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     autoFocus
                     className="field-input"
                     placeholder="Teléfono o correo electrónico"

@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password
 from app.dependencies import TenantContext
+from app.models.campaign import Campaign, CampaignMembership
 from app.models.user import User, UserRole
 from app.schemas.user import UserCreate, UserUpdate
 from app.services.audit_service import record_audit
@@ -307,6 +308,61 @@ def get_user(db: Session, ctx: TenantContext, user_id: str) -> User:
     return _get_owned(db, ctx, user_id, include_deleted=True)
 
 
+# --- Campaign membership ----------------------------------------------------
+def ensure_campaign_memberships(db: Session, user: User) -> int:
+    """Make ``user`` a member of every live campaign of their organization.
+
+    The platform runs one campaign per org (SMA), and every campaign-scoped
+    endpoint requires a membership row — without it a newly created user is
+    locked out ("Not a member of this campaign"). Idempotent: revives a
+    soft-deleted membership and keeps the membership role in sync with the
+    user's role. Superadmins and org-less users are skipped (superadmin
+    bypasses the membership check). Returns the number of rows created or
+    revived. Does not commit.
+    """
+    if user.organization_id is None or user.role == UserRole.SUPERADMIN:
+        return 0
+    campaigns = db.execute(
+        select(Campaign.id).where(
+            Campaign.organization_id == user.organization_id,
+            Campaign.deleted_at.is_(None),
+        )
+    ).scalars().all()
+    changed = 0
+    for cid in campaigns:
+        mem = db.execute(
+            select(CampaignMembership).where(
+                CampaignMembership.user_id == user.id,
+                CampaignMembership.campaign_id == cid,
+            )
+        ).scalar_one_or_none()
+        if mem is None:
+            db.add(CampaignMembership(user_id=user.id, campaign_id=cid, role=user.role))
+            changed += 1
+        else:
+            if mem.deleted_at is not None:
+                mem.deleted_at = None
+                changed += 1
+            if mem.role != user.role:
+                mem.role = user.role
+    db.flush()
+    return changed
+
+
+def backfill_campaign_memberships(db: Session) -> int:
+    """Boot-time repair: give every live non-superadmin user its memberships."""
+    users = db.execute(
+        select(User).where(
+            User.deleted_at.is_(None),
+            User.organization_id.is_not(None),
+            User.role != UserRole.SUPERADMIN,
+        )
+    ).scalars().all()
+    total = sum(ensure_campaign_memberships(db, u) for u in users)
+    db.commit()
+    return total
+
+
 # --- Mutations --------------------------------------------------------------
 def create_user(db: Session, ctx: TenantContext, data: UserCreate) -> tuple[User, str]:
     """Create a user with a temporary password (forced change on first login)."""
@@ -322,7 +378,9 @@ def create_user(db: Session, ctx: TenantContext, data: UserCreate) -> tuple[User
             detail="organization_id is required for non-superadmin users",
         )
 
-    exists = db.execute(select(User.id).where(User.email == data.email)).first()
+    exists = db.execute(
+        select(User.id).where(func.lower(User.email) == data.email.lower())
+    ).first()
     if exists:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
@@ -352,6 +410,7 @@ def create_user(db: Session, ctx: TenantContext, data: UserCreate) -> tuple[User
     )
     db.add(user)
     db.flush()
+    ensure_campaign_memberships(db, user)
     record_audit(
         db,
         action="user.create",
@@ -432,6 +491,7 @@ def update_user(db: Session, ctx: TenantContext, user_id: str, data: UserUpdate)
             ),
         },
     )
+    ensure_campaign_memberships(db, user)
     db.commit()
     db.refresh(user)
     return user
@@ -483,6 +543,7 @@ def restore_user(db: Session, ctx: TenantContext, user_id: str) -> User:
     user.deleted_at = None
     user.is_active = True
     user.updated_by = ctx.user.id
+    ensure_campaign_memberships(db, user)
     record_audit(
         db,
         action="user.restore",

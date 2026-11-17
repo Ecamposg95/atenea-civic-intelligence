@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     RETENTION_PURGE_SOFT_DELETED_DAYS: int = Field(default=30)
 
     # --- Hardening ----------------------------------------------------------
-    LOGIN_RATE_LIMIT: str = Field(default="5/minute")
+    LOGIN_RATE_LIMIT: str = Field(default="20/minute")
     SECURITY_HEADERS_ENABLED: bool = Field(default=True)
 
     # --- Atención Ciudadana: public intake channel --------------------------

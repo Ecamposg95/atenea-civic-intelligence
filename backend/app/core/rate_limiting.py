@@ -35,6 +35,23 @@ def _rate_limit_key(request: Request) -> str:
     """
     if os.getenv("RATE_LIMIT_ENABLED", "true").lower() in ("false", "0", "no"):
         return f"no-limit-{uuid.uuid4()}"
+    return client_ip(request)
+
+
+def client_ip(request: Request) -> str:
+    """Best-effort real client IP behind Railway's edge proxy.
+
+    Uvicorn runs without trusted proxy headers, so ``request.client.host`` is
+    the proxy's address — every user would share ONE login bucket. Railway's
+    edge *appends* the connecting client's IP to ``X-Forwarded-For``, so the
+    right-most entry is the one the edge saw (left-most entries are
+    client-supplied and spoofable, so they are ignored). Falls back to the
+    socket peer when the header is absent (local dev, tests).
+    """
+    xff = request.headers.get("x-forwarded-for", "")
+    hops = [h.strip() for h in xff.split(",") if h.strip()]
+    if hops:
+        return hops[-1]
     return get_remote_address(request)
 
 
