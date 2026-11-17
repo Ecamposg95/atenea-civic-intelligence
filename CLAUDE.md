@@ -120,6 +120,40 @@ The COORDINADOR can now also **capture** (`CapturaWriteCtx` +COORDINADOR) and
 
 ---
 
+## Access & rollout rules (2026-11-17)
+
+- **Campaign membership is mandatory.** `get_campaign_context` 403s without a
+  `CampaignMembership`. Any code path that creates or revives a user must call
+  `users_service.ensure_campaign_memberships(db, user)`; the lifespan runs
+  `backfill_campaign_memberships` as a safety net.
+- **Emails are canonical lower-case** (`UserBase` validator); compare with
+  `func.lower(User.email)` — never `User.email == raw_input`.
+- **Login rate-limit key** is the right-most `X-Forwarded-For` hop
+  (`core/rate_limiting.client_ip`); uvicorn does not trust proxy headers.
+- Prod state, accounts and pending ops: `STATUS.md` → "Production rollout".
+
+## Frontend navigation performance
+
+- Pages render their own `AppLayout`, so a module switch re-mounts the page.
+  To keep switches instant:
+  - `BrowserRouter future={{ v7_startTransition: true }}` (App.tsx) — the old
+    screen stays up while a lazy chunk loads; `RouteFallback` only shows on
+    first paint.
+  - Route components are `lazyPreload(...)` (`src/lib/lazyPreload.ts`);
+    `AppLayout` warms the role's chunks at idle (`preloadModulesFor`, skipped on
+    Save-Data) and nav links preload on hover/focus/touch
+    (`src/lib/preloadHandlers.ts`).
+  - `useAsync(fn, deps, cacheNs?)` — pass a unique `cacheNs` (convention
+    `"<File>#<n>"`) for stale-while-revalidate: cached data shows instantly,
+    `refreshing` flags the background fetch. Cache is memory-only
+    (`src/lib/dataCache.ts`, keyed by ns + active campaign + deps) and cleared on
+    logout. **Deps must fully identify the data**; don't cache loads that seed
+    an editable form (e.g. FormBuilder's existing form).
+  - In-app `.reveal` entrance motion is 0.18 s with no stagger
+    (`main .reveal` in `index.css`); the login keeps its cinematic version.
+
+---
+
 ## Where Things Live
 
 ### Backend
@@ -165,8 +199,13 @@ backend/app/
 ```
 frontend/src/
 ├── modules/
-│   ├── captura/     Activist capture form (mobile-first, offline-aware)
-│   └── admin/       Admin console (dashboard, registros, reveal, estructura)
+│   ├── captura/     Paper-sheet capture C1/Familia (CapturaHojasPage + hojas/)
+│   ├── mapa/        Mapa SMA (MapLibre, 22 secciones, live avance)
+│   ├── promovidos/  Personas: Lista, Estructura, Importar
+│   ├── usuarios/    Users CRUD (UsuariosScreen)
+│   └── registry.ts  Routes, nav groups/tabs, lazyPreload + preloading
+├── lib/             dataCache (SWR), lazyPreload, preloadHandlers
+├── components/brand CampaignBrand ("ViGar") · AtlasCredit (Atlas Horizon)
 └── offline/
     ├── db.ts        IndexedDB schema + queue helpers
     ├── queue.ts     Enqueue / status management
