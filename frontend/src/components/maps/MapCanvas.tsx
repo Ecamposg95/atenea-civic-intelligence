@@ -63,7 +63,7 @@ const styleFor = (b: Basemap, tiles?: string[]): StyleSpecification => {
 
 const EMPTY_FC: AreasResponse = { type: "FeatureCollection", features: [] };
 
-const FLAT_FILL: maplibregl.FillLayerSpecification["paint"] = { "fill-color": "#22d3ee", "fill-opacity": 0.16 };
+const FLAT_FILL: maplibregl.FillLayerSpecification["paint"] = { "fill-color": "#4f7fff", "fill-opacity": 0.16 };
 
 // Recursively extend bounds with valid [lng, lat] positions from any GeoJSON
 // coordinates nesting (Point/Line/Polygon/Multi*). Validates ranges so a
@@ -134,9 +134,9 @@ export function MapCanvas({ areas, showAreas, wmsLayers = [], basemap, fitKey, o
       map.resize();
       map.addSource(AREAS_SOURCE, { type: "geojson", data: EMPTY_FC as never });
       map.addLayer({ id: AREAS_FILL, type: "fill", source: AREAS_SOURCE, paint: FLAT_FILL });
-      // Soft teal glow underlay for the boundaries (blurred, low opacity).
-      map.addLayer({ id: AREAS_GLOW, type: "line", source: AREAS_SOURCE, paint: { "line-color": "#22d3ee", "line-width": 3.5, "line-blur": 3, "line-opacity": 0.5 } });
-      map.addLayer({ id: AREAS_LINE, type: "line", source: AREAS_SOURCE, paint: { "line-color": "#67e8f9", "line-width": 1.1, "line-opacity": 0.9 } });
+      // Soft campaign-blue glow underlay for the boundaries (blurred, low opacity).
+      map.addLayer({ id: AREAS_GLOW, type: "line", source: AREAS_SOURCE, paint: { "line-color": "#4f7fff", "line-width": 3.5, "line-blur": 3, "line-opacity": 0.5 } });
+      map.addLayer({ id: AREAS_LINE, type: "line", source: AREAS_SOURCE, paint: { "line-color": "#9dbbff", "line-width": 1.1, "line-opacity": 0.9 } });
 
       map.on("mousemove", AREAS_FILL, (e) => {
         map.getCanvas().style.cursor = "pointer";

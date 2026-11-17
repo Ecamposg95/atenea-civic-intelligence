@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 
+import { AtlasCredit } from "@/components/brand/AtlasCredit";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { GroupTabs } from "./GroupTabs";
 import { Sidebar } from "./Sidebar";
@@ -37,6 +38,10 @@ export function AppLayout({ title, crumb, children }: AppLayoutProps) {
         <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
           <GroupTabs />
           <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>
+          {/* Crédito en móvil (en escritorio vive en el pie del Sidebar). */}
+          <footer className="mt-10 border-t border-line pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-4 lg:hidden">
+            <AtlasCredit variant="inline" />
+          </footer>
         </main>
       </div>
     </div>

@@ -21,7 +21,7 @@ const PAGE = 20;
 
 const nf = new Intl.NumberFormat("es-MX");
 
-// Estado color semantics (global-constraints): PENDIENTE=neutral, EN_PROCESO=accent/cyan,
+// Estado color semantics (global-constraints): PENDIENTE=neutral, EN_PROCESO=accent/blue,
 // ATENDIDO=success/teal, CERRADO=muted. Mirrors PanoramaAtencionPage's palette so the
 // whole Atención Ciudadana module reads as one system.
 export const ESTADO_LABEL: Record<string, string> = {

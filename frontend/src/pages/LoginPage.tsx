@@ -1,6 +1,8 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { AtlasCredit } from "@/components/brand/AtlasCredit";
+import { CAMPAIGN_FALLBACK } from "@/components/brand/CampaignBrand";
 import { Button } from "@/components/ui/Button";
 import {
   AlertIcon,
@@ -43,44 +45,57 @@ export function LoginPage() {
       />
 
       <div className="relative grid min-h-screen grid-cols-1 lg:grid-cols-2">
-        {/* Left — brand */}
-        <aside className="relative hidden flex-col items-start justify-center overflow-hidden p-12 lg:flex xl:p-20">
-          <div className="relative">
-            <div
-              className="reveal flex items-center gap-3.5"
-              style={{ animationDelay: "0ms" }}
-            >
-              <div className="metric-chip relative h-14 w-14 text-accent shadow-glow">
-                <LogoMark width={30} height={30} />
-              </div>
-              <div>
-                <div className="font-display text-2xl font-bold tracking-tight text-ink">
-                  Atenea
-                </div>
-                <div className="text-[11px] uppercase tracking-[0.18em] text-ink-faint">
-                  Civic Intelligence
-                </div>
-              </div>
+        {/* Left — bandera de campaña (azul del candidato) */}
+        <aside className="relative hidden flex-col justify-between overflow-hidden bg-brand-gradient p-12 text-white lg:flex xl:p-20">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.12]"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)",
+              backgroundSize: "72px 72px",
+            }}
+            aria-hidden="true"
+          />
+          <div
+            className="reveal relative flex items-center gap-3"
+            style={{ animationDelay: "0ms" }}
+          >
+            <div className="grid h-11 w-11 place-items-center rounded-lg bg-white/15 ring-1 ring-inset ring-white/25">
+              <LogoMark width={24} height={24} />
             </div>
+            <div>
+              <div className="font-display text-lg font-bold tracking-tight">Atenea</div>
+              <div className="text-xs text-white/75">Plataforma de campaña</div>
+            </div>
+          </div>
 
-            <h1
-              className="reveal mt-10 max-w-md font-display text-4xl font-bold leading-[1.08] tracking-tight text-ink xl:text-5xl"
-              style={{ animationDelay: "120ms" }}
+          <div className="relative">
+            <p
+              className="reveal text-sm font-semibold text-white/85"
+              style={{ animationDelay: "80ms" }}
             >
-              <span className="text-gradient">Inteligencia</span>
-              <br />
-              que se convierte
-              <br />
-              en acción.
+              {CAMPAIGN_FALLBACK.contienda}
+            </p>
+            <h1
+              className="reveal mt-3 max-w-lg font-display text-5xl font-extrabold leading-[1.02] tracking-tight xl:text-6xl"
+              style={{ animationDelay: "140ms" }}
+            >
+              {CAMPAIGN_FALLBACK.candidatoCompleto}
             </h1>
+            <span aria-hidden="true" className="reveal mt-8 block h-1.5 w-24 rounded-full bg-white" style={{ animationDelay: "200ms" }} />
+            <p
+              className="reveal mt-6 max-w-sm text-base leading-relaxed text-white/85"
+              style={{ animationDelay: "240ms" }}
+            >
+              Cada sección, cada promovido y cada compromiso en un solo lugar.
+            </p>
           </div>
 
           <div
-            className="reveal absolute bottom-12 left-12 flex items-center gap-2 text-xs text-ink-faint xl:left-20"
-            style={{ animationDelay: "260ms" }}
+            className="reveal relative flex items-center gap-2 text-xs text-white/75"
+            style={{ animationDelay: "300ms" }}
           >
-            <ShieldIcon width={15} height={15} /> Privacy-by-design · Audit-logged
-            · Multi-tenant ready
+            <ShieldIcon width={15} height={15} /> Datos personales cifrados y cada consulta auditada
           </div>
         </aside>
 
@@ -88,21 +103,21 @@ export function LoginPage() {
         <section className="flex items-center justify-center px-6 py-12">
           <div className="w-full max-w-sm">
             <div
-              className="reveal mb-6 flex items-center gap-3 lg:hidden"
+              className="reveal mb-6 overflow-hidden rounded-xl bg-brand-gradient px-5 py-4 text-white shadow-glow-accent lg:hidden"
               style={{ animationDelay: "0ms" }}
             >
-              <div className="metric-chip h-10 w-10 text-accent shadow-glow">
-                <LogoMark width={22} height={22} />
+              <div className="text-xs font-semibold text-white/85">
+                {CAMPAIGN_FALLBACK.contienda}
               </div>
-              <div className="font-display text-sm font-semibold tracking-tight text-ink">
-                Atenea · Civic Intelligence
+              <div className="mt-1 font-display text-xl font-bold leading-tight tracking-tight">
+                {CAMPAIGN_FALLBACK.candidatoCompleto}
               </div>
             </div>
 
             <div className="card-premium hud-corners reveal p-8" style={{ animationDelay: "120ms" }}>
               <div className="eyebrow">Iniciar sesión</div>
               <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-ink">
-                Acceso al command center
+                Entra a la plataforma
               </h2>
               <p className="mt-1.5 text-sm text-ink-muted">
                 Usa tus credenciales institucionales.
@@ -183,6 +198,8 @@ export function LoginPage() {
                 </Button>
               </form>
             </div>
+
+            <AtlasCredit className="reveal mt-6" />
           </div>
         </section>
       </div>

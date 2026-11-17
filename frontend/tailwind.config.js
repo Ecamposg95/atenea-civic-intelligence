@@ -10,6 +10,7 @@ export default {
           bg: { DEFAULT: ch("--c-bg"), sunken: ch("--c-bg-sunken") },
           panel: { DEFAULT: ch("--c-panel"), raised: ch("--c-panel-raised"), hover: ch("--c-panel-hover") },
           accent: { DEFAULT: ch("--c-accent"), strong: ch("--c-accent-strong") },
+          brand: { DEFAULT: ch("--c-brand"), deep: ch("--c-brand-deep") },
           teal: { DEFAULT: ch("--c-teal") },
           amber: { DEFAULT: ch("--c-amber") },
           warm: { DEFAULT: ch("--c-warm"), soft: ch("--c-warm-soft") },
@@ -32,6 +33,7 @@ export default {
           "Roboto",
           "sans-serif",
         ],
+        atlas: ["Montserrat", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       boxShadow: {
@@ -43,8 +45,8 @@ export default {
         "card-hover": "var(--shadow-card-hover)",
       },
       backgroundImage: {
-        mesh:
-          "radial-gradient(55% 50% at 12% -5%, rgba(34,211,238,0.10), transparent 60%), radial-gradient(45% 45% at 100% 0%, rgba(245,181,61,0.06), transparent 55%)",
+        mesh: "var(--mesh)",
+        "brand-gradient": "var(--brand-gradient)",
         "accent-gradient": "var(--accent-gradient)",
         sheen:
           "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.06) 50%, transparent 70%)",

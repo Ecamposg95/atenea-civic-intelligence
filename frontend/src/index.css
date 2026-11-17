@@ -7,82 +7,96 @@
 @tailwind utilities;
 
 @layer base {
+  /* Identidad de campaña: azul del candidato (coalición PAN-PRI-PRD-NAEM).
+     Contraste verificado (WCAG AA):
+       dark  — accent #6B98FF sobre bg #080E20 ≈ 7:1; texto bg sobre accent ≈ 6.9:1;
+               accent-strong #4F7FFF con texto bg ≈ 5.3:1.
+       light — accent #1E4FD8 sobre blanco ≈ 6.6:1; blanco sobre accent-strong #0B3BA8 ≈ 9.5:1.
+       brand #1E4FD8 / brand-deep #0B3BA8 = bandera sólida, siempre con texto blanco. */
   .dark {
-    --c-bg: 15 12 11;
-    --c-bg-sunken: 10 8 7;
-    --c-panel: 23 18 17;
-    --c-panel-raised: 30 24 22;
-    --c-panel-hover: 37 29 26;
-    --c-accent: 34 211 238;
-    --c-accent-strong: 6 182 212;
+    --c-bg: 8 14 32;
+    --c-bg-sunken: 5 9 22;
+    --c-panel: 13 21 44;
+    --c-panel-raised: 18 28 56;
+    --c-panel-hover: 25 37 70;
+    --c-accent: 107 152 255;
+    --c-accent-strong: 79 127 255;
+    --c-brand: 30 79 216;
+    --c-brand-deep: 11 59 168;
     --c-teal: 45 212 191;
     --c-amber: 245 181 61;
-    --c-line: 43 35 32;
-    --c-line-strong: 62 51 45;
-    --c-ink: 241 234 229;
-    --c-ink-muted: 178 164 156;
-    --c-ink-faint: 124 109 100;
+    --c-line: 30 42 76;
+    --c-line-strong: 46 63 106;
+    --c-ink: 236 241 252;
+    --c-ink-muted: 168 180 208;
+    --c-ink-faint: 120 134 168;
     --c-warm: 242 138 108;
     --c-warm-soft: 246 169 142;
-    --c-info: 34 211 238;
+    --c-info: 96 165 250;
     --c-warning: 245 181 61;
     --c-critical: 244 96 122;
     --c-ok: 45 212 191;
-    --shadow-panel: 0 0 0 1px rgba(34,211,238,0.04), 0 18px 50px -24px rgba(0,0,0,0.9);
-    --shadow-card-hover: 0 0 0 1px rgba(34,211,238,0.18), 0 30px 80px -30px rgba(0,0,0,0.95);
-    --glow: 0 0 16px -8px rgba(242,138,108,0.4);
-    --glow-accent: 0 0 0 1px rgba(34,211,238,0.22), 0 0 44px -12px rgba(34,211,238,0.50);
+    --shadow-panel: 0 0 0 1px rgba(107,152,255,0.05), 0 18px 50px -24px rgba(0,0,0,0.9);
+    --shadow-card-hover: 0 0 0 1px rgba(107,152,255,0.22), 0 30px 80px -30px rgba(0,0,0,0.95);
+    --glow: 0 0 16px -8px rgba(79,127,255,0.45);
+    --glow-accent: 0 0 0 1px rgba(107,152,255,0.28), 0 0 44px -12px rgba(79,127,255,0.55);
     --glow-teal: 0 0 0 1px rgba(45,212,191,0.20), 0 0 44px -12px rgba(45,212,191,0.40);
     --glow-amber: 0 0 0 1px rgba(245,181,61,0.22), 0 0 44px -12px rgba(245,181,61,0.45);
-    --hud: rgba(34,211,238,0.55);
-    --aura-cyan: rgba(45,212,191,0.10);
-    --aura-teal: rgba(242,138,108,0.10);
+    --hud: rgba(107,152,255,0.6);
+    --aura-cyan: rgba(79,127,255,0.16);
+    --aura-teal: rgba(30,79,216,0.18);
     --aura-amber: rgba(245,181,61,0.12);
-    --grid-line: rgba(242,138,108,0.035);
+    --grid-line: rgba(107,152,255,0.045);
     --grain-opacity: 0.035;
-    --accent-gradient: linear-gradient(135deg, #22d3ee 0%, #2dd4bf 100%);
-    --chart-1: #22d3ee; --chart-2: #f28a6c; --chart-3: #2dd4bf; --chart-4: #f4607a; --chart-5: #a99a8e;
-    --chart-grid: #2b2320; --chart-axis: #7c6d64; --chart-axis-strong: #223a44;
+    --accent-gradient: linear-gradient(135deg, #4f7fff 0%, #9dbbff 100%);
+    --brand-gradient: linear-gradient(150deg, #1e4fd8 0%, #0b3ba8 62%, #082c80 100%);
+    --mesh: radial-gradient(55% 50% at 12% -5%, rgba(79,127,255,0.16), transparent 60%), radial-gradient(45% 45% at 100% 0%, rgba(30,79,216,0.12), transparent 55%);
+    --chart-1: #6b98ff; --chart-2: #f28a6c; --chart-3: #2dd4bf; --chart-4: #f4607a; --chart-5: #94a3c4;
+    --chart-grid: #1e2a4c; --chart-axis: #7886a8; --chart-axis-strong: #2e3f6a;
     --chart-tooltip-shadow: 0 18px 50px -24px rgba(0,0,0,0.9);
     color-scheme: dark;
   }
   .light {
-    --c-bg: 247 245 242;
-    --c-bg-sunken: 241 238 233;
+    --c-bg: 244 246 251;
+    --c-bg-sunken: 236 240 248;
     --c-panel: 255 255 255;
-    --c-panel-raised: 250 248 244;
-    --c-panel-hover: 241 236 229;
-    --c-accent: 8 145 178;
-    --c-accent-strong: 14 116 144;
+    --c-panel-raised: 248 250 254;
+    --c-panel-hover: 233 239 251;
+    --c-accent: 30 79 216;
+    --c-accent-strong: 11 59 168;
+    --c-brand: 30 79 216;
+    --c-brand-deep: 11 59 168;
     --c-teal: 13 148 136;
     --c-amber: 180 83 9;
-    --c-line: 232 225 216;
-    --c-line-strong: 215 204 190;
-    --c-ink: 33 26 25;
-    --c-ink-muted: 95 84 79;
-    --c-ink-faint: 151 138 128;
+    --c-line: 222 228 240;
+    --c-line-strong: 199 209 228;
+    --c-ink: 12 22 48;
+    --c-ink-muted: 71 85 115;
+    --c-ink-faint: 104 116 142;
     --c-warm: 198 91 69;
     --c-warm-soft: 224 131 107;
-    --c-info: 8 145 178;
+    --c-info: 3 105 161;
     --c-warning: 180 83 9;
     --c-critical: 190 18 60;
     --c-ok: 13 148 136;
-    --shadow-panel: 0 1px 2px rgba(16,24,32,0.06), 0 10px 28px -16px rgba(16,24,32,0.18);
-    --shadow-card-hover: 0 1px 2px rgba(16,24,32,0.08), 0 18px 44px -20px rgba(16,24,32,0.22);
-    --glow: 0 0 14px -8px rgba(198,91,69,0.35);
-    --glow-accent: 0 0 0 1px rgba(8,145,178,0.30), 0 8px 22px -10px rgba(16,24,32,0.18);
-    --glow-teal: 0 0 0 1px rgba(13,148,136,0.28), 0 8px 22px -10px rgba(16,24,32,0.16);
-    --glow-amber: 0 0 0 1px rgba(180,83,9,0.28), 0 8px 22px -10px rgba(16,24,32,0.16);
-    --hud: rgba(8,145,178,0.45);
-    --aura-cyan: rgba(13,148,136,0.08);
-    --aura-teal: rgba(198,91,69,0.07);
+    --shadow-panel: 0 1px 2px rgba(12,22,48,0.06), 0 10px 28px -16px rgba(12,22,48,0.18);
+    --shadow-card-hover: 0 1px 2px rgba(12,22,48,0.08), 0 18px 44px -20px rgba(30,79,216,0.22);
+    --glow: 0 0 14px -8px rgba(30,79,216,0.35);
+    --glow-accent: 0 0 0 1px rgba(30,79,216,0.30), 0 8px 22px -10px rgba(30,79,216,0.28);
+    --glow-teal: 0 0 0 1px rgba(13,148,136,0.28), 0 8px 22px -10px rgba(12,22,48,0.16);
+    --glow-amber: 0 0 0 1px rgba(180,83,9,0.28), 0 8px 22px -10px rgba(12,22,48,0.16);
+    --hud: rgba(30,79,216,0.45);
+    --aura-cyan: rgba(30,79,216,0.09);
+    --aura-teal: rgba(11,59,168,0.07);
     --aura-amber: rgba(180,83,9,0.07);
-    --grid-line: rgba(198,91,69,0.05);
+    --grid-line: rgba(30,79,216,0.05);
     --grain-opacity: 0;
-    --accent-gradient: linear-gradient(135deg, #0891b2 0%, #0d9488 100%);
-    --chart-1: #0891b2; --chart-2: #c65b45; --chart-3: #0d9488; --chart-4: #be123c; --chart-5: #8a7d72;
-    --chart-grid: #ece5db; --chart-axis: #a99d90; --chart-axis-strong: #cbd5e1;
-    --chart-tooltip-shadow: 0 10px 28px -16px rgba(16,24,32,0.22);
+    --accent-gradient: linear-gradient(135deg, #0b3ba8 0%, #2f6bff 100%);
+    --brand-gradient: linear-gradient(150deg, #1e4fd8 0%, #0b3ba8 62%, #082c80 100%);
+    --mesh: radial-gradient(55% 50% at 12% -5%, rgba(30,79,216,0.10), transparent 60%), radial-gradient(45% 45% at 100% 0%, rgba(47,107,255,0.07), transparent 55%);
+    --chart-1: #1e4fd8; --chart-2: #c65b45; --chart-3: #0d9488; --chart-4: #be123c; --chart-5: #74809a;
+    --chart-grid: #e2e8f3; --chart-axis: #8e9ab3; --chart-axis-strong: #c7d1e4;
+    --chart-tooltip-shadow: 0 10px 28px -16px rgba(12,22,48,0.22);
     color-scheme: light;
   }
 
@@ -134,7 +148,7 @@
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-1 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/70 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
@@ -148,7 +162,7 @@
   /* Keyboard focus ring for non-button interactive elements
      (NavLinks, tab buttons, sortable table headers, icon buttons). */
   .focus-ring {
-    @apply outline-none focus-visible:ring-1 focus-visible:ring-accent/50;
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-accent/70;
   }
 
   .eyebrow {
@@ -167,7 +181,7 @@
     @apply w-full rounded-lg border border-line bg-bg-sunken px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/40;
   }
 
-  /* Subtle institutional grid backdrop (cyan, big-screen) */
+  /* Subtle institutional grid backdrop (campaign blue) */
   .grid-backdrop {
     background-image: linear-gradient(
         var(--grid-line) 1px,
@@ -182,7 +196,7 @@
     @apply bg-accent-gradient bg-clip-text text-transparent;
   }
 
-  /* Flat near-black panel with a cyan hairline + cyan top accent (big-screen look). */
+  /* Flat near-black panel with a blue hairline + blue top accent (big-screen look). */
   .card-premium {
     @apply relative rounded-card border border-line bg-panel shadow-panel transition-all duration-300;
   }

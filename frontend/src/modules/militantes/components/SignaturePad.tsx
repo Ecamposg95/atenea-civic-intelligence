@@ -17,7 +17,7 @@ export function SignaturePad({ onChange }: { onChange: (b: Blob | null) => void 
     const resize = () => {
       c.width = c.offsetWidth || c.width;
       c.height = c.offsetHeight || 200;
-      ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.strokeStyle = "#e8faff";
+      ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.strokeStyle = "#eaf0ff";
     };
     resize();
 

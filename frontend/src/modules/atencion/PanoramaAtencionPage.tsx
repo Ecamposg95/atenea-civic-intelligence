@@ -26,7 +26,7 @@ const ESTADO_LABEL: Record<string, string> = {
   CERRADO: "Cerrado",
 };
 
-// Estado color semantics (global-constraints): PENDIENTE=neutral, EN_PROCESO=accent/cyan,
+// Estado color semantics (global-constraints): PENDIENTE=neutral, EN_PROCESO=accent/blue,
 // ATENDIDO=success/teal, CERRADO=muted.
 const ESTADO_DONUT_COLOR: Record<string, string> = {
   PENDIENTE: "rgb(var(--c-ink-faint))",

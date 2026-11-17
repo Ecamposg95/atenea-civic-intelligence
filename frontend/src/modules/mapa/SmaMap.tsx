@@ -29,8 +29,8 @@ const carto = (style: string) =>
 const ATTRIBUTION =
   '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> · Secciones: INE';
 
-const OUTLINE: Record<ThemeName, string> = { light: "#ffffff", dark: "#0f0c0b" };
-const FOCUS: Record<ThemeName, string> = { light: "#211a19", dark: "#f1eae5" };
+const OUTLINE: Record<ThemeName, string> = { light: "#ffffff", dark: "#080e20" };
+const FOCUS: Record<ThemeName, string> = { light: "#0c1630", dark: "#ecf1fc" };
 
 function baseStyle(theme: ThemeName): StyleSpecification {
   const vis = (t: ThemeName) => (t === theme ? "visible" : "none") as "visible" | "none";

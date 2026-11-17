@@ -1,5 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 
+import { AtlasCredit } from "@/components/brand/AtlasCredit";
+import { CampaignBanner } from "@/components/brand/CampaignBrand";
 import { ModuleBadge } from "@/components/ui/ModuleBadge";
 import { LogoMark } from "@/components/ui/icons";
 import {
@@ -42,27 +44,25 @@ export function Sidebar({
         open ? "translate-x-0" : "-translate-x-full"
       }`}
     >
-      <div className="flex items-center gap-3 px-2">
-        <div className="grid h-11 w-11 place-items-center rounded-lg bg-accent/15 text-accent shadow-glow-accent">
-          <LogoMark width={24} height={24} />
+      <div className="flex items-center gap-2.5 px-2">
+        <div className="grid h-8 w-8 place-items-center rounded-lg bg-accent/15 text-accent">
+          <LogoMark width={18} height={18} />
         </div>
-        <div className="min-w-0">
-          <div className="font-display text-base font-semibold tracking-tight text-ink">
-            Atenea
-          </div>
-          <div className="text-[11px] uppercase tracking-[0.16em] text-ink-faint">
-            Civic Intelligence
-          </div>
+        <div className="min-w-0 font-display text-sm font-semibold tracking-tight text-ink">
+          Atenea
+          <span className="ml-1.5 text-[11px] font-medium text-ink-faint">Civic Intelligence</span>
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Cerrar menú"
-          className="ml-auto grid h-8 w-8 place-items-center rounded-lg border border-line text-ink-muted hover:text-ink lg:hidden"
+          className="focus-ring ml-auto grid h-9 w-9 place-items-center rounded-lg border border-line text-ink-muted hover:text-ink lg:hidden"
         >
           ✕
         </button>
       </div>
+
+      <CampaignBanner className="mx-1 mt-4" />
 
       <div className="mt-2 flex-1 overflow-y-auto pr-1">
         {(() => {
@@ -139,10 +139,8 @@ export function Sidebar({
         })}
       </div>
 
-      <div className="mt-2 border-t border-line px-3 pt-4 text-[11px] leading-relaxed text-ink-faint">
-        Atlas Tech · GovTech
-        <br />
-        <span className="opacity-70">v0.2.0</span>
+      <div className="mt-2 border-t border-line px-1 pt-3">
+        <AtlasCredit />
       </div>
     </aside>
   );
