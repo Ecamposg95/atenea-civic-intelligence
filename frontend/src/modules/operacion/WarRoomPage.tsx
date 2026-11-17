@@ -75,7 +75,7 @@ function Semaforo({ rows, onRowClick }: { rows: SemaforoRow[]; onRowClick: (secc
 }
 
 export default function WarRoomPage() {
-  const state = useAsync(() => getSeguimiento(), []);
+  const state = useAsync(() => getSeguimiento(), [], "WarRoomPage#1");
   const d = state.data;
   const nav = useNavigate();
   const goToPlan = () => nav("/plan-territorial");

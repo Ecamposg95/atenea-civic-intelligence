@@ -1,4 +1,6 @@
-import { lazy, type ComponentType, type LazyExoticComponent } from "react";
+import { type ComponentType } from "react";
+
+import { lazyPreload, type PreloadableComponent } from "@/lib/lazyPreload";
 
 import type { UserRole } from "@/types/auth";
 import { ALERTAS_READ } from "@/modules/alertas/logic";
@@ -27,7 +29,7 @@ export interface ModuleDef {
   state: ModuleState;
   /** Restrict to roles; omit = any authenticated user. */
   roles?: UserRole[];
-  element: LazyExoticComponent<ComponentType>;
+  element: PreloadableComponent<ComponentType>;
   /** End-match for the index route. */
   end?: boolean;
   /** Nav group: the sidebar shows ONE entry per group and AppLayout renders the
@@ -90,108 +92,108 @@ export const SECTION_ORDER: ModuleSection[] = [
   "administracion",
 ];
 
-const Dashboard = lazy(() =>
+const Dashboard = lazyPreload(() =>
   import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
 );
-const PlatformDashboard = lazy(() =>
+const PlatformDashboard = lazyPreload(() =>
   import("@/pages/PlatformDashboardPage").then((m) => ({
     default: m.PlatformDashboardPage,
   })),
 );
-const Users = lazy(() =>
+const Users = lazyPreload(() =>
   import("@/pages/UsersPage").then((m) => ({ default: m.UsersPage })),
 );
-const Organization = lazy(() =>
+const Organization = lazyPreload(() =>
   import("@/pages/OrganizationSettingsPage").then((m) => ({
     default: m.OrganizationSettingsPage,
   })),
 );
-const Auditoria = lazy(() =>
+const Auditoria = lazyPreload(() =>
   import("@/modules/auditoria/AuditoriaPage").then((m) => ({
     default: m.AuditoriaPage,
   })),
 );
-const Configuracion = lazy(() =>
+const Configuracion = lazyPreload(() =>
   import("@/modules/configuracion/ConfiguracionPage").then((m) => ({
     default: m.ConfiguracionPage,
   })),
 );
-const Organizaciones = lazy(() =>
+const Organizaciones = lazyPreload(() =>
   import("@/modules/organizaciones/OrgsPage").then((m) => ({ default: m.OrgsPage })),
 );
-const Campaigns = lazy(() =>
+const Campaigns = lazyPreload(() =>
   import("@/modules/campaigns/CampaignsPage").then((m) => ({
     default: m.CampaignsPage,
   })),
 );
-const Historial = lazy(() =>
+const Historial = lazyPreload(() =>
   import("@/modules/historial/HistorialPage").then((m) => ({ default: m.HistorialPage })),
 );
-const MapaSma = lazy(() =>
+const MapaSma = lazyPreload(() =>
   import("@/modules/mapa/MapaSmaPage").then((m) => ({ default: m.MapaSmaPage })),
 );
-const CapturaHojas = lazy(() =>
+const CapturaHojas = lazyPreload(() =>
   import("@/modules/captura/CapturaHojasPage").then((m) => ({ default: m.CapturaHojasPage })),
 );
-const ImportarPromovidos = lazy(() =>
+const ImportarPromovidos = lazyPreload(() =>
   import("@/modules/promovidos/ImportarPromovidosPage").then((m) => ({ default: m.ImportarPromovidosPage })),
 );
-const Estructura = lazy(() =>
+const Estructura = lazyPreload(() =>
   import("@/modules/promovidos/EstructuraPage").then((m) => ({
     default: m.EstructuraPage,
   })),
 );
-const Promovidos = lazy(() =>
+const Promovidos = lazyPreload(() =>
   import("@/modules/promovidos/PromovidosPage").then((m) => ({ default: m.PromovidosPage })),
 );
-const CapturaMilitante = lazy(() =>
+const CapturaMilitante = lazyPreload(() =>
   import("@/modules/militantes/CapturaMilitantePage"),
 );
-const PanoramaMilitantes = lazy(() =>
+const PanoramaMilitantes = lazyPreload(() =>
   import("@/modules/militantes/PanoramaMilitantesPage"),
 );
-const MilitantesList = lazy(() =>
+const MilitantesList = lazyPreload(() =>
   import("@/modules/militantes/MilitantesListPage").then((m) => ({
     default: m.MilitantesListPage,
   })),
 );
-const PanoramaAtencion = lazy(() =>
+const PanoramaAtencion = lazyPreload(() =>
   import("@/modules/atencion/PanoramaAtencionPage"),
 );
-const CasosAtencion = lazy(() =>
+const CasosAtencion = lazyPreload(() =>
   import("@/modules/atencion/CasosPage"),
 );
-const CapturaAtencion = lazy(() =>
+const CapturaAtencion = lazyPreload(() =>
   import("@/modules/atencion/CapturaAtencionPage"),
 );
-const FormBuilder = lazy(() =>
+const FormBuilder = lazyPreload(() =>
   import("@/modules/atencion/FormBuilderPage"),
 );
-const PanoramaMunicipio = lazy(() =>
+const PanoramaMunicipio = lazyPreload(() =>
   import("@/modules/municipio/PanoramaMunicipioPage"),
 );
-const PlanTerritorial = lazy(() =>
+const PlanTerritorial = lazyPreload(() =>
   import("@/modules/operacion/PlanTerritorialPage"),
 );
-const Alertas = lazy(() =>
+const Alertas = lazyPreload(() =>
   import("@/modules/alertas/AlertasPage"),
 );
-const WarRoom = lazy(() =>
+const WarRoom = lazyPreload(() =>
   import("@/modules/operacion/WarRoomPage"),
 );
-const MinutasList = lazy(() =>
+const MinutasList = lazyPreload(() =>
   import("@/modules/minutas/MinutasListPage"),
 );
-const MisAcuerdos = lazy(() =>
+const MisAcuerdos = lazyPreload(() =>
   import("@/modules/minutas/MisAcuerdosPage"),
 );
 // Scrum/PM board — /workitems/:id has no dedicated route: WorkItemDetail
 // renders as an in-page drawer from Tablero/Backlog instead (see
 // modules/scrum/WorkItemDetail.tsx), so all three scrum pages are plain
 // nav-visible routes here, unlike the minutas param routes in App.tsx.
-const Tablero = lazy(() => import("@/modules/scrum/TableroPage"));
-const Backlog = lazy(() => import("@/modules/scrum/BacklogPage"));
-const Sprints = lazy(() => import("@/modules/scrum/SprintsPage"));
+const Tablero = lazyPreload(() => import("@/modules/scrum/TableroPage"));
+const Backlog = lazyPreload(() => import("@/modules/scrum/BacklogPage"));
+const Sprints = lazyPreload(() => import("@/modules/scrum/SprintsPage"));
 
 export const GROUPS: ModuleGroup[] = [
   { key: "territorio", label: "Mapa SMA", section: "operacion", icon: MapIcon },
@@ -279,4 +281,43 @@ export function moduleForPath(pathname: string): ModuleDef | undefined {
     if (matchesPath(m, pathname) && (!best || m.path.length > best.path.length)) best = m;
   }
   return best;
+}
+
+
+/** Fetch the route chunk for `path` ahead of time (hover/focus on a nav link). */
+export function preloadPath(pathname: string): void {
+  void moduleForPath(pathname)?.element.preload().catch(() => undefined);
+}
+
+/**
+ * Warm every module chunk the role can open, one at a time when the browser is
+ * idle, so switching modules never waits on the network. Skipped on
+ * data-saver connections (capturistas on prepaid mobile data).
+ */
+export function preloadModulesFor(role: string | undefined): () => void {
+  const nav = navigator as Navigator & { connection?: { saveData?: boolean } };
+  if (nav.connection?.saveData) return () => undefined;
+  const queue = MODULES.filter(
+    (m) => !m.roles || (role !== undefined && m.roles.includes(role as UserRole)),
+  );
+  let cancelled = false;
+  type IdleWin = Window & {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+  };
+  const w = window as IdleWin;
+  const schedule = (cb: () => void) =>
+    w.requestIdleCallback ? w.requestIdleCallback(cb, { timeout: 2000 }) : window.setTimeout(cb, 300);
+  const next = () => {
+    if (cancelled) return;
+    const m = queue.shift();
+    if (!m) return;
+    m.element
+      .preload()
+      .catch(() => undefined)
+      .finally(() => schedule(next));
+  };
+  schedule(next);
+  return () => {
+    cancelled = true;
+  };
 }

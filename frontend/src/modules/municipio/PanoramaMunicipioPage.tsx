@@ -107,14 +107,13 @@ export default function PanoramaMunicipioPage() {
         : !hasMunicipio
           ? Promise.reject(new Error("Esta campaña no tiene municipio asignado"))
           : getRegion(),
-    [activeId, hasMunicipio],
-  );
+    [activeId, hasMunicipio], "PanoramaMunicipioPage#1");
   const [selected, setSelected] = useState<string | null>(null);
   useEffect(() => {
     setSelected(null);
   }, [activeId]);
   const code = selected ?? (regionState.data ? pickDefaultCode(regionState.data, campaign?.municipio_code) : null);
-  const state = useAsync(() => (code ? getMunicipioPanorama(code) : Promise.resolve(null)), [code]);
+  const state = useAsync(() => (code ? getMunicipioPanorama(code) : Promise.resolve(null)), [code], "PanoramaMunicipioPage#2");
   const d = state.data;
   const nav = useNavigate();
   const esCampana = !!code && code === campaign?.municipio_code;

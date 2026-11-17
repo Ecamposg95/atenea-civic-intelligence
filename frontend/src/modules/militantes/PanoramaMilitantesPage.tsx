@@ -131,7 +131,7 @@ const ACTIVISTA_COLUMNS: Column<PorActivista>[] = [
 ];
 
 export default function PanoramaMilitantesPage() {
-  const state = useAsync(getPanorama, []);
+  const state = useAsync(getPanorama, [], "PanoramaMilitantesPage#1");
   const data = state.data;
   const nav = useNavigate();
   const goToPadron = () => nav("/militantes/lista");

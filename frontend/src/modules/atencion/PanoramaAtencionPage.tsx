@@ -95,7 +95,7 @@ const RESPONSABLE_COLUMNS: Column<PorResponsable>[] = [
 ];
 
 export default function PanoramaAtencionPage() {
-  const state = useAsync(getCasoPanorama, []);
+  const state = useAsync(getCasoPanorama, [], "PanoramaAtencionPage#1");
   const data = state.data;
   const nav = useNavigate();
   const goToCasos = () => nav("/atencion/casos");

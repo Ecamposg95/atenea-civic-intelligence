@@ -124,7 +124,7 @@ export function HistorialPage() {
   const isAdmin =
     user?.role === "superadmin" || user?.role === "admin";
 
-  const runs = useAsync(listIngestRuns, []);
+  const runs = useAsync(listIngestRuns, [], "HistorialPage#1");
   const items = runs.data ?? [];
 
   const [selected, setSelected] = useState<IngestRun | null>(null);
@@ -406,7 +406,7 @@ interface UploadForm {
 const EMPTY_UPLOAD: UploadForm = { dataset: "", file: null, anio: "" };
 
 function UploadModal({ open, onClose, onSuccess }: UploadModalProps) {
-  const datasets = useAsync(listIngestDatasets, []);
+  const datasets = useAsync(listIngestDatasets, [], "HistorialPage#2");
   const available = datasets.data ?? [];
 
   const [form, setForm] = useState<UploadForm>(EMPTY_UPLOAD);

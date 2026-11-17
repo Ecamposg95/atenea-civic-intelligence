@@ -1,5 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 
+import { preloadHandlers } from "@/lib/preloadHandlers";
+
 import { GROUPS, groupModules, moduleForPath } from "@/modules/registry";
 import { useAuthStore } from "@/store/authStore";
 
@@ -26,6 +28,7 @@ export function GroupTabs() {
             <NavLink
               to={t.path}
               end={tabs.some((o) => o !== t && o.path.startsWith(t.path + "/"))}
+              {...preloadHandlers(t.path)}
               className={({ isActive }) =>
                 [
                   "focus-ring inline-flex min-h-[44px] items-center whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-colors",

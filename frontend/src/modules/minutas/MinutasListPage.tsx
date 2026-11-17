@@ -41,7 +41,7 @@ export function MinutasListPage() {
   const role = useAuthStore((s) => s.user?.role);
   const canWrite = role ? MINUTAS_WRITE.includes(role) : false;
 
-  const state = useAsync(() => listMinutas({ limit: PAGE, offset: 0 }), []);
+  const state = useAsync(() => listMinutas({ limit: PAGE, offset: 0 }), [], "MinutasListPage#1");
   const data = state.data;
   const items = data?.items ?? [];
 

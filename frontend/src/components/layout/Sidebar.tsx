@@ -1,5 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 
+import { preloadHandlers } from "@/lib/preloadHandlers";
+
 import { AtlasCredit } from "@/components/brand/AtlasCredit";
 import { CampaignBanner } from "@/components/brand/CampaignBrand";
 import { ModuleBadge } from "@/components/ui/ModuleBadge";
@@ -80,6 +82,7 @@ export function Sidebar({
                 className={linkClass}
                 title={dashboardModule.label}
                 onClick={onClose}
+                {...preloadHandlers(dashboardModule.path)}
               >
                 <Icon width={20} height={20} className="shrink-0" />
                 <span className="min-w-0 flex-1 truncate">
@@ -127,6 +130,7 @@ export function Sidebar({
                       className={(st) => linkClass({ isActive: groupActive ?? st.isActive })}
                       title={e.label}
                       onClick={onClose}
+                      {...preloadHandlers(e.to)}
                     >
                       <Icon width={20} height={20} className="shrink-0" />
                       <span className="min-w-0 flex-1 truncate">{e.label}</span>

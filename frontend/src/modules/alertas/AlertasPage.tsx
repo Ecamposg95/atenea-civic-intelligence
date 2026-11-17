@@ -46,7 +46,7 @@ export default function AlertasPage() {
   const campaignName = useCampaignStore(
     (s) => s.campaigns.find((c) => c.id === s.activeId)?.name ?? null,
   );
-  const state = useAsync(() => (activeId ? getAlertas() : Promise.resolve(null)), [activeId]);
+  const state = useAsync(() => (activeId ? getAlertas() : Promise.resolve(null)), [activeId], "AlertasPage#1");
   const [categoria, setCategoria] = useState<FiltroCategoria>("todas");
   const [seccion, setSeccion] = useState<string | null>(null);
   useEffect(() => {

@@ -87,7 +87,7 @@ export default function CapturaAtencionPage() {
   const { refresh: refreshPending } = usePendingSyncStore();
   const campaignId = localStorage.getItem("agora-campaign") ?? "";
 
-  const formsState = useAsync(() => listForms(), []);
+  const formsState = useAsync(() => listForms(), [], "CapturaAtencionPage#1");
   const eligibleForms = (formsState.data ?? []).filter(isEligible);
 
   const [formId, setFormId] = useState<string | null>(null);

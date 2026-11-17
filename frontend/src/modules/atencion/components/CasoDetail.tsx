@@ -139,15 +139,15 @@ function EventoThumb({ url }: { url: string }) {
  * the inbox refreshes.
  */
 export function CasoDetail({ id, onClose, onChanged }: Props) {
-  const state = useAsync<Caso>(() => getCaso(id), [id]);
+  const state = useAsync<Caso>(() => getCaso(id), [id], "CasoDetail#1");
   const caso = state.data;
 
-  const usersState = useAsync(() => listUsers({ limit: 200, is_active: true }), []);
+  const usersState = useAsync(() => listUsers({ limit: 200, is_active: true }), [], "CasoDetail#2");
   const assignableUsers = [...(usersState.data?.items ?? [])].sort((a, b) =>
     a.full_name.localeCompare(b.full_name),
   );
 
-  const eventosState = useAsync<CasoEvento[]>(() => listEventos(id), [id]);
+  const eventosState = useAsync<CasoEvento[]>(() => listEventos(id), [id], "CasoDetail#3");
   // Newest first for display; the API returns oldest→newest.
   const eventos = [...(eventosState.data ?? [])].reverse();
 

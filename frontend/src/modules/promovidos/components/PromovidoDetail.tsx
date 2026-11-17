@@ -38,7 +38,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 type Reveal = { clave: string; curp: string | null };
 
 export function PromovidoDetail({ promovido: p, onClose }: Props) {
-  const state = useAsync(() => getRegistroDetalle(p.id), [p.id]);
+  const state = useAsync(() => getRegistroDetalle(p.id), [p.id], "PromovidoDetail#1");
   const d = state.data;
 
   const role = useAuthStore((s) => s.user?.role);

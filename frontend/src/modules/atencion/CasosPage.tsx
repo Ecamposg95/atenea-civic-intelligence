@@ -166,12 +166,11 @@ export function CasosPage() {
         tipo: tipo || undefined,
         asignado: asignado || undefined,
       }),
-    [offset, q, colonia, estado, tipo, asignado],
-  );
+    [offset, q, colonia, estado, tipo, asignado], "CasosPage#1");
 
   // Assignable staff for the "Asignado" filter — best-effort; the filter still
   // works with an empty list, it just falls back to "Todos".
-  const usersState = useAsync(() => listUsers({ limit: 200, is_active: true }), []);
+  const usersState = useAsync(() => listUsers({ limit: 200, is_active: true }), [], "CasosPage#2");
   const assignableUsers = useMemo(
     () =>
       [...(usersState.data?.items ?? [])].sort((a, b) => a.full_name.localeCompare(b.full_name)),

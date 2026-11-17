@@ -67,10 +67,13 @@ function RequireRole({ roles, children }: { roles?: UserRole[]; children: JSX.El
   return children;
 }
 
+/** First paint only: navigations run inside a transition (see BrowserRouter
+ * `future`), so after the app is up the previous screen stays visible while a
+ * route chunk loads instead of flashing this fallback. */
 function RouteFallback() {
   return (
-    <div className="grid h-screen place-items-center bg-bg text-ink-faint">
-      Loading…
+    <div className="relative h-screen bg-bg" role="status" aria-label="Cargando">
+      <div className="route-progress" aria-hidden="true" />
     </div>
   );
 }
@@ -122,7 +125,7 @@ export default function App() {
   useGlobalOfflineSync();
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />

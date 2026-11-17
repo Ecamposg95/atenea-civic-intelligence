@@ -52,8 +52,7 @@ export function DashboardPage() {
 function DashboardEjecutivo() {
   const { data, loading, error, reload } = useAsync<ExecutiveDashboard>(
     () => getExecutiveDashboard(),
-    [],
-  );
+    [], "DashboardPage#1");
 
   const role = useAuthStore((s) => s.user?.role);
   const puedeAlertas = !!role && ALERTAS_READ.includes(role);
@@ -61,8 +60,7 @@ function DashboardEjecutivo() {
   // Falla silenciosa: el chip es un atajo, nunca debe romper Inicio.
   const centro = useAsync(
     () => (puedeAlertas ? getAlertas().catch(() => null) : Promise.resolve(null)),
-    [puedeAlertas, activeId],
-  );
+    [puedeAlertas, activeId], "DashboardPage#2");
   const criticas = centro.data?.resumen.critica ?? 0;
 
   const promovidos = data?.promovidos;

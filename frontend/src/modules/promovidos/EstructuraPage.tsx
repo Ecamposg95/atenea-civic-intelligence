@@ -190,7 +190,7 @@ export function EstructuraPage() {
     return () => clearTimeout(t);
   }, [qIn, seccionIn]);
 
-  const state = useAsync(() => getEstructura({ q, seccion, limit: PAGE, offset }), [q, seccion, offset]);
+  const state = useAsync(() => getEstructura({ q, seccion, limit: PAGE, offset }), [q, seccion, offset], "EstructuraPage#1");
   const data = state.data;
   const r = data?.resumen;
   const hasFilters = Boolean(q || seccion);

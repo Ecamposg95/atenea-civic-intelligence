@@ -149,8 +149,8 @@ function AgendaFase({ fase, items, onChanged }: { fase: number; items: AgendaIte
 
 /* ------------------------------------------------------------- page */
 export default function PlanTerritorialPage() {
-  const planes = useAsync(() => getPlanes(), []);
-  const agenda = useAsync(() => getAgenda(), []);
+  const planes = useAsync(() => getPlanes(), [], "PlanTerritorialPage#1");
+  const agenda = useAsync(() => getAgenda(), [], "PlanTerritorialPage#2");
   const [editing, setEditing] = useState<PlanRow | null>(null);
 
   const rows = planes.data ?? [];

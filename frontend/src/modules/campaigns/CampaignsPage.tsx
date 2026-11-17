@@ -79,10 +79,10 @@ const EMPTY_FORM: FormState = { name: "", cycle: "", municipio_code: "" };
 
 export function CampaignsPage() {
   const setCampaigns = useCampaignStore((s) => s.setCampaigns);
-  const campaigns = useAsync(() => listMyCampaigns(), []);
+  const campaigns = useAsync(() => listMyCampaigns(), [], "CampaignsPage#1");
   const items = campaigns.data ?? [];
   // Falla silenciosa: sin catálogo el select solo muestra la opción vacía.
-  const catalogo = useAsync(() => getMunicipioCatalogo().catch(() => []), []);
+  const catalogo = useAsync(() => getMunicipioCatalogo().catch(() => []), [], "CampaignsPage#2");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);

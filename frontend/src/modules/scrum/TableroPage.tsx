@@ -80,7 +80,7 @@ function WorkItemCard({
  * the WorkItemDetail drawer. No active sprint → empty state.
  */
 export function TableroPage() {
-  const state = useAsync<Board>(() => getTablero(), []);
+  const state = useAsync<Board>(() => getTablero(), [], "TableroPage#1");
   const board = state.data;
 
   const [moveError, setMoveError] = useState<string | null>(null);

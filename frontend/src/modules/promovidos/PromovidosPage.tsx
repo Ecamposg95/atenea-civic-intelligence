@@ -95,8 +95,7 @@ export function PromovidosPage() {
         q, seccion, padre, padre_id: padreId || undefined, legacy, tipo,
         sort, order: sort === "created_at" ? "desc" : "asc", limit: PAGE, offset,
       }),
-    [q, seccion, padre, padreId, legacy, tipo, sort, offset],
-  );
+    [q, seccion, padre, padreId, legacy, tipo, sort, offset], "PromovidosPage#1");
   const data = state.data;
   const items = useMemo(() => data?.items ?? [], [data]);
   const total = data?.total ?? 0;

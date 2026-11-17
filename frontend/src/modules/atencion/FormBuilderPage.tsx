@@ -93,9 +93,8 @@ export function FormBuilderPage() {
 
   const existingState = useAsync<FormDefinition | null>(
     () => (formId ? getForm(formId) : Promise.resolve(null)),
-    [formId],
-  );
-  const listState = useAsync(() => listForms(), []);
+    [formId]);
+  const listState = useAsync(() => listForms(), [], "FormBuilderPage#2");
 
   const [meta, setMeta] = useState<MetaState>(EMPTY_META);
   const [slugTouched, setSlugTouched] = useState(false);

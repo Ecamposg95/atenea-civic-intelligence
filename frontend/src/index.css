@@ -239,6 +239,35 @@
     @apply animate-fade-up;
   }
 
+  /* Inside the app shell, entrance motion must never delay content: module
+   * switches re-mount pages, and a .6s staggered fade read as "slow". The
+   * cinematic version stays on the login screen. */
+  main .reveal {
+    animation-duration: 0.18s;
+    animation-delay: 0s !important;
+  }
+
+  /* Thin indeterminate bar for the first route load. */
+  .route-progress {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    overflow: hidden;
+    background: rgb(var(--c-accent) / 0.15);
+  }
+  .route-progress::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: rgb(var(--c-accent));
+    animation: route-progress 1s ease-in-out infinite;
+  }
+  @keyframes route-progress {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(250%); }
+  }
+
   @media print {
     .reveal {
       animation: none !important;

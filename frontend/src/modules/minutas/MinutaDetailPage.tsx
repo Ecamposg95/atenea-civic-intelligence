@@ -47,7 +47,7 @@ export function MinutaDetailPage() {
   const state = useAsync<Minuta>(() => {
     if (!id) return Promise.reject(new Error("Falta el id de la minuta."));
     return getMinuta(id);
-  }, [id]);
+  }, [id], "MinutaDetailPage#1");
   const m = state.data;
 
   const [error, setError] = useState<string | null>(null);

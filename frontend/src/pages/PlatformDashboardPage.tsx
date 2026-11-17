@@ -89,7 +89,7 @@ export function PlatformDashboardPage() {
     loading: overviewLoading,
     error: overviewError,
     reload: reloadOverview,
-  } = useAsync<AnalyticsOverview>(() => getOverview(), []);
+  } = useAsync<AnalyticsOverview>(() => getOverview(), [], "PlatformDashboardPage#1");
   const [areas, setAreas] = useState<AreasResponse | null>(null);
   const [areasError, setAreasError] = useState<string | null>(null);
   const [areasReloadKey, setAreasReloadKey] = useState(0);

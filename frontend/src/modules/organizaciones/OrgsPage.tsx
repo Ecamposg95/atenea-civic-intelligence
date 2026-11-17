@@ -86,7 +86,7 @@ const ORG_STATIC_COLUMNS: Column<Organization>[] = [
 // ─── Page component ───────────────────────────────────────────────────────────
 
 export function OrgsPage() {
-  const orgs = useAsync(() => listOrganizations(), []);
+  const orgs = useAsync(() => listOrganizations(), [], "OrgsPage#1");
   const items = orgs.data?.items ?? [];
 
   const [editing, setEditing] = useState<Editing | null>(null);

@@ -159,8 +159,7 @@ export function MilitantesListPage() {
         estado: estado || undefined,
         flag: flag || undefined,
       }),
-    [offset, q, seccion, activistaId, estado, flag],
-  );
+    [offset, q, seccion, activistaId, estado, flag], "MilitantesListPage#1");
 
   const data = state.data;
   const items = useMemo(() => data?.items ?? [], [data]);

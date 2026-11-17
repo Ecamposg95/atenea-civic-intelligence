@@ -1,11 +1,15 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 
 import { AtlasCredit } from "@/components/brand/AtlasCredit";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { preloadModulesFor } from "@/modules/registry";
+import { useAuthStore } from "@/store/authStore";
 import { GroupTabs } from "./GroupTabs";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+
+let warmedFor: string | null = null;
 
 interface AppLayoutProps {
   title: string;
@@ -16,6 +20,16 @@ interface AppLayoutProps {
 export function AppLayout({ title, crumb, children }: AppLayoutProps) {
   const [navOpen, setNavOpen] = useState(false);
   const { pathname } = useLocation();
+  const role = useAuthStore((st) => st.user?.role);
+
+  // Warm the role's module chunks once per session so tab/module switches
+  // never wait on the network (pages re-mount this layout; the flag keeps it
+  // to a single pass).
+  useEffect(() => {
+    if (!role || warmedFor === role) return;
+    warmedFor = role;
+    return preloadModulesFor(role);
+  }, [role]);
 
   return (
     <div className="relative flex h-screen w-full overflow-hidden bg-bg text-ink">

@@ -95,7 +95,7 @@ export function MilitanteDetail({ id, onClose, onChanged }: Props) {
   const role = useAuthStore((s) => s.user?.role);
   const canManage = Boolean(role && MANAGER_ROLES.has(role));
 
-  const state = useAsync<Militante>(() => getMilitante(id), [id]);
+  const state = useAsync<Militante>(() => getMilitante(id), [id], "MilitanteDetail#1");
   const militante = state.data;
 
   const [reveal, setReveal] = useState<Reveal | null>(null);

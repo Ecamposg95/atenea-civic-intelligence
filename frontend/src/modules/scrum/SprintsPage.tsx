@@ -75,7 +75,7 @@ export function SprintsPage() {
   const canGovern = role ? SCRUM_GOV.includes(role) : false;
   const canCeremonia = role ? MINUTAS_WRITE.includes(role) : false;
 
-  const state = useAsync(() => listSprints({ limit: 100, offset: 0 }), []);
+  const state = useAsync(() => listSprints({ limit: 100, offset: 0 }), [], "SprintsPage#1");
   const sprints = state.data?.items ?? [];
 
   const [showForm, setShowForm] = useState(false);
@@ -302,9 +302,9 @@ export function SprintsPage() {
  * the backend requires ADMIN/COORDINADOR/LIDER to POST /sprints/:id/ceremonias).
  */
 function SprintDetail({ sprintId, canCeremonia }: { sprintId: string; canCeremonia: boolean }) {
-  const metricsState = useAsync(() => getSprintMetrics(sprintId), [sprintId]);
-  const burndownState = useAsync(() => getBurndown(sprintId), [sprintId]);
-  const ceremoniasState = useAsync(() => listCeremonias(sprintId), [sprintId]);
+  const metricsState = useAsync(() => getSprintMetrics(sprintId), [sprintId], "SprintsPage#2");
+  const burndownState = useAsync(() => getBurndown(sprintId), [sprintId], "SprintsPage#3");
+  const ceremoniasState = useAsync(() => listCeremonias(sprintId), [sprintId], "SprintsPage#4");
 
   const metrics = metricsState.data;
   const burndown = burndownState.data;

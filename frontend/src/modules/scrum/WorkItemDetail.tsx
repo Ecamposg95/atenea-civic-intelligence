@@ -46,14 +46,14 @@ export function WorkItemDetail({ id, onClose, onChanged }: Props) {
   const role = useAuthStore((s) => s.user?.role);
   const canGovern = role ? SCRUM_GOV.includes(role) : false;
 
-  const state = useAsync<WorkItem>(() => getWorkitem(id), [id]);
+  const state = useAsync<WorkItem>(() => getWorkitem(id), [id], "WorkItemDetail#1");
   const wi = state.data;
 
-  const usersState = useAsync(() => listUsers({ limit: 200, is_active: true }), []);
+  const usersState = useAsync(() => listUsers({ limit: 200, is_active: true }), [], "WorkItemDetail#2");
   const assignableUsers = [...(usersState.data?.items ?? [])].sort((a, b) =>
     a.full_name.localeCompare(b.full_name),
   );
-  const sprintsState = useAsync(() => listSprints({ limit: 200, offset: 0 }), []);
+  const sprintsState = useAsync(() => listSprints({ limit: 200, offset: 0 }), [], "WorkItemDetail#3");
   const sprints = sprintsState.data?.items ?? [];
 
   const [fieldError, setFieldError] = useState<string | null>(null);

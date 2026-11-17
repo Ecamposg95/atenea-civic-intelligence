@@ -41,8 +41,8 @@ export function BacklogPage() {
   const role = useAuthStore((s) => s.user?.role);
   const canGovern = role ? SCRUM_GOV.includes(role) : false;
 
-  const state = useAsync(() => listWorkitems({ limit: FETCH_LIMIT, offset: 0 }), []);
-  const sprintsState = useAsync(() => listSprints({ limit: FETCH_LIMIT, offset: 0 }), []);
+  const state = useAsync(() => listWorkitems({ limit: FETCH_LIMIT, offset: 0 }), [], "BacklogPage#1");
+  const sprintsState = useAsync(() => listSprints({ limit: FETCH_LIMIT, offset: 0 }), [], "BacklogPage#2");
   const sprints = sprintsState.data?.items ?? [];
   const sprintName = useMemo(() => {
     const m = new Map<string, string>();

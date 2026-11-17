@@ -74,7 +74,7 @@ function AcuerdoRow({ a, onOpenMinuta }: { a: Acuerdo; onOpenMinuta: () => void 
  */
 export function MisAcuerdosPage() {
   const nav = useNavigate();
-  const state = useAsync(() => listAcuerdos({ limit: 200, offset: 0 }), []);
+  const state = useAsync(() => listAcuerdos({ limit: 200, offset: 0 }), [], "MisAcuerdosPage#1");
   const items = state.data?.items ?? [];
 
   const grouped = useMemo(() => {
