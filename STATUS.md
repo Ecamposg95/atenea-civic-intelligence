@@ -43,8 +43,8 @@ cd frontend && npm run build && npm run test    # tsc + Vite build, Vitest
 ## Deploy
 
 Railway, single Nixpacks service + PostGIS. Bootstrap (migrations, seeds) runs
-in the FastAPI lifespan; there is no release step. Details and the pending
-`railway.json` → `.railway/railway.ts` migration (deadline 2026-12-01):
+in the FastAPI lifespan; there is no release step. Service config lives in
+`.railway/railway.ts` (IaC). URL: https://sma-atenco.up.railway.app. Details:
 `docs/deployment.md`.
 
 ---

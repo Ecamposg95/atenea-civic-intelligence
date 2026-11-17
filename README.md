@@ -64,7 +64,7 @@ agora-civic-intelligence/
 ├── scripts/      railway_init.py (idempotent bootstrap/seed), dev helpers
 ├── nixpacks.toml Build (Node + Python, builds SPA)
 ├── Procfile      web (uvicorn) + release (railway_init)
-└── railway.json  Railway service config
+└── .railway/     Railway infrastructure as code (railway.ts)
 ```
 
 ## Local setup

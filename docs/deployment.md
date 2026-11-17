@@ -7,8 +7,12 @@ database service. Build is **Nixpacks** (no Dockerfile).
 ## App service
 
 - **Root directory:** repo root.
-- **Config:** `railway.json` (builder `NIXPACKS`, `nixpacksConfigPath: nixpacks.toml`,
-  start command, health check `/api/health`, restart `ON_FAILURE`).
+- **URL:** https://sma-atenco.up.railway.app (Railway service domain; `CORS_ORIGINS` matches it).
+- **Config:** `.railway/railway.ts` — Railway infrastructure as code (builder `NIXPACKS`,
+  start command, health check `/api/health`, restart `ON_FAILURE` ×10). Edit it, then
+  `railway config plan` / `railway config apply`. The SDK is installed in `.railway/`
+  (`cd .railway && npm ci`). Run `railway config …` directly, not under `timeout`
+  (the SDK checks the CLI version via `$_`).
 - **Build** (`nixpacks.toml`):
   - setup: Node 20 + Python 3.12 + gcc;
   - install: creates `/opt/venv`, `pip install -r backend/requirements.txt`,
@@ -18,7 +22,7 @@ database service. Build is **Nixpacks** (no Dockerfile).
   ```
   . /opt/venv/bin/activate && uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
   ```
-  (same command in `railway.json`, `nixpacks.toml` and `Procfile`).
+  (same command in `.railway/railway.ts`, `nixpacks.toml` and `Procfile`).
 - There is **no release step.** All bootstrap runs at startup (see below),
   because Railway private networking (`*.railway.internal`) is only available
   once the service is running.
@@ -70,12 +74,6 @@ cd backend
 alembic revision --autogenerate -m "message"
 ```
 Follow the enum/idempotency rules in `CLAUDE.md`.
-
-## Pending: Railway config-as-code
-
-`railway.json` stops working on **2026-12-01**. Before then, migrate it to
-`.railway/railway.ts` with `railway config migrate` and verify the build,
-start command and health check are unchanged.
 
 ## Post-deploy checklist
 
