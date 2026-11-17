@@ -1,26 +1,23 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 import { ModuleBadge } from "@/components/ui/ModuleBadge";
 import { LogoMark } from "@/components/ui/icons";
 import {
+  GROUPS,
   MODULES,
   SECTION_LABELS,
   SECTION_ORDER,
+  groupModules,
+  visibleFor,
   type ModuleDef,
 } from "@/modules/registry";
 import { useAuthStore } from "@/store/authStore";
-import type { UserRole } from "@/types/auth";
 
 const navItem =
   "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium transition-all focus-ring";
 const sectionLabel =
   "mt-5 mb-1.5 flex items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint";
 
-function visibleFor(role: string | undefined, m: ModuleDef): boolean {
-  if (!m.roles) return true;
-  if (!role) return false;
-  return m.roles.includes(role as UserRole);
-}
 
 export function Sidebar({
   open = false,
@@ -30,6 +27,7 @@ export function Sidebar({
   onClose?: () => void;
 }) {
   const role = useAuthStore((s) => s.user?.role);
+  const { pathname } = useLocation();
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `${navItem} ${
@@ -93,33 +91,45 @@ export function Sidebar({
           );
         })()}
         {SECTION_ORDER.map((section) => {
-          const items = MODULES.filter(
-            (m) =>
-              m.section === section &&
-              m.key !== "dashboard" &&
-              visibleFor(role, m),
-          );
-          if (items.length === 0) return null;
+          // One entry per standalone module, and ONE entry per group (linking to
+          // the first tab the role can see; active on any of the group's routes).
+          const entries: { key: string; to: string; label: string; icon: ModuleDef["icon"]; end?: boolean; activePaths?: string[] }[] = [];
+          const seen = new Set<string>();
+          for (const m of MODULES) {
+            if (m.key === "dashboard" || !visibleFor(role, m)) continue;
+            if (m.group) {
+              const g = GROUPS.find((x) => x.key === m.group);
+              if (!g || g.section !== section || seen.has(g.key)) continue;
+              seen.add(g.key);
+              const tabs = groupModules(g.key, role);
+              entries.push({ key: g.key, to: tabs[0].path, label: g.label, icon: g.icon, activePaths: tabs.map((t) => t.path) });
+            } else if (m.section === section) {
+              entries.push({ key: m.key, to: m.path, label: m.label, icon: m.icon, end: m.end });
+            }
+          }
+          if (entries.length === 0) return null;
           return (
             <div key={section}>
               <div className={sectionLabel}>
                 <span>{SECTION_LABELS[section]}</span>
               </div>
               <nav className="flex flex-col gap-0.5">
-                {items.map((m) => {
-                  const Icon = m.icon;
+                {entries.map((e) => {
+                  const Icon = e.icon;
+                  const groupActive = e.activePaths?.some(
+                    (p) => pathname === p || pathname.startsWith(p + "/"),
+                  );
                   return (
                     <NavLink
-                      key={m.key}
-                      to={m.path}
-                      end={m.end}
-                      className={linkClass}
-                      title={m.label}
+                      key={e.key}
+                      to={e.to}
+                      end={e.end}
+                      className={(st) => linkClass({ isActive: groupActive ?? st.isActive })}
+                      title={e.label}
                       onClick={onClose}
                     >
                       <Icon width={20} height={20} className="shrink-0" />
-                      <span className="min-w-0 flex-1 truncate">{m.label}</span>
-                      <ModuleBadge state={m.state} />
+                      <span className="min-w-0 flex-1 truncate">{e.label}</span>
                     </NavLink>
                   );
                 })}

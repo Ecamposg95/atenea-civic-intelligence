@@ -31,6 +31,11 @@ export interface ModuleDef {
   element: LazyExoticComponent<ComponentType>;
   /** End-match for the index route. */
   end?: boolean;
+  /** Nav group: the sidebar shows ONE entry per group and AppLayout renders the
+   * group's modules as tabs. Omit for a standalone sidebar entry. */
+  group?: ModuleGroupKey;
+  /** Routed but never shown in the sidebar or tabs. */
+  hidden?: boolean;
 }
 
 // ── Default-deny role constants ──────────────────────────────────────────────
@@ -69,6 +74,17 @@ export const MINUTAS_WRITE: UserRole[] = [
 // since lider is read/move-tier only here (she can still move cards and
 // toggle tareas she's responsable for; the service enforces that, not RBAC).
 export const SCRUM_GOV: UserRole[] = ["superadmin", "admin", "coordinador"];
+
+
+export type ModuleGroupKey =
+  | "territorio" | "personas" | "militantes" | "atencion" | "reuniones" | "tareas" | "sistema";
+
+export interface ModuleGroup {
+  key: ModuleGroupKey;
+  label: string;
+  section: ModuleSection;
+  icon: ComponentType<{ width?: number; height?: number; className?: string }>;
+}
 
 export const SECTION_LABELS: Record<ModuleSection, string> = {
   operacion: "Operación",
@@ -218,63 +234,100 @@ const Tablero = lazy(() => import("@/modules/scrum/TableroPage"));
 const Backlog = lazy(() => import("@/modules/scrum/BacklogPage"));
 const Sprints = lazy(() => import("@/modules/scrum/SprintsPage"));
 
+export const GROUPS: ModuleGroup[] = [
+  { key: "territorio", label: "Mapa SMA", section: "operacion", icon: MapIcon },
+  { key: "personas", label: "Personas", section: "operacion", icon: VotersIcon },
+  { key: "militantes", label: "Militantes", section: "operacion", icon: UserIcon },
+  { key: "atencion", label: "Atención", section: "operacion", icon: ShieldIcon },
+  { key: "reuniones", label: "Reuniones", section: "operacion", icon: AnalyticsIcon },
+  { key: "tareas", label: "Tareas", section: "operacion", icon: LayersIcon },
+  { key: "sistema", label: "Sistema", section: "administracion", icon: SettingsIcon },
+];
+
 export const MODULES: ModuleDef[] = [
   // Inicio (rendered as a loose item above the sections in Sidebar.tsx —
   // section value below is unused for grouping but must be a valid ModuleSection).
   { key: "dashboard", path: "/", label: "Inicio", section: "operacion", icon: DashboardIcon, state: "active", element: Dashboard, end: true, roles: ALL },
   { key: "captura", path: "/captura", label: "Captura de hojas", section: "operacion", icon: VotersIcon, state: "active", element: CapturaHojas, roles: ["superadmin", "admin", "coordinador", "capturista"] },
-  { key: "mapa", path: "/mapa", label: "Mapa SMA", section: "operacion", icon: MapIcon, state: "active", element: MapaSma, roles: ["superadmin", "admin", "coordinador", "lider", "analyst"] },
+  { key: "mapa", path: "/mapa", label: "Mapa", group: "territorio", section: "operacion", icon: MapIcon, state: "active", element: MapaSma, roles: ["superadmin", "admin", "coordinador", "lider", "analyst"] },
 
   // Inteligencia Electoral (ex-plataforma data/analysis tools + existing intel datasets)
   { key: "analytics", path: "/analytics", label: "Analítica", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Analytics, roles: INTEL },
   { key: "sources", path: "/sources", label: "Fuentes", section: "inteligencia", icon: DatabaseIcon, state: "active", element: Sources, roles: ["superadmin", "admin", "analyst"] },
   { key: "busqueda", path: "/busqueda", label: "Búsqueda", section: "inteligencia", icon: SearchIcon, state: "active", element: Busqueda, roles: INTEL },
-  { key: "municipio-panorama", path: "/municipio", label: "Panorama municipal", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: PanoramaMunicipio, roles: INTEL_TERRITORY },
+  { key: "municipio-panorama", path: "/municipio", label: "Panorama", group: "territorio", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: PanoramaMunicipio, roles: INTEL_TERRITORY },
   { key: "ieem", path: "/ieem", label: "IEEM", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Ieem, roles: INTEL },
   { key: "worldbank", path: "/indicadores", label: "Indicadores", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: WorldBank, roles: INTEL },
 
   // Operación (ex-ciudadanía)
-  { key: "promovidos-importar", path: "/promovidos/importar", label: "Importar", section: "operacion", icon: DatabaseIcon, state: "active", element: ImportarPromovidos, roles: ["superadmin", "admin", "coordinador"] },
-  { key: "captura-campo", path: "/captura-campo", label: "Captura en campo", section: "operacion", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "lider", "activista"] },
-  { key: "plan-territorial", path: "/plan-territorial", label: "Plan Territorial", section: "operacion", icon: LayersIcon, state: "active", element: PlanTerritorial, roles: CONSOLE_COORD },
-  { key: "war-room", path: "/war-room", label: "War Room", section: "operacion", icon: AnalyticsIcon, state: "active", element: WarRoom, roles: CONSOLE_COORD },
+  { key: "promovidos-importar", path: "/promovidos/importar", label: "Importar", group: "personas", section: "operacion", icon: DatabaseIcon, state: "active", element: ImportarPromovidos, roles: ["superadmin", "admin", "coordinador"] },
+  { key: "captura-campo", path: "/captura-campo", label: "Captura en campo", section: "operacion", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "lider", "activista"], hidden: true },
+  { key: "plan-territorial", path: "/plan-territorial", label: "Plan", group: "territorio", section: "operacion", icon: LayersIcon, state: "active", element: PlanTerritorial, roles: CONSOLE_COORD },
+  { key: "war-room", path: "/war-room", label: "War Room", group: "territorio", section: "operacion", icon: AnalyticsIcon, state: "active", element: WarRoom, roles: CONSOLE_COORD },
   // Minutas & Acuerdos — only the two non-parameterized routes are nav items;
   // /minutas/nueva, /minutas/:id and /minutas/:id/editar are registered
   // directly in App.tsx (param routes must not appear as Sidebar links).
-  { key: "minutas", path: "/minutas", label: "Minutas", section: "operacion", icon: AnalyticsIcon, state: "active", element: MinutasList, roles: MINUTAS_READ },
-  { key: "acuerdos", path: "/acuerdos", label: "Acuerdos", section: "operacion", icon: UserIcon, state: "active", element: MisAcuerdos, roles: MINUTAS_READ },
+  { key: "minutas", path: "/minutas", label: "Minutas", group: "reuniones", section: "operacion", icon: AnalyticsIcon, state: "active", element: MinutasList, roles: MINUTAS_READ },
+  { key: "acuerdos", path: "/acuerdos", label: "Acuerdos", group: "reuniones", section: "operacion", icon: UserIcon, state: "active", element: MisAcuerdos, roles: MINUTAS_READ },
   // Scrum/PM — tablero/backlog/sprints. Read tier mirrors minutas (activista/
   // capturista can view); create/estimate/assign/activar/cerrar is gated
   // in-page to SCRUM_GOV (coordinador/admin), mover-tarjeta is open to the
   // whole read tier with ownership enforced server-side.
-  { key: "scrum-tablero", path: "/tablero", label: "Tablero", section: "operacion", icon: LayersIcon, state: "active", element: Tablero, roles: MINUTAS_READ },
-  { key: "scrum-backlog", path: "/backlog", label: "Pendientes", section: "operacion", icon: DatabaseIcon, state: "active", element: Backlog, roles: MINUTAS_READ },
-  { key: "scrum-sprints", path: "/sprints", label: "Ciclos", section: "operacion", icon: AnalyticsIcon, state: "active", element: Sprints, roles: MINUTAS_READ },
-  { key: "promovidos", path: "/promovidos", label: "Promovidos", section: "operacion", icon: VotersIcon, state: "active", element: Promovidos, roles: ["superadmin", "admin", "coordinador", "lider"] },
-  { key: "militantes-captura", path: "/militantes/captura", label: "Afiliar militante", section: "operacion", icon: VotersIcon, state: "active", element: CapturaMilitante, roles: CONSOLE_CAPTURA },
-  { key: "militantes", path: "/militantes", label: "Afiliación", section: "operacion", icon: VotersIcon, state: "active", element: PanoramaMilitantes, roles: ["superadmin", "admin", "coordinador"], end: true },
-  { key: "militantes-lista", path: "/militantes/lista", label: "Militantes", section: "operacion", icon: VotersIcon, state: "active", element: MilitantesList, roles: CONSOLE_COORD },
-  { key: "atencion", path: "/atencion", label: "Panorama", section: "operacion", icon: UserIcon, state: "active", element: PanoramaAtencion, roles: ["superadmin", "admin", "coordinador"], end: true },
-  { key: "atencion-casos", path: "/atencion/casos", label: "Casos", section: "operacion", icon: UserIcon, state: "active", element: CasosAtencion, roles: CONSOLE_COORD },
-  { key: "atencion-captura", path: "/atencion/captura", label: "Atender", section: "operacion", icon: UserIcon, state: "active", element: CapturaAtencion, roles: CONSOLE_CAPTURA },
-  { key: "atencion-formularios", path: "/atencion/formularios", label: "Formularios", section: "operacion", icon: SettingsIcon, state: "active", element: FormBuilder, roles: ["superadmin", "admin", "coordinador"] },
-  { key: "riesgo", path: "/riesgo", label: "Alertas", section: "operacion", icon: AlertIcon, state: "active", element: Alertas, roles: ALERTAS_READ },
+  { key: "scrum-tablero", path: "/tablero", label: "Tablero", group: "tareas", section: "operacion", icon: LayersIcon, state: "active", element: Tablero, roles: MINUTAS_READ },
+  { key: "scrum-backlog", path: "/backlog", label: "Pendientes", group: "tareas", section: "operacion", icon: DatabaseIcon, state: "active", element: Backlog, roles: MINUTAS_READ },
+  { key: "scrum-sprints", path: "/sprints", label: "Ciclos", group: "tareas", section: "operacion", icon: AnalyticsIcon, state: "active", element: Sprints, roles: MINUTAS_READ },
+  { key: "promovidos", path: "/promovidos", label: "Lista", group: "personas", section: "operacion", icon: VotersIcon, state: "active", element: Promovidos, roles: ["superadmin", "admin", "coordinador", "lider"] },
+  { key: "militantes-captura", path: "/militantes/captura", label: "Afiliar", group: "militantes", section: "operacion", icon: VotersIcon, state: "active", element: CapturaMilitante, roles: CONSOLE_CAPTURA },
+  { key: "militantes", path: "/militantes", label: "Panorama", group: "militantes", section: "operacion", icon: VotersIcon, state: "active", element: PanoramaMilitantes, roles: ["superadmin", "admin", "coordinador"], end: true },
+  { key: "militantes-lista", path: "/militantes/lista", label: "Lista", group: "militantes", section: "operacion", icon: VotersIcon, state: "active", element: MilitantesList, roles: CONSOLE_COORD },
+  { key: "atencion", path: "/atencion", label: "Panorama", group: "atencion", section: "operacion", icon: UserIcon, state: "active", element: PanoramaAtencion, roles: ["superadmin", "admin", "coordinador"], end: true },
+  { key: "atencion-casos", path: "/atencion/casos", label: "Casos", group: "atencion", section: "operacion", icon: UserIcon, state: "active", element: CasosAtencion, roles: CONSOLE_COORD },
+  { key: "atencion-captura", path: "/atencion/captura", label: "Atender", group: "atencion", section: "operacion", icon: UserIcon, state: "active", element: CapturaAtencion, roles: CONSOLE_CAPTURA },
+  { key: "atencion-formularios", path: "/atencion/formularios", label: "Formularios", group: "atencion", section: "operacion", icon: SettingsIcon, state: "active", element: FormBuilder, roles: ["superadmin", "admin", "coordinador"] },
+  { key: "riesgo", path: "/riesgo", label: "Alertas", group: "territorio", section: "operacion", icon: AlertIcon, state: "active", element: Alertas, roles: ALERTAS_READ },
 
   // Administración (ex-gobernanza + ex-administracion)
-  { key: "auditoria", path: "/auditoria", label: "Auditoría", section: "administracion", icon: ShieldIcon, state: "active", element: Auditoria, roles: ADMINY },
-  { key: "historial", path: "/historial", label: "Ingestas", section: "administracion", icon: DatabaseIcon, state: "active", element: Historial, roles: ADMINY },
-  { key: "reportes", path: "/reportes", label: "Reportes", section: "administracion", icon: DatabaseIcon, state: "active", element: Reportes, roles: REPORTS },
+  { key: "auditoria", path: "/auditoria", label: "Auditoría", group: "sistema", section: "administracion", icon: ShieldIcon, state: "active", element: Auditoria, roles: ADMINY },
+  { key: "historial", path: "/historial", label: "Ingestas", group: "sistema", section: "administracion", icon: DatabaseIcon, state: "active", element: Historial, roles: ADMINY },
+  { key: "reportes", path: "/reportes", label: "Reportes", group: "personas", section: "administracion", icon: DatabaseIcon, state: "active", element: Reportes, roles: REPORTS },
 
   // Admin console (role-gated, active)
-  { key: "admin-dashboard", path: "/admin", label: "Consola", section: "administracion", icon: AnalyticsIcon, state: "active", element: AdminDashboard, roles: CONSOLE_COORD },
-  { key: "admin-registros", path: "/admin/registros", label: "Registros", section: "administracion", icon: VotersIcon, state: "active", element: AdminRegistros, roles: CONSOLE_COORD },
-  { key: "admin-estructura", path: "/admin/estructura", label: "Estructura", section: "administracion", icon: UserIcon, state: "active", element: AdminEstructura, roles: ["superadmin", "admin", "coordinador"] },
+  { key: "admin-dashboard", path: "/admin", label: "Consola", group: "personas", section: "administracion", icon: AnalyticsIcon, state: "active", element: AdminDashboard, roles: CONSOLE_COORD },
+  { key: "admin-registros", path: "/admin/registros", label: "Registros", group: "personas", section: "administracion", icon: VotersIcon, state: "active", element: AdminRegistros, roles: CONSOLE_COORD },
+  { key: "admin-estructura", path: "/admin/estructura", label: "Estructura", group: "personas", section: "administracion", icon: UserIcon, state: "active", element: AdminEstructura, roles: ["superadmin", "admin", "coordinador"] },
 
   // Administración (role-gated, active)
   { key: "users", path: "/users", label: "Usuarios", section: "administracion", icon: UserIcon, state: "active", element: Users, roles: ADMINY },
-  { key: "organization", path: "/organization", label: "Organización", section: "administracion", icon: SettingsIcon, state: "active", element: Organization, roles: ADMINY },
-  { key: "configuracion", path: "/configuracion", label: "Configuración", section: "administracion", icon: SettingsIcon, state: "active", element: Configuracion, roles: ADMINY },
-  { key: "organizaciones", path: "/organizaciones", label: "Organizaciones", section: "administracion", icon: ShieldIcon, state: "active", element: Organizaciones, roles: ["superadmin"] },
-  { key: "campaigns", path: "/campaigns", label: "Campañas", section: "administracion", icon: AnalyticsIcon, state: "active", element: Campaigns, roles: ADMINY },
-  { key: "plataforma", path: "/plataforma", label: "Plataforma", section: "administracion", icon: DatabaseIcon, state: "active", element: PlatformDashboard, roles: ["superadmin", "admin"] },
+  { key: "organization", path: "/organization", label: "Organización", group: "sistema", section: "administracion", icon: SettingsIcon, state: "active", element: Organization, roles: ADMINY },
+  { key: "configuracion", path: "/configuracion", label: "Configuración", group: "sistema", section: "administracion", icon: SettingsIcon, state: "active", element: Configuracion, roles: ADMINY },
+  { key: "organizaciones", path: "/organizaciones", label: "Organizaciones", group: "sistema", section: "administracion", icon: ShieldIcon, state: "active", element: Organizaciones, roles: ["superadmin"] },
+  { key: "campaigns", path: "/campaigns", label: "Campañas", group: "sistema", section: "administracion", icon: AnalyticsIcon, state: "active", element: Campaigns, roles: ADMINY },
+  { key: "plataforma", path: "/plataforma", label: "Plataforma", group: "sistema", section: "administracion", icon: DatabaseIcon, state: "active", element: PlatformDashboard, roles: ["superadmin", "admin"] },
 ];
+
+// ── Nav helpers (Sidebar + group tabs) ───────────────────────────────────────
+export function visibleFor(role: string | undefined, m: ModuleDef): boolean {
+  if (m.hidden) return false;
+  if (!m.roles) return true;
+  if (!role) return false;
+  return m.roles.includes(role as UserRole);
+}
+
+/** Modules of a group the role can see, in registry order (= tab order). */
+export function groupModules(group: ModuleGroupKey, role: string | undefined): ModuleDef[] {
+  return MODULES.filter((m) => m.group === group && visibleFor(role, m));
+}
+
+function matchesPath(m: ModuleDef, pathname: string): boolean {
+  if (m.path === "/") return pathname === "/";
+  return pathname === m.path || pathname.startsWith(m.path + "/");
+}
+
+/** The module owning ``pathname`` (longest matching path wins). */
+export function moduleForPath(pathname: string): ModuleDef | undefined {
+  let best: ModuleDef | undefined;
+  for (const m of MODULES) {
+    if (matchesPath(m, pathname) && (!best || m.path.length > best.path.length)) best = m;
+  }
+  return best;
+}

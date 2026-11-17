@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { GroupTabs } from "./GroupTabs";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
@@ -34,6 +35,7 @@ export function AppLayout({ title, crumb, children }: AppLayoutProps) {
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         <Topbar title={title} crumb={crumb} onMenu={() => setNavOpen(true)} />
         <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+          <GroupTabs />
           <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>
         </main>
       </div>
