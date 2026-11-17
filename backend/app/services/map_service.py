@@ -1,7 +1,7 @@
 """Map / geospatial service.
 
-Layer catalog plus tenant-scoped electoral areas serialized as a GeoJSON
-FeatureCollection. On PostGIS, geometry is emitted via ``ST_AsGeoJSON``.
+Tenant-scoped electoral areas serialized as a GeoJSON FeatureCollection.
+On PostGIS, geometry is emitted via ``ST_AsGeoJSON``.
 """
 
 from __future__ import annotations
@@ -13,39 +13,6 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.electoral_area import AreaLevel, ElectoralArea
-
-
-def list_layers() -> list[dict[str, Any]]:
-    """Return the catalog of available map layers."""
-    return [
-        {
-            "id": "electoral_districts",
-            "name": "Electoral Districts",
-            "category": "electoral",
-            "geometry_type": "polygon",
-            "srid": 4326,
-            "visible": True,
-            "description": "Administrative electoral district boundaries.",
-        },
-        {
-            "id": "precincts",
-            "name": "Voting Precincts",
-            "category": "electoral",
-            "geometry_type": "point",
-            "srid": 4326,
-            "visible": False,
-            "description": "Polling locations and precinct centroids.",
-        },
-        {
-            "id": "participation_heat",
-            "name": "Participation Heatmap",
-            "category": "analytics",
-            "geometry_type": "raster",
-            "srid": 4326,
-            "visible": False,
-            "description": "Civic participation density surface.",
-        },
-    ]
 
 
 def _level_value(level: Any) -> str:

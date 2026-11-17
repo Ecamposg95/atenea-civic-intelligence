@@ -132,7 +132,7 @@ export function Sidebar({
       <div className="mt-2 border-t border-line px-3 pt-4 text-[11px] leading-relaxed text-ink-faint">
         Atlas Tech · GovTech
         <br />
-        <span className="opacity-70">v0.2.0 · Platform demo</span>
+        <span className="opacity-70">v0.2.0</span>
       </div>
     </aside>
   );

@@ -188,7 +188,7 @@ export function ConfiguracionPage() {
       STATUS_ORDER.map((status) => ({
         status,
         items: INTEGRATIONS.filter((s) => s.status === status),
-      })),
+      })).filter((g) => g.items.length > 0),
     [],
   );
 

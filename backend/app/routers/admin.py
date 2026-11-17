@@ -90,7 +90,8 @@ def revelar_clave(
         raise HTTPException(status_code=422, detail="El registro no tiene clave de elector")
     if plain is None:
         raise HTTPException(status_code=404, detail="Registro not found")
-    return RevelarClaveResponse(registro_id=registro_id, clave_elector=plain)
+    curp = admin_service.reveal_curp(db, ctx, registro_id)
+    return RevelarClaveResponse(registro_id=registro_id, clave_elector=plain, curp=curp)
 
 
 @router.get("/auditoria", response_model=Page[AuditEntry])

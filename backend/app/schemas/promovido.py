@@ -18,6 +18,11 @@ class PromovidoRead(BaseModel):
     estructura: Optional[str] = None
     promotor: Optional[str] = None
     clave_masked: Optional[str] = None
+    # Captura SMA (0022)
+    legacy: bool = False
+    tipo: Optional[str] = None
+    padre_id: Optional[str] = None
+    padre_nombre: Optional[str] = None
     # electoral context (from SeccionElectoral, may be null)
     participacion: Optional[float] = None
     margen: Optional[int] = None

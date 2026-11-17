@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { getIeemDatasets } from "@/api/intel";
-import { getAreas } from "@/api/maps";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { DataState } from "@/components/ui/DataState";
@@ -16,7 +15,6 @@ import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import { useAsync } from "@/hooks/useAsync";
 import { MODULES } from "@/modules/registry";
 import type { IeemDatasetRef } from "@/types/intel";
-import type { AreasResponse } from "@/types/maps";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,7 +34,7 @@ interface ResultGroup {
   results: SearchResult[];
 }
 
-type GroupKey = "todos" | "modulos" | "territorios" | "ieem";
+type GroupKey = "todos" | "modulos" | "ieem";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -47,15 +45,6 @@ const norm = (s: string): string =>
     .toLowerCase()
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "");
-
-const LEVEL_LABELS: Record<string, string> = {
-  state: "Estado",
-  municipality: "Municipio",
-};
-
-function levelLabel(level: string): string {
-  return LEVEL_LABELS[level] ?? level;
-}
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -132,7 +121,6 @@ function GroupSection({ group }: { group: ResultGroup }) {
 const SEGMENT_OPTIONS: { id: GroupKey; label: string }[] = [
   { id: "todos", label: "Todos" },
   { id: "modulos", label: "Módulos" },
-  { id: "territorios", label: "Territorios" },
   { id: "ieem", label: "IEEM" },
 ];
 
@@ -141,17 +129,10 @@ export function BusquedaPage() {
   const [activeGroup, setActiveGroup] = useState<GroupKey>("todos");
   const q = norm(query.trim());
 
-  // States are always loaded; municipios are fetched lazily only once the
-  // user has typed something, to avoid a heavy upfront request.
-  const states = useAsync<AreasResponse>(() => getAreas("state"), []);
-  const muni = useAsync<AreasResponse>(
-    () => (q ? getAreas("municipality") : Promise.resolve(null as never)),
-    [q.length === 0],
-  );
   const ieem = useAsync<IeemDatasetRef[]>(() => getIeemDatasets(), []);
 
-  const loading = states.loading || ieem.loading;
-  const error = states.error ?? ieem.error;
+  const loading = ieem.loading;
+  const error = ieem.error;
 
   // -------------------------------------------------------------------------
   // Computed results
@@ -162,27 +143,10 @@ export function BusquedaPage() {
     return MODULES.filter((m) => norm(m.label).includes(q)).map((m) => ({
       id: m.key,
       label: m.label,
-      sublabel: m.state === "soon" ? "Próximamente" : m.path,
+      sublabel: m.path,
       to: m.path,
     }));
   }, [q]);
-
-  const territoryResults = useMemo<SearchResult[]>(() => {
-    if (!q) return [];
-    const features = [
-      ...(states.data?.features ?? []),
-      ...(muni.data?.features ?? []),
-    ];
-    return features
-      .filter((f) => norm(f.properties.name).includes(q))
-      .slice(0, 30)
-      .map((f) => ({
-        id: f.properties.id,
-        label: f.properties.name,
-        sublabel: levelLabel(f.properties.level),
-        to: "/territorios",
-      }));
-  }, [q, states.data, muni.data]);
 
   const ieemResults = useMemo<SearchResult[]>(() => {
     if (!q) return [];
@@ -202,12 +166,6 @@ export function BusquedaPage() {
       title: "Módulos",
       icon: <LayersIcon width={16} height={16} />,
       results: moduleResults,
-    },
-    {
-      key: "territorios",
-      title: "Territorios",
-      icon: <SearchIcon width={16} height={16} />,
-      results: territoryResults,
     },
     {
       key: "ieem",
@@ -239,13 +197,13 @@ export function BusquedaPage() {
         eyebrow="Plataforma"
         title="Búsqueda"
         accent="global"
-        subtitle="Encuentra módulos, territorios y fuentes oficiales del Estado de México (IEEM) desde un solo lugar. Datos reales."
+        subtitle="Encuentra módulos y fuentes oficiales del Estado de México (IEEM) desde un solo lugar. Datos reales."
       />
 
       {/* ── Search input ── */}
       <div className="reveal mb-5">
         <label htmlFor="busqueda-input" className="sr-only">
-          Buscar módulos, territorios o fuentes IEEM
+          Buscar módulos o fuentes IEEM
         </label>
         <div className="relative">
           <SearchIcon
@@ -256,11 +214,11 @@ export function BusquedaPage() {
             id="busqueda-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar módulos, territorios o fuentes IEEM…"
+            placeholder="Buscar módulos o fuentes IEEM…"
             autoFocus
             autoComplete="off"
             spellCheck={false}
-            aria-label="Buscar módulos, territorios o fuentes IEEM"
+            aria-label="Buscar módulos o fuentes IEEM"
             aria-controls="busqueda-results"
             aria-autocomplete="list"
             className="field-input w-full pl-11 text-base"
@@ -298,7 +256,6 @@ export function BusquedaPage() {
         loading={loading}
         error={error}
         onRetry={() => {
-          states.reload();
           ieem.reload();
         }}
         skeleton={
@@ -320,7 +277,7 @@ export function BusquedaPage() {
               <SearchIcon width={22} height={22} />
             </span>
             <p className="text-sm leading-relaxed text-ink-muted">
-              Escribe para buscar a través de módulos, territorios y fuentes IEEM.
+              Escribe para buscar a través de módulos y fuentes IEEM.
             </p>
             <p className="font-mono text-xs text-ink-faint">
               Usa el campo de búsqueda de arriba para comenzar.

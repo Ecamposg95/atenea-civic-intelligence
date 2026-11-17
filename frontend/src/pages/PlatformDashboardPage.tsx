@@ -25,7 +25,6 @@ import {
   AlertIcon,
   DatabaseIcon,
   LayersIcon,
-  MapIcon,
   ShieldIcon,
   UserIcon,
 } from "@/components/ui/icons";
@@ -416,14 +415,6 @@ export function PlatformDashboardPage() {
             title="Cobertura territorial"
             accentDot
             className="h-full"
-            action={
-              <Link
-                to="/maps"
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-accent transition-colors hover:text-accent-strong"
-              >
-                <MapIcon width={14} height={14} /> Ver mapa
-              </Link>
-            }
           >
             {areasError ? (
               <div className={`grid ${PANEL_HEIGHTS.mapMini} place-items-center text-center text-sm text-ink-faint`}>
@@ -447,7 +438,6 @@ export function PlatformDashboardPage() {
                     key={theme}
                     areas={areas}
                     showAreas
-                    choropleth
                     basemap="dark"
                     fitKey={fitKey}
                     onSelect={() => {}}

@@ -81,6 +81,7 @@ class EstructuraNode(BaseModel):
 class RevelarClaveResponse(BaseModel):
     registro_id: str
     clave_elector: str  # decrypted — never logged, never cached
+    curp: Optional[str] = None  # decrypted CURP when stored (audited registro.reveal_curp)
 
 
 class RevelarClavesRequest(BaseModel):

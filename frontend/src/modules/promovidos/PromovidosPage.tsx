@@ -416,7 +416,7 @@ export function PromovidosPage() {
                       : "Aún no hay promovidos capturados."}
                   </p>
                   <div className="flex flex-wrap justify-center gap-2">
-                    <Link to="/captura-rapida" className="btn-primary focus-ring">
+                    <Link to="/captura" className="btn-primary focus-ring">
                       Capturar
                     </Link>
                     {canImport && (

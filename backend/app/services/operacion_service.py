@@ -41,6 +41,7 @@ def _avance_por_seccion(db: Session, ctx: CampaignContext) -> dict[str, int]:
             Registro.campaign_id == ctx.campaign_id,
             Registro.organization_id == ctx.organization_id,
             Registro.deleted_at.is_(None),
+            Registro.legacy.is_(False),  # KPIs cuentan solo capturas nuevas (spec §8)
         )
         .group_by(Registro.seccion)
     ).all()
@@ -183,6 +184,7 @@ def _weekly_trend(db: Session, ctx: CampaignContext,
         Registro.campaign_id == ctx.campaign_id,
         Registro.organization_id == ctx.organization_id,
         Registro.deleted_at.is_(None),
+        Registro.legacy.is_(False),
         Registro.created_at.is_not(None),
     )
     if secciones is not None:
@@ -202,6 +204,18 @@ def _weekly_trend(db: Session, ctx: CampaignContext,
 
 def _status(pct: int) -> str:
     return "verde" if pct >= 100 else ("ambar" if pct >= 60 else "rojo")
+
+
+def _promovidos_viejos(db: Session, ctx: CampaignContext) -> int:
+    """Legacy ("valor viejo") registros of the campaign — reference only."""
+    return db.execute(
+        select(func.count()).select_from(Registro).where(
+            Registro.campaign_id == ctx.campaign_id,
+            Registro.organization_id == ctx.organization_id,
+            Registro.deleted_at.is_(None),
+            Registro.legacy.is_(True),
+        )
+    ).scalar_one()
 
 
 def seguimiento(db: Session, ctx: CampaignContext) -> dict:
@@ -234,6 +248,7 @@ def seguimiento(db: Session, ctx: CampaignContext) -> dict:
             "secciones": len(semaforo),
             "meta_total": meta_total,
             "promovidos_total": prom_total,
+            "promovidos_viejos": _promovidos_viejos(db, ctx),
             "pct_global": round(min(100, prom_total / meta_total * 100)) if meta_total else None,
             "en_riesgo": sum(1 for s in semaforo if s["status"] == "rojo"),
             "al_dia": sum(1 for s in semaforo if s["status"] == "verde"),

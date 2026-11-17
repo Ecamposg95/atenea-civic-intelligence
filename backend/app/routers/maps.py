@@ -1,4 +1,4 @@
-"""Maps router — layer catalog, tenant-scoped GeoJSON areas, and WMS layers."""
+"""Maps router — tenant-scoped GeoJSON areas and WMS layers."""
 
 from typing import Any
 
@@ -15,12 +15,6 @@ _INTEL_READ = Depends(require_roles(
 ))
 
 router = APIRouter(prefix="/maps", tags=["maps"], dependencies=[_INTEL_READ])
-
-
-@router.get("/layers", summary="List available map layers")
-def list_layers() -> dict[str, Any]:
-    """Return the catalog of map layers available to the explorer."""
-    return {"layers": map_service.list_layers()}
 
 
 # Default simplification tolerance (SRID 4326 degrees) per level. Dense layers

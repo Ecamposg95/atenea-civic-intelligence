@@ -29,19 +29,10 @@ class MunicipioConfig:
         return _BASE / self.code
 
 
-REGIONES: dict[str, str] = {"atizapan": "Atizapán y periferia", "toluca": "Valle de Toluca"}
-
-_ATZ = dict(region="atizapan", bloque_propio="Morena-PVEM-PT", bloque_rival="PAN-PRI-PRD")
+REGIONES: dict[str, str] = {"toluca": "Valle de Toluca"}
 
 MUNICIPIOS: dict[str, MunicipioConfig] = {m.code: m for m in (
     MunicipioConfig("15076", "San Mateo Atenco", "toluca", "Coalición", "Morena", "SMA", ("4127",)),
-    MunicipioConfig("15013", "Atizapán de Zaragoza", folio_prefix="ATZ", **_ATZ),
-    MunicipioConfig("15104", "Tlalnepantla de Baz", folio_prefix="TLA", **_ATZ),
-    MunicipioConfig("15057", "Naucalpan de Juárez", folio_prefix="NAU", **_ATZ),
-    MunicipioConfig("15060", "Nicolás Romero", folio_prefix="NRO", **_ATZ),
-    MunicipioConfig("15121", "Cuautitlán Izcalli", folio_prefix="CIZ", **_ATZ),
-    MunicipioConfig("15038", "Isidro Fabela", folio_prefix="IFA", **_ATZ),
-    MunicipioConfig("15046", "Jilotzingo", folio_prefix="JIL", **_ATZ),
 )}
 
 
@@ -50,5 +41,5 @@ def config_de(code: Optional[str]) -> Optional[MunicipioConfig]:
 
 
 def municipios_de_region(region: str) -> list[MunicipioConfig]:
-    """Orden de inserción del registro (Atizapán primero en su región)."""
+    """Municipios de la región, en orden de inserción del registro."""
     return [m for m in MUNICIPIOS.values() if m.region == region]

@@ -8,7 +8,6 @@ from app.seeds.municipios import MUNICIPIOS
 from tests.conftest import TestingSessionLocal
 
 SMA = MUNICIPIOS["15076"]
-ATZ = MUNICIPIOS["15013"]
 
 
 def _n_secciones(db, code):
@@ -47,18 +46,5 @@ def test_seed_is_idempotent_and_reconciles_missing_code():
         assert _n_secciones(db, "15076") == 22
         n_area = db.execute(select(func.count()).select_from(ElectoralArea).where(ElectoralArea.code == "15076")).scalar_one()
         assert n_area == 1
-    finally:
-        db.close()
-
-
-def test_seed_atizapan_no_mezcla_con_sma():
-    db = TestingSessionLocal()
-    try:
-        seed_territory(db, SMA)
-        seed_territory(db, ATZ)
-        assert _n_secciones(db, "15013") == 174
-        assert _n_secciones(db, "15076") == 22
-        muni = db.execute(select(ElectoralArea).where(ElectoralArea.code == "15013")).scalar_one()
-        assert muni.name == "Atizapán de Zaragoza"
     finally:
         db.close()

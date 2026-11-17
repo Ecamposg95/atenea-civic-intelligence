@@ -7,6 +7,7 @@ from typing import Optional
 from sqlalchemy import (
     Boolean, DateTime, Float, ForeignKey, Index, Integer, LargeBinary, String, UniqueConstraint,
 )
+from sqlalchemy import false as sa_false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -45,6 +46,27 @@ class Registro(UUIDMixin, TenantMixin, CampaignMixin, AuditMixin, Base):
     consentimiento: Mapped[bool] = mapped_column(Boolean, nullable=False)
     consentimiento_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     aviso_version: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+
+    # ── Captura de hojas SMA (migración 0022) ──
+    tipo: Mapped[Optional[str]] = mapped_column(String(12), nullable=True)  # LIDER|ACTIVISTA|PROMOVIDO
+    padre_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("registros.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    apellido_paterno: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    apellido_materno: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    nombres: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    calle: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    numero: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    clave_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True, nullable=True)
+    hoja_id: Mapped[Optional[str]] = mapped_column(String(36), index=True, nullable=True)
+    # CURP: Fernet ciphertext + masked display + keyed hash (dup detection).
+    curp_enc: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
+    curp_masked: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    curp_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True, nullable=True)
+    # "Valor viejo": filas previas a la captura SMA (marcadas por la migración 0022).
+    legacy: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_false()
+    )
 
     client_uuid: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     lat: Mapped[Optional[float]] = mapped_column(Float, nullable=True)

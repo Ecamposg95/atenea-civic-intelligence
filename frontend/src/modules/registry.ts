@@ -3,13 +3,11 @@ import { lazy, type ComponentType, type LazyExoticComponent } from "react";
 import type { UserRole } from "@/types/auth";
 import { ALERTAS_READ } from "@/modules/alertas/logic";
 import {
-  AiIcon,
   AlertIcon,
   AnalyticsIcon,
   DashboardIcon,
   DatabaseIcon,
   LayersIcon,
-  MapIcon,
   SearchIcon,
   SettingsIcon,
   ShieldIcon,
@@ -17,14 +15,8 @@ import {
   VotersIcon,
 } from "@/components/ui/icons";
 
-export type ModuleState = "active" | "preview" | "soon";
+export type ModuleState = "active" | "preview";
 export type ModuleSection = "operacion" | "inteligencia" | "administracion";
-
-export interface SoonCopy {
-  summary: string;
-  features: string[];
-  dataSource: string;
-}
 
 export interface ModuleDef {
   key: string;
@@ -35,11 +27,9 @@ export interface ModuleDef {
   state: ModuleState;
   /** Restrict to roles; omit = any authenticated user. */
   roles?: UserRole[];
-  /** Component for active/preview modules. soon → ComingSoonPage. */
-  element?: LazyExoticComponent<ComponentType>;
+  element: LazyExoticComponent<ComponentType>;
   /** End-match for the index route. */
   end?: boolean;
-  soon?: SoonCopy;
 }
 
 // ── Default-deny role constants ──────────────────────────────────────────────
@@ -53,11 +43,6 @@ const ALL: UserRole[] = [
 const INTEL: UserRole[] = ["superadmin", "admin", "lider", "analyst", "viewer"];
 // Territory/operational intel a coordinador DOES keep (San Mateo Atenco panorama).
 const INTEL_TERRITORY: UserRole[] = ["superadmin", "admin", "coordinador", "lider", "analyst", "viewer"];
-// Analyst-tier intelligence library (Mapa, Territorios) — national-scope GIS
-// tools misaimed for an operator; coordinador/lider are excluded (UX-4 A).
-const INTEL_ANALYST: UserRole[] = ["superadmin", "admin", "analyst", "viewer"];
-// Generic console tier (e.g. Participación) — coordinador excluded.
-const CONSOLE: UserRole[] = ["superadmin", "admin", "lider"];
 // Activist console a coordinador owns (dashboard, registros).
 const CONSOLE_COORD: UserRole[] = ["superadmin", "admin", "coordinador", "lider"];
 // Militante capture — coordinador tier + the field roles that actually affiliate people.
@@ -104,9 +89,6 @@ const PlatformDashboard = lazy(() =>
     default: m.PlatformDashboardPage,
   })),
 );
-const MapExplorer = lazy(() =>
-  import("@/pages/MapExplorerPage").then((m) => ({ default: m.MapExplorerPage })),
-);
 const Analytics = lazy(() =>
   import("@/pages/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage })),
 );
@@ -121,27 +103,9 @@ const Organization = lazy(() =>
     default: m.OrganizationSettingsPage,
   })),
 );
-const Resultados = lazy(() =>
-  import("@/modules/resultados/ResultadosPage").then((m) => ({
-    default: m.ResultadosPage,
-  })),
-);
-const Padron = lazy(() =>
-  import("@/modules/padron/PadronPage").then((m) => ({ default: m.PadronPage })),
-);
-const AiAnalyst = lazy(() =>
-  import("@/modules/ai-analyst/AiAnalystPage").then((m) => ({
-    default: m.AiAnalystPage,
-  })),
-);
 const Auditoria = lazy(() =>
   import("@/modules/auditoria/AuditoriaPage").then((m) => ({
     default: m.AuditoriaPage,
-  })),
-);
-const Territorios = lazy(() =>
-  import("@/modules/territorios/TerritoriosPage").then((m) => ({
-    default: m.TerritoriosPage,
   })),
 );
 const Ieem = lazy(() =>
@@ -151,23 +115,6 @@ const WorldBank = lazy(() =>
   import("@/modules/worldbank/WorldBankPage").then((m) => ({
     default: m.WorldBankPage,
   })),
-);
-const Economia = lazy(() =>
-  import("@/modules/economia/EconomiaPage").then((m) => ({ default: m.EconomiaPage })),
-);
-const Banxico = lazy(() =>
-  import("@/modules/banxico/BanxicoPage").then((m) => ({ default: m.BanxicoPage })),
-);
-const Denue = lazy(() =>
-  import("@/modules/denue/DenuePage").then((m) => ({ default: m.DenuePage })),
-);
-const Demografia = lazy(() =>
-  import("@/modules/demografia/DemografiaPage").then((m) => ({
-    default: m.DemografiaPage,
-  })),
-);
-const Indice = lazy(() =>
-  import("@/modules/indice/IndicePage").then((m) => ({ default: m.IndicePage })),
 );
 const Reportes = lazy(() =>
   import("@/modules/reportes/ReportesPage").then((m) => ({ default: m.ReportesPage })),
@@ -193,9 +140,6 @@ const Historial = lazy(() =>
 );
 const Captura = lazy(() =>
   import("@/modules/captura/CapturaPage").then((m) => ({ default: m.CapturaPage })),
-);
-const CapturaRapida = lazy(() =>
-  import("@/modules/captura/CapturaRapidaPage").then((m) => ({ default: m.CapturaRapidaPage })),
 );
 const ImportarPromovidos = lazy(() =>
   import("@/modules/promovidos/ImportarPromovidosPage").then((m) => ({ default: m.ImportarPromovidosPage })),
@@ -273,30 +217,14 @@ export const MODULES: ModuleDef[] = [
   { key: "dashboard", path: "/", label: "Inicio", section: "operacion", icon: DashboardIcon, state: "active", element: Dashboard, end: true, roles: ALL },
 
   // Inteligencia Electoral (ex-plataforma data/analysis tools + existing intel datasets)
-  { key: "maps", path: "/maps", label: "Mapa", section: "inteligencia", icon: MapIcon, state: "active", element: MapExplorer, roles: INTEL_ANALYST },
   { key: "analytics", path: "/analytics", label: "Analítica", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Analytics, roles: INTEL },
   { key: "sources", path: "/sources", label: "Fuentes", section: "inteligencia", icon: DatabaseIcon, state: "active", element: Sources, roles: ["superadmin", "admin", "analyst"] },
   { key: "busqueda", path: "/busqueda", label: "Búsqueda", section: "inteligencia", icon: SearchIcon, state: "active", element: Busqueda, roles: INTEL },
-  { key: "resultados", path: "/resultados", label: "Resultados", section: "inteligencia", icon: AnalyticsIcon, state: "preview", element: Resultados, roles: INTEL },
-  { key: "padron", path: "/padron", label: "Padrón", section: "inteligencia", icon: VotersIcon, state: "preview", element: Padron, roles: ["superadmin", "admin", "analyst"] },
-  {
-    key: "candidaturas", path: "/candidaturas", label: "Candidaturas", section: "inteligencia", icon: UserIcon, state: "soon", roles: INTEL,
-    soon: {
-      summary: "Registro y seguimiento de candidaturas por cargo, partido y territorio.",
-      features: ["Directorio de candidaturas por elección", "Filtros por partido, cargo y entidad", "Fichas con trayectoria y vínculos"],
-      dataSource: "Candidaturas MX (apielectoral.mx) — ya integrada en el backend.",
-    },
-  },
   { key: "municipio-panorama", path: "/municipio", label: "Panorama municipal", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: PanoramaMunicipio, roles: INTEL_TERRITORY },
-  { key: "territorios", path: "/territorios", label: "Territorios", section: "inteligencia", icon: LayersIcon, state: "active", element: Territorios, roles: INTEL_ANALYST },
   { key: "ieem", path: "/ieem", label: "IEEM", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: Ieem, roles: INTEL },
   { key: "worldbank", path: "/indicadores", label: "Indicadores", section: "inteligencia", icon: AnalyticsIcon, state: "active", element: WorldBank, roles: INTEL },
-  { key: "economia", path: "/economia", label: "Economía", section: "inteligencia", icon: DatabaseIcon, state: "preview", element: Economia, roles: INTEL },
-  { key: "denue", path: "/unidades-economicas", label: "Denue", section: "inteligencia", icon: DatabaseIcon, state: "preview", element: Denue, roles: INTEL },
-  { key: "banxico", path: "/banxico", label: "Banxico", section: "inteligencia", icon: AnalyticsIcon, state: "preview", element: Banxico, roles: INTEL },
 
   // Operación (ex-ciudadanía)
-  { key: "captura-rapida", path: "/captura-rapida", label: "Captura rápida", section: "operacion", icon: VotersIcon, state: "active", element: CapturaRapida, roles: CONSOLE_CAPTURA },
   { key: "promovidos-importar", path: "/promovidos/importar", label: "Importar", section: "operacion", icon: DatabaseIcon, state: "active", element: ImportarPromovidos, roles: ["superadmin", "admin", "coordinador"] },
   { key: "captura", path: "/captura", label: "Activistas", section: "operacion", icon: VotersIcon, state: "active", element: Captura, roles: ["superadmin", "admin", "lider", "activista", "capturista"] },
   { key: "plan-territorial", path: "/plan-territorial", label: "Plan Territorial", section: "operacion", icon: LayersIcon, state: "active", element: PlanTerritorial, roles: CONSOLE_COORD },
@@ -321,29 +249,10 @@ export const MODULES: ModuleDef[] = [
   { key: "atencion-casos", path: "/atencion/casos", label: "Casos", section: "operacion", icon: UserIcon, state: "active", element: CasosAtencion, roles: CONSOLE_COORD },
   { key: "atencion-captura", path: "/atencion/captura", label: "Atender", section: "operacion", icon: UserIcon, state: "active", element: CapturaAtencion, roles: CONSOLE_CAPTURA },
   { key: "atencion-formularios", path: "/atencion/formularios", label: "Formularios", section: "operacion", icon: SettingsIcon, state: "active", element: FormBuilder, roles: ["superadmin", "admin", "coordinador"] },
-  { key: "ai-analyst", path: "/ai-analyst", label: "Copiloto", section: "operacion", icon: AiIcon, state: "preview", element: AiAnalyst, roles: ["superadmin", "admin", "coordinador", "analyst"] },
-  { key: "demografia", path: "/demografia", label: "Censo", section: "operacion", icon: VotersIcon, state: "preview", element: Demografia, roles: INTEL },
-  {
-    key: "sentimiento", path: "/sentimiento", label: "Sentimiento", section: "operacion", icon: AnalyticsIcon, state: "soon", roles: INTEL,
-    soon: {
-      summary: "Escucha social y de medios sobre temas y actores cívicos.",
-      features: ["Tendencias de conversación", "Análisis de sentimiento por tema", "Alertas de picos de actividad"],
-      dataSource: "APIs de redes/medios (pendiente de contratar).",
-    },
-  },
-  {
-    key: "participacion", path: "/participacion", label: "Participación", section: "operacion", icon: VotersIcon, state: "soon", roles: CONSOLE,
-    soon: {
-      summary: "Consultas, peticiones y encuestas ciudadanas gobernadas.",
-      features: ["Consultas y peticiones", "Encuestas con resultados auditables", "Tablero de participación"],
-      dataSource: "Módulo propio de captación (por construir).",
-    },
-  },
   { key: "riesgo", path: "/riesgo", label: "Alertas", section: "operacion", icon: AlertIcon, state: "active", element: Alertas, roles: ALERTAS_READ },
 
   // Administración (ex-gobernanza + ex-administracion)
   { key: "auditoria", path: "/auditoria", label: "Auditoría", section: "administracion", icon: ShieldIcon, state: "active", element: Auditoria, roles: ADMINY },
-  { key: "indice", path: "/indice", label: "Índice Cívico", section: "administracion", icon: AnalyticsIcon, state: "preview", element: Indice, roles: INTEL },
   { key: "historial", path: "/historial", label: "Ingestas", section: "administracion", icon: DatabaseIcon, state: "active", element: Historial, roles: ADMINY },
   { key: "reportes", path: "/reportes", label: "Reportes", section: "administracion", icon: DatabaseIcon, state: "active", element: Reportes, roles: REPORTS },
 

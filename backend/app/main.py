@@ -30,6 +30,7 @@ from app.routers import (
     audit,
     auth,
     campaigns,
+    captura_sma,
     casos,
     catalogs,
     dashboard,
@@ -99,24 +100,6 @@ async def lifespan(app: FastAPI):
             seed_municipio_intel(db)
     except Exception:
         logger.exception("Municipio intel seed failed during startup")
-    # Atizapán demo (env-gated, idempotent): org, admin re-home, campaign, structure.
-    try:
-        from app.database import SessionLocal
-        from app.seeds.demo_atizapan import seed_atizapan_campaign
-
-        with SessionLocal() as db:
-            seed_atizapan_campaign(db)
-    except Exception:
-        logger.exception("Atizapán demo seed failed during startup")
-    # Atizapán synthetic operation (env-gated, one-time via marker).
-    try:
-        from app.database import SessionLocal
-        from app.seeds.demo_atizapan_operacion import seed_atizapan_operacion
-
-        with SessionLocal() as db:
-            seed_atizapan_operacion(db)
-    except Exception:
-        logger.exception("Atizapán operación seed failed during startup")
     # Election date (idempotent) so the Command Center countdown runs.
     try:
         from app.database import SessionLocal
@@ -250,7 +233,7 @@ def _configure_error_handlers(app: FastAPI) -> None:
 def _register_routers(app: FastAPI) -> None:
     """Mount all API routers under the configured prefix."""
     prefix = settings.API_PREFIX
-    for module in (health, auth, users, organizations, campaigns, maps, analytics, sources, audit, intel, catalogs, dashboard, territory, ingest, exports, registros, militantes, municipio, operacion, promovidos, privacy, admin, arco, reports, forms, responses, casos, public_forms, minutas, scrum, alertas):
+    for module in (health, auth, users, organizations, campaigns, maps, analytics, sources, audit, intel, catalogs, dashboard, territory, ingest, exports, registros, militantes, municipio, operacion, promovidos, privacy, admin, arco, reports, forms, responses, casos, public_forms, minutas, scrum, alertas, captura_sma):
         app.include_router(module.router, prefix=prefix)
 
 

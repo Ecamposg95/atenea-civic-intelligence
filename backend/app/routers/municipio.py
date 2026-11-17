@@ -7,7 +7,7 @@ from app.dependencies import CampaignCtx, DbSession, Tenant, require_roles
 from app.models.user import UserRole
 from app.schemas.municipio import MunicipioCatalogo, RegionOut
 from app.seeds.municipios import MUNICIPIOS, REGIONES
-from app.services import municipio_service
+from app.services import mapa_service, municipio_service
 
 _INTEL_READ = Depends(require_roles(
     UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER,
@@ -33,6 +33,20 @@ def catalogo(ctx: Tenant):
         MunicipioCatalogo(code=c.code, name=c.name, region=REGIONES[c.region])
         for c in MUNICIPIOS.values()
     ]
+
+
+_MAPA_READ = Depends(require_roles(
+    UserRole.ADMIN, UserRole.COORDINADOR, UserRole.LIDER, UserRole.ANALYST,
+))  # spec 2026-11-17 §7 — no VIEWER (shows campaign avance)
+
+
+@router.get("/{code}/mapa", dependencies=[_MAPA_READ])
+def mapa(code: str, db: DbSession, cctx: CampaignCtx):
+    """Sección polygons + metas 2027 + resultados 2024 + avance de la campaña."""
+    data = mapa_service.mapa(db, cctx, code)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Municipio sin cartografía")
+    return data
 
 
 @router.get("/{code}/panorama")

@@ -198,6 +198,7 @@ def import_rows(db: Session, *, organization_id: str, campaign_id: str, path: st
             if clave and not existing.clave_elector_enc:
                 existing.clave_elector_enc = crypto.encrypt_clave(clave)
                 existing.clave_masked = crypto.mask_clave(clave)
+                existing.clave_hash = crypto.hash_clave(clave)
                 actualizadas += 1
             else:
                 duplicadas += 1
@@ -217,6 +218,7 @@ def import_rows(db: Session, *, organization_id: str, campaign_id: str, path: st
             observacion=r["observacion"],
             clave_elector_enc=crypto.encrypt_clave(clave) if clave else None,
             clave_masked=crypto.mask_clave(clave) if clave else None,
+            clave_hash=crypto.hash_clave(clave) if clave else None,
             consentimiento=True,
             aviso_version="import-papel-2024",
             client_uuid=cuid,

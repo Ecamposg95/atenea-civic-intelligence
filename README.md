@@ -60,7 +60,7 @@ path so React Router deep-links work. See [`docs/architecture.md`](docs/architec
 agora-civic-intelligence/
 ├── backend/      FastAPI app (models+mixins, schemas, routers, services), Alembic, tests
 ├── frontend/     Vite + React + TS + Tailwind + MapLibre + Recharts
-├── docs/         architecture, product-brief, data-model, roadmap, deployment
+├── docs/         architecture, product-brief, data-model, deployment
 ├── scripts/      railway_init.py (idempotent bootstrap/seed), dev helpers
 ├── nixpacks.toml Build (Node + Python, builds SPA)
 ├── Procfile      web (uvicorn) + release (railway_init)
@@ -140,7 +140,6 @@ alembic upgrade head                      # apply migrations
 | GET    | `/api/auth/me`            | Current user                     |
 | GET    | `/api/users`              | Tenant-scoped users (paginated)  |
 | GET    | `/api/organizations`      | Organizations (paginated)        |
-| GET    | `/api/maps/layers`        | Map layer catalog                |
 | GET    | `/api/maps/areas`         | Electoral areas as GeoJSON       |
 | GET    | `/api/analytics/overview` | Civic intelligence KPIs          |
 
@@ -161,23 +160,11 @@ FastAPI, which serves API + SPA) and a **PostgreSQL** service from the
 - Build: `nixpacks.toml` installs Node + Python, builds `frontend/dist`,
   installs `backend/requirements.txt`.
 - Start: `web: uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT`
-- Release (idempotent): `release: python scripts/railway_init.py` — enables
-  PostGIS, creates tables, seeds org + super-admin (only if `SEED_ADMIN_PASSWORD`
-  is set).
+- No release step: migrations and seeds run idempotently in the FastAPI
+  lifespan at startup (`app/bootstrap.py`).
 - Health check: `/api/health`.
 
 Full guide: [`docs/deployment.md`](docs/deployment.md).
-
-## Roadmap
-
-- **Phase 0** — Foundation scaffold ✅
-- **Phase 1** — Auth, tenancy, RBAC, audit middleware
-- **Phase 2** — PostGIS geospatial core + map rendering
-- **Phase 3** — Real analytics & executive dashboards
-- **Phase 4** — Institutional AI analyst (cited, governed)
-- **Phase 5** — Governance, permissions & scale
-
-See [`docs/roadmap.md`](docs/roadmap.md).
 
 ---
 

@@ -1,7 +1,6 @@
 import { JSX, Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-import { ComingSoonPage } from "@/components/modules/ComingSoonPage";
 import { MINUTAS_READ, MINUTAS_WRITE, MODULES } from "@/modules/registry";
 import { useAuthStore } from "@/store/authStore";
 import { usePendingSyncStore } from "@/store/pendingSyncStore";
@@ -140,8 +139,7 @@ export default function App() {
           />
           {MODULES.map((m) => {
             const Element = m.element;
-            const node =
-              m.state === "soon" || !Element ? <ComingSoonPage module={m} /> : <Element />;
+            const node = <Element />;
             return (
               <Route
                 key={m.key}

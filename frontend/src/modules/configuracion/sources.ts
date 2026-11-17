@@ -76,7 +76,7 @@ export const INTEGRATIONS: IntegrationSource[] = [
   {
     key: "gadm",
     name: "Geometría GADM",
-    powers: "Map Explorer · estados y municipios",
+    powers: "Cartografía · estados y municipios",
     status: "activa",
     format: "GeoJSON · estados/municipios",
   },
@@ -88,57 +88,7 @@ export const INTEGRATIONS: IntegrationSource[] = [
     format: "DB interna",
   },
 
-  // ── Preview (muestra, conectable) ──────────────────────────────────────
-  {
-    key: "datamexico",
-    name: "DataMéxico",
-    powers: "Economía Territorial",
-    status: "preview",
-    format: "API · economía",
-    howTo:
-      "El cliente está integrado con datos de muestra. Se conecta a la fuente real sin tokens; pendiente de cablear el feed en producción.",
-  },
-  {
-    key: "inegi",
-    name: "INEGI",
-    powers: "Demografía & Censo",
-    status: "preview",
-    format: "API · demografía",
-    envVar: "INEGI_TOKEN",
-    howTo:
-      "Solicita un token en el portal de INEGI y configúralo como variable de entorno en Railway. El navegador no almacena el token.",
-  },
-  {
-    key: "denue",
-    name: "DENUE",
-    powers: "Unidades Económicas",
-    status: "preview",
-    format: "API · unidades económicas",
-    envVar: "INEGI_TOKEN",
-    howTo:
-      "DENUE usa el mismo token de INEGI. Una vez definido INEGI_TOKEN en Railway, la fuente queda disponible.",
-  },
-  {
-    key: "banxico",
-    name: "Banxico",
-    powers: "Macro-financiero (Banxico)",
-    status: "preview",
-    format: "API · SIE",
-    envVar: "BANXICO_TOKEN",
-    howTo:
-      "Genera un token en el SIE de Banxico y configúralo como BANXICO_TOKEN en Railway (servidor). No se introduce en el navegador.",
-  },
-
   // ── Bloqueadas (externo caído) ─────────────────────────────────────────
-  {
-    key: "apielectoral",
-    name: "apielectoral.mx",
-    powers: "Candidaturas",
-    status: "bloqueada",
-    format: "API externa · candidaturas",
-    howTo:
-      "El proveedor externo está fuera de servicio. El módulo se reactivará automáticamente cuando la API vuelva a responder.",
-  },
   {
     key: "ckan",
     name: "datos.gob.mx (CKAN)",

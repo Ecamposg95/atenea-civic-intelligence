@@ -3,7 +3,6 @@ import maplibregl, { type GeoJSONSource, type StyleSpecification } from "maplibr
 // maplibre-gl CSS is imported globally in src/index.css (avoids deferred chunk race).
 
 import type { AreasResponse, AreaProperties } from "@/types/maps";
-import { sampleMetric } from "@/types/maps";
 import { useThemeStore } from "@/store/themeStore";
 
 export interface WmsOverlay { id: string; tiles: string[]; visible: boolean; }
@@ -13,10 +12,9 @@ interface MapCanvasProps {
   areas: AreasResponse | null;
   showAreas: boolean;
   wmsLayers?: WmsOverlay[];
-  choropleth: boolean;
   basemap: Basemap;
   fitKey?: number; // bump to trigger fit-to-bounds
-  onSelect?: (props: (AreaProperties & { metric: number }) | null) => void;
+  onSelect?: (props: AreaProperties | null) => void;
 }
 
 const AREAS_SOURCE = "agora-areas";
@@ -65,30 +63,7 @@ const styleFor = (b: Basemap, tiles?: string[]): StyleSpecification => {
 
 const EMPTY_FC: AreasResponse = { type: "FeatureCollection", features: [] };
 
-// Inject the sample metric into each feature property for data-driven styling.
-function withMetric(fc: AreasResponse): GeoJSON.FeatureCollection {
-  return {
-    type: "FeatureCollection",
-    features: fc.features.map((f) => ({
-      ...f,
-      properties: { ...f.properties, metric: sampleMetric(f.properties.id) },
-    })),
-  } as unknown as GeoJSON.FeatureCollection;
-}
-
 const FLAT_FILL: maplibregl.FillLayerSpecification["paint"] = { "fill-color": "#22d3ee", "fill-opacity": 0.16 };
-// All-black big-screen ramp: deep cyan → bright cyan → amber at the peak.
-const CHORO_FILL: maplibregl.FillLayerSpecification["paint"] = {
-  "fill-opacity": 0.6,
-  "fill-color": [
-    "interpolate", ["linear"], ["get", "metric"],
-    0.45, "#062a30",
-    0.58, "#0e7490",
-    0.70, "#22d3ee",
-    0.82, "#67e8f9",
-    0.90, "#f5b53d",
-  ] as never,
-};
 
 // Recursively extend bounds with valid [lng, lat] positions from any GeoJSON
 // coordinates nesting (Point/Line/Polygon/Multi*). Validates ranges so a
@@ -118,7 +93,7 @@ function extendBounds(b: maplibregl.LngLatBounds, coords: unknown): boolean {
   return any;
 }
 
-export function MapCanvas({ areas, showAreas, wmsLayers = [], choropleth, basemap, fitKey, onSelect }: MapCanvasProps) {
+export function MapCanvas({ areas, showAreas, wmsLayers = [], basemap, fitKey, onSelect }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const readyRef = useRef(false);
@@ -175,8 +150,7 @@ export function MapCanvas({ areas, showAreas, wmsLayers = [], choropleth, basema
       map.on("click", AREAS_FILL, (e) => {
         const f = e.features?.[0];
         if (f) {
-          const p = f.properties as unknown as AreaProperties & { metric: number };
-          onSelectRef.current?.({ ...p, metric: Number((p as { metric: number }).metric) });
+          onSelectRef.current?.(f.properties as unknown as AreaProperties);
         }
       });
     });
@@ -185,27 +159,22 @@ export function MapCanvas({ areas, showAreas, wmsLayers = [], choropleth, basema
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Data + visibility + choropleth styling.
+  // Data + visibility.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const apply = () => {
       const src = map.getSource(AREAS_SOURCE) as GeoJSONSource | undefined;
-      if (src) src.setData(withMetric(areas ?? EMPTY_FC));
+      if (src) src.setData((areas ?? EMPTY_FC) as never);
       const vis = showAreas ? "visible" : "none";
       if (map.getLayer(AREAS_FILL)) {
         map.setLayoutProperty(AREAS_FILL, "visibility", vis);
-        const fill = (choropleth ? CHORO_FILL : FLAT_FILL) as NonNullable<
-          maplibregl.FillLayerSpecification["paint"]
-        >;
-        map.setPaintProperty(AREAS_FILL, "fill-color", fill["fill-color"] as never);
-        map.setPaintProperty(AREAS_FILL, "fill-opacity", fill["fill-opacity"] as never);
       }
       if (map.getLayer(AREAS_GLOW)) map.setLayoutProperty(AREAS_GLOW, "visibility", vis);
       if (map.getLayer(AREAS_LINE)) map.setLayoutProperty(AREAS_LINE, "visibility", vis);
     };
     if (readyRef.current) apply(); else map.once("load", apply);
-  }, [areas, showAreas, choropleth]);
+  }, [areas, showAreas]);
 
   // WMS overlays (unchanged behavior).
   useEffect(() => {

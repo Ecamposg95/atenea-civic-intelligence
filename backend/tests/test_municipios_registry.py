@@ -1,20 +1,18 @@
 from app.seeds.municipios import MUNICIPIOS, REGIONES, config_de, municipios_de_region
 
 
-def test_registro_tiene_sma_y_region_atizapan():
+def test_registro_solo_sma():
+    assert list(MUNICIPIOS) == ["15076"]
     assert MUNICIPIOS["15076"].region == "toluca"
-    atz = municipios_de_region("atizapan")
-    assert [m.code for m in atz][0] == "15013"
-    assert {m.code for m in atz} == {"15013", "15104", "15057", "15060", "15121", "15038", "15046"}
-    assert REGIONES["atizapan"] == "Atizapán y periferia"
+    assert [m.code for m in municipios_de_region("toluca")] == ["15076"]
+    assert REGIONES["toluca"] == "Valle de Toluca"
 
 
 def test_config_bloques_y_folio():
-    atz = config_de("15013")
-    assert atz.bloque_propio == "Morena-PVEM-PT" and atz.bloque_rival == "PAN-PRI-PRD"
-    assert atz.folio_prefix == "ATZ"
     sma = config_de("15076")
+    assert sma.bloque_propio == "Coalición" and sma.bloque_rival == "Morena"
     assert sma.folio_prefix == "SMA" and sma.extra_secciones == ("4127",)
+    assert config_de("15013") is None
     assert config_de("99999") is None
 
 

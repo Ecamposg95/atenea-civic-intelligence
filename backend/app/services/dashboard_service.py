@@ -38,6 +38,7 @@ def executive(db: Session, ctx: CampaignContext) -> dict:
             "total": resumen["promovidos_total"],
             "meta": resumen["meta_total"],
             "pct": resumen["pct_global"],
+            "viejos": resumen.get("promovidos_viejos", 0),
         },
         "afiliados": {
             "total": mil.get("total", 0),

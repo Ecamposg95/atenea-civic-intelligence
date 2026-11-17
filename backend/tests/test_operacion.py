@@ -200,7 +200,7 @@ def test_list_planes_aisla_por_municipio(coordinador_ctx, db_session, _limpia_se
 
 def test_folio_prefix_por_municipio(coordinador_ctx):
     assert territory_service.folio_prefix(coordinador_ctx) == "SMA"
-    assert territory_service.folio_prefix(replace(coordinador_ctx, municipio_code="15013")) == "ATZ"
+    assert territory_service.folio_prefix(replace(coordinador_ctx, municipio_code=None)) == "SMA"
 
 
 def test_list_planes_responsable_nombre_usa_full_name(coordinador_ctx, db_session):

@@ -13,7 +13,7 @@ from app.models.registro import Registro
 from app.models.seccion_electoral import SeccionElectoral
 from app.models.user import UserRole
 from app.services import territory_service
-from app.services.registro_service import _role_scoped
+from app.services.registro_service import _role_scoped, attach_padre_nombre
 from app.services.territory_service import secciones_query
 
 
@@ -59,7 +59,7 @@ _SORT_WHITELIST = {
 def list_promovidos(
     db: Session, ctx: CampaignContext, *, seccion: Optional[str], promotor: Optional[str],
     prioridad: Optional[str], q: Optional[str], limit: int, offset: int,
-    sort: str = "created_at", order: str = "desc",
+    sort: str = "created_at", order: str = "desc", legacy: str = "todos",
 ) -> tuple[list[Registro], int, bool]:
     secciones = territory_service.scope_secciones(db, ctx.user)
     # COORDINADOR is the campaign executive → campaign-wide, no territory gate.
@@ -72,6 +72,10 @@ def list_promovidos(
             stmt = stmt.where(sa.false())
         else:
             stmt = stmt.where(Registro.seccion.in_(secciones))
+    if legacy == "nuevos":
+        stmt = stmt.where(Registro.legacy.is_(False))
+    elif legacy == "viejos":
+        stmt = stmt.where(Registro.legacy.is_(True))
     if seccion:
         stmt = stmt.where(Registro.seccion == seccion)
     if promotor:
@@ -106,4 +110,5 @@ def list_promovidos(
         r.participacion = f.participacion if f else None
         r.margen = f.margen if f else None
         r.prioridad = f.prioridad if f else None
+    attach_padre_nombre(db, rows)
     return rows, total, has_territory

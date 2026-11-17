@@ -56,6 +56,7 @@ Migración `0022_captura_sma` (idempotente, compatible con SQLite) agrega a `reg
 | `apellido_paterno`, `apellido_materno`, `nombres` | String(120) null | Los 11 campos de la página 15 del PDF |
 | `calle`, `numero` | String(255)/String(20) null | `direccion` se sigue llenando con "calle numero" |
 | `clave_hash` | String(64) null, index | HMAC-SHA256 de la clave normalizada (llave derivada de `SECRET_KEY`), para detectar duplicados sin descifrar |
+| `curp_enc`, `curp_masked`, `curp_hash` | LargeBinary / String(20) / String(64) index | CURP cifrada con Fernet, igual que la clave |
 | `hoja_id` | String(36) null, index | Agrupa las filas capturadas de una misma hoja de papel |
 | `legacy` | Boolean not null default false | **"Valor viejo"** |
 
@@ -70,12 +71,14 @@ Para cada fila:
 - **Errores** (bloquean la hoja):
   - falta el apellido paterno o los nombres;
   - la sección no es una de las 22 de SMA;
-  - la clave está presente pero no tiene 18 caracteres alfanuméricos;
+  - **falta la clave de elector** (obligatoria, decisión del usuario 2026-11-17) o no tiene 18 caracteres alfanuméricos;
+  - la CURP está presente pero no tiene formato válido;
+  - la CURP ya existe en una captura nueva o se repite dentro de la hoja;
   - el teléfono está presente pero no tiene 10 dígitos;
   - la clave ya existe en una captura nueva (`legacy = false`) de la campaña;
   - la misma clave aparece repetida dentro de la hoja.
 - **Avisos** (no bloquean):
-  - falta la clave;
+  - falta la CURP;
   - falta el teléfono;
   - el nombre normalizado ya existe en capturas nuevas (posible duplicado);
   - la persona coincide con un valor viejo (por clave o nombre). Es informativo: la captura nueva se guarda.
@@ -98,7 +101,7 @@ Pueden usarla: ADMIN, COORDINADOR y CAPTURISTA (el superadmin pasa siempre). Tod
     "filas": [ PersonaIn, ... ]
   }
   ```
-  - `PersonaIn` = `apellido_paterno`, `apellido_materno`, `nombres`, `seccion`, `calle`, `numero`, `colonia`, `clave_elector`, `telefono`.
+  - `PersonaIn` = `apellido_paterno`, `apellido_materno`, `nombres`, `seccion`, `calle`, `numero`, `colonia`, `clave_elector` (obligatoria), `curp` (opcional), `telefono`.
   - En una hoja LIDER el titular es el líder y las filas son hasta 10 activistas. En una hoja FAMILIA el titular es el activista (fila sombreada) y las filas son hasta 7 promovidos.
   - Las filas vacías se ignoran.
   - Respuesta: `{ "ok": bool, "titular": FilaResultado, "filas": [ { "index", "estado": "ok"|"aviso"|"error", "mensajes": [..] } ], "creados": n, "hoja_id": "..." }`.
@@ -123,7 +126,8 @@ Reemplaza a "Captura rápida", que se elimina. La página está pensada para esc
    - En una hoja de familia: se busca un activista ya capturado (se muestra su líder) o se captura uno nuevo eligiendo su líder.
    - El titular se queda puesto entre hojas, para capturar seguidas varias hojas del mismo líder o activista.
 3. **Filas**: una cuadrícula fija de 10 filas (C1) o 7 (familia), con columnas en el orden del papel:
-   Ap. paterno · Ap. materno · Nombre(s) · Sección · Calle · # · Bo./Col. · Clave de elector · Teléfono.
+   Ap. paterno · Ap. materno · Nombre(s) · Sección · Calle · # · Bo./Col. · Clave de elector · CURP · Teléfono.
+   En el celular cada fila es una tarjeta plegable, en lugar de una cuadrícula.
    - La sección es un select con las 22 secciones.
    - Bo./Col. sugiere los barrios del catálogo.
    - La clave muestra un contador "n/18".
@@ -187,7 +191,16 @@ Railway: migrar `railway.json` a `.railway/railway.ts` con `railway config migra
 ## 11. Decisiones mías (revisar)
 
 - Todas las personas son `Registro` con `tipo` y `padre_id`, en lugar de tablas nuevas, para reutilizar el cifrado, la privacidad, ARCO, las exportaciones y los reportes.
-- La clave es opcional y genera un aviso, porque el papel a veces viene incompleto. Si viene, debe ser válida.
+- (Cambiado por el usuario) La clave es obligatoria. La CURP es opcional pero se valida, porque los formatos de papel no traen columna de CURP.
 - Los duplicados por clave bloquean la hoja. Los duplicados por nombre solo avisan.
 - El polígono de la 4127 se usa para 6673 y 6674.
 - Promovidos muestra "Nuevos" por defecto.
+
+## 12. Prioridades confirmadas por el usuario (2026-11-17)
+
+- La plataforma es primero el **hub de captura**. Las visualizaciones vienen después, salvo el mapa.
+- El **mapa debe lucirse**: es lo que más les gusta a los usuarios. Debe mostrar en vivo lo que se va capturando.
+- **CRUD completo de usuarios para Roberto (ADMIN)**: crear, editar, cambiar rol, asignar sección o líder, activar y desactivar, restablecer contraseña, borrar y restaurar, con buscador y filtros.
+- El look and feel debe ser **moderno, muy visible y accesible**: contraste AA, objetivos táctiles de al menos 44 px, foco visible, etiquetas en todos los campos.
+- La **versión móvil es crítica**: algunos capturistas usarán el teléfono.
+- El área legal de la campaña ya divulgó los avisos de privacidad, así que las capturas se guardan con consentimiento y sin casilla en la UI.

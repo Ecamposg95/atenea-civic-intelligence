@@ -50,6 +50,19 @@ def _role_scoped(ctx: CampaignContext):
     return stmt.where(sa.false())
 
 
+def attach_padre_nombre(db: Session, rows) -> None:
+    """Set the transient ``padre_nombre`` on each row (one query, no N+1).
+    Read by RegistroRead / PromovidoRead (from_attributes); never mapped."""
+    ids = {r.padre_id for r in rows if getattr(r, "padre_id", None)}
+    names: dict[str, str] = {}
+    if ids:
+        names = dict(db.execute(
+            select(Registro.id, Registro.nombre_completo).where(Registro.id.in_(ids))
+        ).all())
+    for r in rows:
+        r.padre_nombre = names.get(r.padre_id) if r.padre_id else None
+
+
 def create_registro(db: Session, ctx: CampaignContext, data: RegistroCreate) -> Registro:
     if not data.consentimiento:
         raise ConsentRequired()
@@ -89,6 +102,7 @@ def create_registro(db: Session, ctx: CampaignContext, data: RegistroCreate) -> 
         observacion=data.observacion,
         clave_elector_enc=clave_enc,
         clave_masked=clave_masked,
+        clave_hash=crypto.hash_clave(data.clave_elector) if data.clave_elector else None,
         consentimiento=True,
         consentimiento_at=datetime.now(timezone.utc),
         aviso_version=notice.version,
@@ -145,15 +159,19 @@ def list_registros(
             names[uid] = fname
     for r in rows:
         r.activista_nombre = names.get(r.activista_id)
+    attach_padre_nombre(db, rows)
     return rows, total
 
 
 def get_registro(
     db: Session, ctx: CampaignContext, registro_id: str
 ) -> Optional[Registro]:
-    return db.execute(
+    reg = db.execute(
         _role_scoped(ctx).where(Registro.id == registro_id)
     ).scalar_one_or_none()
+    if reg is not None:
+        attach_padre_nombre(db, [reg])
+    return reg
 
 
 def update_registro(
@@ -169,6 +187,7 @@ def update_registro(
         clave = fields.pop("clave_elector")
         reg.clave_elector_enc = crypto.encrypt_clave(clave) if clave else None
         reg.clave_masked = crypto.mask_clave(clave) if clave else None
+        reg.clave_hash = crypto.hash_clave(clave) if clave else None
     fields.pop("consentimiento", None)
     for k, v in fields.items():
         setattr(reg, k, v)

@@ -54,6 +54,25 @@ def reveal_clave(db: Session, ctx: CampaignContext, registro_id: str) -> Optiona
     return plain
 
 
+def reveal_curp(db: Session, ctx: CampaignContext, registro_id: str) -> Optional[str]:
+    """Decrypt the CURP if stored (None otherwise). Audits registro.reveal_curp
+    on successful reveal only, like reveal_clave."""
+    reg = registro_service.get_registro(db, ctx, registro_id)
+    if reg is None or not reg.curp_enc:
+        return None
+    plain = crypto.decrypt_curp(bytes(reg.curp_enc))
+    record_audit(
+        db,
+        action="registro.reveal_curp",
+        actor_id=ctx.user.id,
+        organization_id=reg.organization_id,
+        entity_type="registro",
+        entity_id=reg.id,
+    )
+    db.commit()
+    return plain
+
+
 def reveal_claves(db: Session, ctx: CampaignContext, registro_ids: list[str]) -> dict[str, str]:
     """Batch reveal. For each in-scope registro that has a stored clave, decrypt it
     and write ONE audit row per revealed registro (registro.reveal_clave,

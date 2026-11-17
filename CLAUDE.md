@@ -9,9 +9,12 @@ Developer notes for AI assistants working in this repository.
 Ágora is an API-first GovTech platform. The backend owns all security, authorization,
 validation, and business rules. The frontend is a pure consumer of `/api/*`.
 
-**Activist-capture platform** (SPA-1 → SPA-4) is the main feature on the
-`feat/spa4-compliance` branch. It layers on top of the existing platform spine
-without modifying its foundations.
+**Focus: San Mateo Atenco (SMA, municipio 15076) only.** The app serves one
+campaign territory; mock/"soon"/demo modules (incl. the Atizapán demo) were
+removed (recoverable from tag `pre-sma-cleanup`). Current work: paper-sheet
+capture + SMA section map — see
+`docs/superpowers/specs/2026-11-17-sma-captura-hojas-mapa-design.md`. The
+activist-capture platform (SPA-1 → SPA-4) layers on top of the platform spine.
 
 ---
 
@@ -84,18 +87,16 @@ The COORDINADOR can now also **capture** (`CapturaWriteCtx` +COORDINADOR) and
   countdown always has a date for every campaign with a registry `municipio_code`
   (the old `DEMO_CAMPAIGN_ID` override was removed).
 
-### Demo Atizapán / multi-municipio
+### Municipio registry (SMA only)
 
-- Registry: `app/seeds/municipios.py` (`MunicipioConfig`, `MUNICIPIOS`, `REGIONES`, `config_de`); data in
-  `app/seeds/municipios/<code>/{secciones_2024.csv,intel.csv,manifest.json}` (15076 SMA + región "atizapan").
+- Registry: `app/seeds/municipios.py` (`MunicipioConfig`, `MUNICIPIOS`, `REGIONES`, `config_de`); only
+  15076 SMA (region "toluca"). Data in `app/seeds/municipios/15076/` (`secciones_2024.csv`, `intel.csv`,
+  `metas_2027.csv`, `secciones.geojson`).
 - Semantics: `SeccionElectoral.coalicion` = bloque PROPIO, `morena` = RIVAL, `margen = coalicion − morena`.
 - `Campaign.municipio_code/candidato/partido` (mig 0021) → `CampaignContext.municipio_code`;
   `territory_service.secciones_query(ctx)` scopes plan territorial/promovidos/militantes (no municipio → no filter).
-- `GET /municipio/{code}/panorama`, `GET /municipio/region`; alertas: `GET /alertas` (page `/riesgo`).
-- Seeds: `SEED_DEMO_TERRITORY`, `SEED_DEMO_ATIZAPAN(+_PASSWORD/_ORG_SLUG/_ADMIN_EMAIL)`; synthetic operation marked
-  `Registro.promotor == "demo-seed"`; local reset `scripts/seed_atizapan_operacion.py --reset --yes`.
-- Regenerate CSVs: `PYTHONPATH=. .venv/bin/python scripts/build_municipio_dataset.py --region atizapan` (never in PROD;
-  IEEM `ID_MUNICIPIO` ≠ INEGI code, see `IEEM_ID` map). Guion: `docs/demo-atizapan.md`.
+- `GET /municipio/{code}/panorama`, `GET /municipio/region` (returns just SMA); alertas: `GET /alertas` (page `/riesgo`).
+- Seeds: `SEED_DEMO_TERRITORY=true` loads SMA secciones; municipio intel + election date seed on every boot.
 
 ### Promovidos — richer views
 
@@ -107,19 +108,15 @@ The COORDINADOR can now also **capture** (`CapturaWriteCtx` +COORDINADOR) and
 
 ### Digitalización del papel ("digitize Lucy's paper") — program
 
-Four flows; **1 and 2 shipped**, 3 and 4 pending.
-
-1. **Captura rápida** — `modules/captura/CapturaRapidaPage.tsx` (route
-   `/captura-rapida`, gated `CONSOLE_CAPTURA`). Lean mobile-first form reusing
-   `POST /registros`; "guardar y capturar otro" keeps sección+promotor. `promotor`
-   was added to `RegistroCreate` + service so it persists via the create API.
+1. **Captura rápida** — removed (superseded by the SMA paper-sheet capture at
+   `/captura`, see the 2026-11-17 spec). `RegistroCreate.promotor` remains.
 2. **Importación masiva** — `POST /promovidos/import` (router promovidos, gated
    ADMIN+COORDINADOR) reuses `import_service.parse_workbook`/`import_rows` (fixed
    paper template; dedup by `basename(file)`+sheet+row → re-upload never dupes;
    batch-audited `registro.import`). `commit=false`→preview, `commit=true`→import.
    Frontend `modules/promovidos/ImportarPromovidosPage.tsx` (route `/promovidos/importar`).
 3. **OCR scan** (pending) — reuse Atención on-device INE OCR for paper forms.
-4. **Acuerdos y Minutas** (pending) — new module, own spec.
+4. **Minutas y Acuerdos** — shipped (`modules/minutas/`).
 
 ---
 
@@ -184,7 +181,7 @@ frontend/src/
 
 ```bash
 cd backend
-python3 -m pytest           # all tests (250 baseline)
+python3 -m pytest           # all tests
 python3 -m pytest -q        # quiet summary
 python3 -m pytest tests/test_registros.py -v   # single file
 ```

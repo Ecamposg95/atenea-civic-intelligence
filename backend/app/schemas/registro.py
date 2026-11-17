@@ -100,7 +100,19 @@ class RegistroRead(BaseModel):
     observacion: Optional[str]
     promotor: Optional[str] = None
     activista_nombre: Optional[str] = None
+    # Captura SMA (0022): "valor viejo" flag, person type and parent's name.
+    legacy: bool = False
+    tipo: Optional[str] = None
+    padre_id: Optional[str] = None
+    padre_nombre: Optional[str] = None
+    hoja_id: Optional[str] = None
+    apellido_paterno: Optional[str] = None
+    apellido_materno: Optional[str] = None
+    nombres: Optional[str] = None
+    calle: Optional[str] = None
+    numero: Optional[str] = None
     clave_masked: Optional[str]
+    curp_masked: Optional[str] = None
     consentimiento: bool
     consentimiento_at: Optional[datetime]
     created_at: datetime
